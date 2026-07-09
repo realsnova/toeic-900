@@ -2,7 +2,15 @@
 
 專為衝刺 TOEIC 900 分以上設計的網頁學習軟體。針對「目前 600–750、考前 1–2 個月、每天 1 小時」的備考情境，採**三階段週期化訓練**，涵蓋單字、聽力（Part 2/3/4）、文法（Part 5/6）、閱讀（Part 7）。
 
-## 如何開啟
+## 🌐 線上使用（電腦、手機都能開）
+
+**https://realsnova.github.io/toeic-900/**
+
+直接用手機或電腦的瀏覽器開啟這個網址即可，不用安裝任何東西。建議在手機瀏覽器把它「加入主畫面」，開啟起來就像 App 一樣。
+
+> 預設狀態下，每台裝置的學習紀錄各自獨立存放（存在該瀏覽器的 localStorage）。想讓手機與電腦顯示同一套進度，請設定下方的「雲端同步」。
+
+## 本機開啟（開發用）
 
 直接雙擊 `index.html` 即可使用（聽力需要 Edge 或 Chrome，使用系統內建語音合成，免音檔、免網路）。
 
@@ -41,6 +49,33 @@ python -m http.server 8642
 - 「題庫/備份」分頁可匯出 JSON 備份檔（含學習紀錄＋自訂題庫）、匯入還原；超過 7 天未備份，首頁會出現提醒
 - 換瀏覽器或清除瀏覽資料前，請先匯出備份
 
+## ☁️ 雲端同步設定（讓手機與電腦進度一致）
+
+同步用 [Firebase](https://firebase.google.com)（Google 的免費雲端資料庫）。只需要一個 Google 帳號，不用信用卡，設定約 3 分鐘：
+
+1. 前往 [Firebase 主控台](https://console.firebase.google.com/)，用 Google 帳號登入，按「新增專案」，輸入任意名稱（如 `toeic-sync`），一路下一步建立完成
+2. 進入專案後，左側選單「建構」→「Realtime Database」→「建立資料庫」→ 選一個離你近的地區 → **安全性規則選「測試模式」開始**（之後會替換成下面更嚴謹的規則）
+3. 資料庫建立後，切到「規則」分頁，貼上以下內容並發布：
+   ```json
+   {
+     "rules": {
+       "sync": {
+         "$code": {
+           ".read": true,
+           ".write": true
+         }
+       }
+     }
+   }
+   ```
+   （這代表「知道同步代碼的人才能讀寫該代碼底下的資料」——足夠應付個人讀書進度，不建議存放機敏資料）
+4. 回到專案總覽（點左上角齒輪 →「專案設定」），往下捲到「你的應用程式」，按 `</>`（網頁）圖示新增一個網頁應用程式，名稱隨意，**不需要**勾選 Firebase Hosting
+5. 建立後會顯示一段 `firebaseConfig` 物件，**把這 7 個值整個複製給我（貼在對話裡）**，我會幫你寫進 `js/firebase-config.js` 並重新部署
+
+設定完成後，在任一裝置的「題庫/備份」分頁按「產生新代碼」，把代碼抄到第二台裝置貼上並按「套用」，兩台裝置就會自動同步（存檔後約 1.5 秒推送雲端，開啟頁面時自動抓取最新進度）。
+
+> Firebase 網頁設定值（apiKey 等）本來就設計成可公開，安全性是由上面的資料庫規則把關，不是靠隱藏這些值，所以放心提供給我寫進程式碼。
+
 ## 擴增題庫
 
 「題庫/備份」分頁 →「一鍵擴增題庫」：選類型與數量 → 複製自動產生的 AI 指令 → 貼給 Claude（或任何 AI）→ 把回覆的 JSON 貼回來按匯入。系統會自動驗證格式、剔除與現有題目重複的內容，匯入後立即加入練習輪替。
@@ -50,12 +85,14 @@ python -m http.server 8642
 ## 檔案結構
 
 ```
-index.html            入口頁面
-css/style.css         樣式
-js/app.js             應用邏輯（階段引擎、SRS、TTS、測驗、題庫管理、備份、統計）
-js/data/vocab.js      單字庫（181 字）
-js/data/listening.js  聽力題庫（Part 2 ×24、Part 3/4 ×8 組）
-js/data/part5.js      Part 5 題庫（70 題）
-js/data/part6.js      Part 6 題庫（5 篇）
-js/data/part7.js      Part 7 題庫（7 組）
+index.html               入口頁面
+css/style.css            樣式
+js/app.js                應用邏輯（階段引擎、SRS、TTS、測驗、題庫管理、備份、統計）
+js/sync.js               雲端同步邏輯（Firebase Realtime Database）
+js/firebase-config.js    Firebase 專案設定（預設 null＝未啟用同步）
+js/data/vocab.js         單字庫（181 字）
+js/data/listening.js     聽力題庫（Part 2 ×24、Part 3/4 ×8 組）
+js/data/part5.js         Part 5 題庫（70 題）
+js/data/part6.js         Part 6 題庫（5 篇）
+js/data/part7.js         Part 7 題庫（7 組）
 ```
