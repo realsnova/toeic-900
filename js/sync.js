@@ -65,7 +65,7 @@ const Sync = {
     const ref = Sync.ref();
     if (!ref) return;
     try {
-      await ref.set({ records: S, bank: loadBank(), updatedAt: S.updatedAt });
+      await ref.set({ records: S, bank: loadBank(), updatedAt: S.updatedAt || Date.now() });
       Sync.lastSynced = new Date();
     } catch (e) { console.warn("雲端同步寫入失敗", e); }
   }

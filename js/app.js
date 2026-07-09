@@ -4,6 +4,7 @@ const STORE_KEY = "toeic900";
 function defaultState() {
   return {
     exam: null,               // 考試日期 'YYYY-MM-DD'
+    updatedAt: 0,              // 最後異動時間戳（雲端同步比對新舊用，不可為 undefined）
     vocab: {},                // word -> {i:間隔天數, e:難易係數, due:'YYYY-MM-DD', n:複習次數}
     cat: {},                  // Part5 類別 -> {r, w}
     lcat: {},                 // 聽力類別（Part 2 / Part 3/4）-> {r, w}
@@ -171,8 +172,8 @@ function $(sel) { return document.querySelector(sel); }
 
 /* ============ 備考階段引擎 ============ */
 function examDate() {
-  if (!S.exam) { S.exam = todayStr(49); save(); } // 預設 7 週後
-  return S.exam;
+  // 純讀取、不寫入：若在雲端同步比對完成前就 save()，會用空白的預設狀態搶先蓋掉雲端的真實進度
+  return S.exam || todayStr(49); // 未設定時預設 7 週後
 }
 function daysLeft() {
   const ms = new Date(examDate()) - new Date(todayStr());
@@ -1196,15 +1197,15 @@ renderers.stats = function () {
 
 /* ============ 啟動 ============ */
 mergeBank();
-renderers.home();
-updateNavBadges();
-if (typeof Sync !== "undefined") {
-  Sync.init();
-  Sync.pullOnStartup().then(changed => {
-    if (changed) {
-      mergeBank();
-      renderers[document.querySelector("#nav button.active")?.dataset.tab || "home"]();
-      updateNavBadges();
-    }
-  });
+async function boot() {
+  // 雲端同步的拉取務必在第一次 render 之前完成，
+  // 否則任何在 render 過程中觸發的 save()（例如指定預設考試日期）會搶先寫入時間戳，
+  // 導致「較新」的空白本機狀態誤判為比雲端資料新，蓋掉雲端的真實進度。
+  if (typeof Sync !== "undefined") {
+    Sync.init();
+    if (await Sync.pullOnStartup()) mergeBank();
+  }
+  renderers.home();
+  updateNavBadges();
 }
+boot();
