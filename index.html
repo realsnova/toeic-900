@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TOEIC 900+ 衝刺</title>
+<link rel="stylesheet" href="css/style.css?v=3">
+</head>
+<body>
+<header>
+  <div class="brand">🎯 TOEIC <span>900+</span> 衝刺</div>
+  <nav id="nav">
+    <button data-tab="home" class="active">首頁</button>
+    <button data-tab="vocab">單字卡</button>
+    <button data-tab="listen">聽力</button>
+    <button data-tab="p5">Part 5</button>
+    <button data-tab="p6">Part 6</button>
+    <button data-tab="p7">Part 7</button>
+    <button data-tab="wrong">錯題本</button>
+    <button data-tab="bank">題庫/備份</button>
+    <button data-tab="stats">統計</button>
+  </nav>
+</header>
+
+<main>
+  <section id="tab-home" class="tab active"></section>
+  <section id="tab-vocab" class="tab"></section>
+  <section id="tab-listen" class="tab"></section>
+  <section id="tab-p5" class="tab"></section>
+  <section id="tab-p6" class="tab"></section>
+  <section id="tab-p7" class="tab"></section>
+  <section id="tab-wrong" class="tab"></section>
+  <section id="tab-bank" class="tab"></section>
+  <section id="tab-stats" class="tab"></section>
+</main>
+
+<script src="js/data/vocab.js?v=3"></script>
+<script src="js/data/part5.js?v=3"></script>
+<script src="js/data/part6.js?v=3"></script>
+<script src="js/data/part7.js?v=3"></script>
+<script src="js/data/listening.js?v=3"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
+<script src="js/firebase-config.js?v=3"></script>
+<script src="js/sync.js?v=3"></script>
+<script src="js/app.js?v=3"></script>
+</body>
+</html>
