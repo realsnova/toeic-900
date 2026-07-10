@@ -26,7 +26,43 @@ const PART2 = [
   { q: "Where can I find the safety guidelines?", opts: ["They're posted on the bulletin board.", "By the end of the day.", "A safe workplace."], ans: 0, exp: "Where 問地點，回答「貼在佈告欄上」。「By the end of the day」答期限；「A safe workplace」重複 safe 的同字陷阱。" },
   { q: "You've met the new branch manager, haven't you?", opts: ["Briefly, at the orientation.", "It's a management position.", "Yes, I'll meet the deadline."], ans: 0, exp: "附加問句：「見過，在新人訓練時短暫見過」。「I'll meet the deadline」用 meet 的多義陷阱（趕上期限）。" },
   { q: "Would you mind switching shifts with me on Friday?", opts: ["Not at all — I'm free that day.", "Yes, the light switch.", "During the night shift."], ans: 0, exp: "Would you mind...? 答應要用 Not at all（一點也不介意）。「the light switch」用 switch 的同字陷阱（開關）。" },
-  { q: "How many people signed up for the wellness program?", opts: ["The list hasn't been posted yet.", "Sign at the bottom.", "It's a great program."], ans: 0, exp: "間接回應：「名單還沒公布」＝不知道人數。「Sign at the bottom」用 sign 的同字陷阱；「It's a great program」答非所問。" }
+  { q: "How many people signed up for the wellness program?", opts: ["The list hasn't been posted yet.", "Sign at the bottom.", "It's a great program."], ans: 0, exp: "間接回應：「名單還沒公布」＝不知道人數。「Sign at the bottom」用 sign 的同字陷阱；「It's a great program」答非所問。" },
+  { q: "Where did you put the quarterly sales report?", opts: ["I emailed it to you this morning.", "About three percent higher.", "It was quite detailed."], ans: 0, exp: "間接回應：不直說放哪，而說「今早寄到你信箱了」。「three percent higher」回答數字；「quite detailed」評論內容。" },
+  { q: "Isn't the new cafeteria opening this week?", opts: ["Actually, it's been pushed back to next month.", "The food was delicious.", "On the second floor."], ans: 0, exp: "否定疑問句＋間接回應：「其實延到下個月了」。「The food was delicious」與「還沒開」矛盾；「On the second floor」答地點。" },
+  { q: "Should I email the client or call them directly?", opts: ["A phone call would be more personal.", "Yes, please do.", "The client was satisfied."], ans: 0, exp: "選擇疑問句（email or call）擇一回答。「Yes, please do」用 Yes 回答選擇疑問句是陷阱。" },
+  { q: "Who's responsible for ordering office supplies?", opts: ["That's handled by the admin team.", "In the storage room.", "Every two weeks."], ans: 0, exp: "Who 問負責人，「行政團隊負責」。「In the storage room」答地點；「Every two weeks」答頻率。" },
+  { q: "The projector in Room B isn't working again.", opts: ["I'll put in a maintenance request.", "Yes, it's a great room.", "About two hours long."], ans: 0, exp: "陳述問題，最佳回應是提出解決（我來報修）。其餘答非所問。" },
+  { q: "Why has the delivery been delayed?", opts: ["The supplier ran out of stock.", "By express courier.", "To the warehouse."], ans: 0, exp: "Why 問原因，「供應商缺貨了」。「By express courier」答方式；「To the warehouse」答地點。" },
+  { q: "Could you recommend a good hotel near the airport?", opts: ["The Grandview usually has great rates.", "Yes, I flew there last week.", "It's a long flight."], ans: 0, exp: "請求推薦，回應具體飯店名。其餘用 fly/flight 的相關字陷阱，答非所問。" },
+  { q: "Do you know when the shipment will clear customs?", opts: ["It should be released by Thursday.", "At the port.", "A large container."], ans: 0, exp: "When 問時間，「週四前應會放行」。「At the port」答地點；「A large container」描述物品。" },
+  { q: "Haven't the new brochures been printed yet?", opts: ["They'll be ready this afternoon.", "Yes, on glossy paper.", "In the marketing office."], ans: 0, exp: "否定疑問句：「今天下午就會好」暗示尚未完成。「on glossy paper」describe 細節；「In the marketing office」答地點。" },
+  { q: "Would you prefer the morning or the afternoon session?", opts: ["The morning works better for me.", "Yes, I'd love to attend.", "It lasts two hours."], ans: 0, exp: "選擇疑問句擇一回答。「Yes, I'd love to attend」用 Yes 回答是陷阱。" },
+  { q: "How often is the equipment serviced?", opts: ["Once every six months.", "By an outside contractor.", "In the basement."], ans: 0, exp: "How often 問頻率，「每六個月一次」。「By an outside contractor」答執行者；「In the basement」答地點。" },
+  { q: "Where can I get my parking validated?", opts: ["The reception desk can stamp it for you.", "For up to three hours.", "It costs five dollars."], ans: 0, exp: "Where 問地點，「櫃檯可以幫你蓋章」。「up to three hours」答時長；「five dollars」答金額。" },
+  { q: "The client wants to move the meeting up to Monday.", opts: ["Let me check whether the room is available.", "Yes, it was a productive meeting.", "On the tenth floor."], ans: 0, exp: "陳述新資訊，回應以行動（我確認會議室是否有空）。其餘答非所問。" },
+  { q: "Why don't we outsource the translation work?", opts: ["That might actually save us time.", "Because it was mistranslated.", "In several languages."], ans: 0, exp: "Why don't we...（提議），回應同意（那說不定能省時間）。「Because...」把提議當 Why 問句回答。" },
+  { q: "Has anyone confirmed the venue for the awards dinner?", opts: ["Karen is finalizing it today.", "It was a lovely evening.", "About two hundred guests."], ans: 0, exp: "間接回應：「Karen 今天在敲定」＝還沒完全確認。「a lovely evening」答感想；「two hundred guests」答人數。" },
+  { q: "Which supplier offered the better price?", opts: ["We're still comparing the two quotes.", "By the end of the week.", "In bulk quantities."], ans: 0, exp: "間接回應：「還在比較兩份報價」＝尚未決定。「end of the week」答時間；「bulk quantities」答數量。" },
+  { q: "You're attending the trade show in Berlin, aren't you?", opts: ["Yes, my flight leaves Tuesday.", "It was very informative.", "At the convention center."], ans: 0, exp: "附加問句確認，「是，我週二的班機」。「very informative」答感想；「convention center」答地點。" },
+  { q: "Should the report be printed in color or black and white?", opts: ["Color would look more professional.", "Yes, ten copies please.", "By tomorrow morning."], ans: 0, exp: "選擇疑問句擇一回答。「Yes, ten copies」用 Yes 回答並答數量是陷阱。" },
+  { q: "How was the response to the customer survey?", opts: ["Better than we anticipated.", "By email and phone.", "Around fifty questions."], ans: 0, exp: "How（如何）問結果，「比預期好」。「By email and phone」答方式；「fifty questions」答數量。" },
+  { q: "Where should I store these confidential files?", opts: ["The locked cabinet in my office.", "For seven years.", "They're highly sensitive."], ans: 0, exp: "Where 問地點，「我辦公室上鎖的櫃子」。「seven years」答期限；「highly sensitive」描述性質。" },
+  { q: "Didn't the maintenance crew fix the elevator?", opts: ["They're coming back tomorrow.", "On every floor.", "Yes, it's a fast elevator."], ans: 0, exp: "否定疑問句＋間接回應：「他們明天再來」暗示還沒修好。「Yes, it's a fast elevator」與語意矛盾。" },
+  { q: "Would you like me to book a taxi or arrange a shuttle?", opts: ["A shuttle would be more economical.", "Yes, right away.", "To the airport."], ans: 0, exp: "選擇疑問句擇一回答。「Yes, right away」用 Yes 回答是陷阱。" },
+  { q: "Why was the budget meeting canceled?", opts: ["The director had a scheduling conflict.", "In the main boardroom.", "For about an hour."], ans: 0, exp: "Why 問原因，「總監行程衝突」。「main boardroom」答地點；「about an hour」答時長。" },
+  { q: "How do I apply for the leadership program?", opts: ["There's a form on the company intranet.", "It runs for six months.", "About twenty participants."], ans: 0, exp: "How 問方法，「公司內網有表格」。「six months」答期間；「twenty participants」答人數。" },
+  { q: "The printer is out of toner again.", opts: ["I'll order some more right away.", "Yes, it prints quickly.", "On the third floor."], ans: 0, exp: "陳述問題，回應以行動（我馬上訂）。其餘答非所問。" },
+  { q: "Who approved this expense report?", opts: ["It still needs the director's signature.", "About three hundred dollars.", "Last Thursday."], ans: 0, exp: "間接回應：「還需要總監簽名」＝還沒人批准。「three hundred dollars」答金額；「Last Thursday」答時間。" },
+  { q: "Isn't this the last day of the promotion?", opts: ["No, it's been extended through Sunday.", "At all our locations.", "Twenty percent off."], ans: 0, exp: "否定疑問句：「不，延長到週日」。「all our locations」答地點；「Twenty percent off」答折扣。" },
+  { q: "Where are the training sessions being held this year?", opts: ["They've moved to the downtown branch.", "Every Wednesday afternoon.", "By a certified instructor."], ans: 0, exp: "Where 問地點，「改到市中心分部」。「Every Wednesday」答時間；「certified instructor」答執行者。" },
+  { q: "Could you send me the updated contact list?", opts: ["Sure, I'll forward it now.", "About fifty names.", "In alphabetical order."], ans: 0, exp: "請求，回應答應（好，我現在轉寄）。「fifty names」答數量；「alphabetical order」答排序。" },
+  { q: "Why is the lobby closed off this morning?", opts: ["They're refinishing the floors.", "Until noon.", "Near the entrance."], ans: 0, exp: "Why 問原因，「他們在重新打磨地板」。「Until noon」答時間；「Near the entrance」答地點。" },
+  { q: "Do you want to review the slides before the presentation?", opts: ["Yes, could you email them over?", "It went very well.", "In the conference room."], ans: 0, exp: "Yes/No 問句，回應「好，能寄給我嗎？」。「It went very well」用過去式答非所問；「conference room」答地點。" },
+  { q: "How long has Ms. Tanaka been with the company?", opts: ["She joined about a decade ago.", "In the finance department.", "As a senior analyst."], ans: 0, exp: "How long 問期間，「大約十年前加入」。「finance department」答部門；「senior analyst」答職稱。" },
+  { q: "Shouldn't we notify the clients about the price change?", opts: ["A notice is already being drafted.", "Yes, they're valued clients.", "By about five percent."], ans: 0, exp: "否定疑問句＋間接回應：「通知已經在草擬了」。「valued clients」答非所問；「five percent」答幅度。" },
+  { q: "Where did the shipment get held up?", opts: ["Somewhere at the border crossing.", "For over a week.", "In sealed containers."], ans: 0, exp: "Where 問地點，「卡在邊境某處」。「over a week」答時長；「sealed containers」描述包裝。" },
+  { q: "Would you rather lead the project or support it?", opts: ["I'd be happy to take the lead.", "Yes, it's an exciting project.", "Over the next quarter."], ans: 0, exp: "選擇疑問句擇一回答。「Yes, it's an exciting project」用 Yes 回答是陷阱。" },
+  { q: "Why haven't the invoices been sent to accounting?", opts: ["I'm still waiting on two receipts.", "By the end of the day.", "In the top drawer."], ans: 0, exp: "否定疑問句＋間接回應：「我還在等兩張收據」解釋原因。「end of the day」答時間；「top drawer」答地點。" }
 ];
 
 // Part 3 對話 + Part 4 短講（turns: M=男聲, W=女聲, N=旁白/單人）
@@ -130,6 +166,71 @@ const PART34 = [
       { q: "What is being advertised?", opts: ["A furniture sale", "A grand opening", "A home renovation service", "An office rental"], ans: 0, exp: "廣告主打 Fairfield Furniture 的年度倉庫特賣（annual warehouse sale）。" },
       { q: "According to the advertisement, how can customers receive free delivery?", opts: ["By spending more than $200 online", "By visiting the store on Friday", "By joining a membership program", "By ordering before Thursday"], ans: 0, exp: "網站購物滿兩百美元即免運（free delivery on any purchase over two hundred dollars）。" },
       { q: "What will the first fifty customers on Friday receive?", opts: ["A free lamp", "A discount coupon", "An ergonomic chair", "A gift card"], ans: 0, exp: "週五早上前五十名進門的顧客可獲贈檯燈（complimentary desk lamp）。complimentary = 贈送的。" }
+    ]
+  },
+  {
+    type: "Part 3", title: "對話：軟體升級安排",
+    turns: [
+      { s: "W", t: "Hi Daniel, IT is planning to upgrade the accounting software this weekend. Will that affect our team's access on Monday?" },
+      { s: "M", t: "It shouldn't. The upgrade finishes Sunday night, and everything should be back to normal by Monday morning. But you'll need to reset your password the first time you log in." },
+      { s: "W", t: "Good to know. Should I back up my current reports just in case?" },
+      { s: "M", t: "That's a smart idea. I'd export anything you're actively working on. I'll send everyone a step-by-step guide this afternoon so no one gets stuck." }
+    ],
+    qs: [
+      { q: "What is the conversation mainly about?", opts: ["An upcoming software upgrade", "A new hiring policy", "A budget review", "An office relocation"], ans: 0, exp: "對話開頭即談 IT 週末要升級會計軟體，圍繞這件事展開。" },
+      { q: "What does the man say users will need to do?", opts: ["Reset their passwords", "Attend a training session", "Submit a request form", "Work from home on Monday"], ans: 0, exp: "男子說第一次登入時 you'll need to reset your password（需重設密碼）。" },
+      { q: "What will the man do this afternoon?", opts: ["Send out a step-by-step guide", "Back up the woman's reports", "Cancel the upgrade", "Meet with the accounting team"], ans: 0, exp: "男子說 I'll send everyone a step-by-step guide this afternoon（下午寄操作指南）。" }
+    ]
+  },
+  {
+    type: "Part 3", title: "對話：租借會議場地",
+    turns: [
+      { s: "M", t: "Thank you for calling Lakeside Conference Center. How may I help you?" },
+      { s: "W", t: "Hi, I'd like to book a room for a product training on March 15th, for about forty people." },
+      { s: "M", t: "Let me check. Yes, our Maple Room seats fifty and it's available that day. It comes with a projector and free Wi-Fi. Would you like catering as well?" },
+      { s: "W", t: "Yes, a light lunch for everyone. Could you email me a quote with the room and catering costs so I can get it approved by my manager?" },
+      { s: "M", t: "Of course. I'll send that within the hour. Just note that we require a fifty percent deposit to confirm the booking." }
+    ],
+    qs: [
+      { q: "Why is the woman calling?", opts: ["To reserve a room for an event", "To cancel a reservation", "To apply for a job", "To complain about a service"], ans: 0, exp: "女子要為三月十五日的產品訓練預訂容納約四十人的場地。" },
+      { q: "What does the woman ask the man to send?", opts: ["A price quote", "A room map", "A guest list", "A signed contract"], ans: 0, exp: "女子請對方 email me a quote（寄含場地與餐飲費用的報價）以便呈主管核准。" },
+      { q: "What is required to confirm the booking?", opts: ["A fifty percent deposit", "A signed waiver", "A membership card", "Full payment in advance"], ans: 0, exp: "男子說 we require a fifty percent deposit to confirm（需五成訂金確認）。" }
+    ]
+  },
+  {
+    type: "Part 3", title: "對話：客訴處理",
+    turns: [
+      { s: "W", t: "Hello, I ordered a desk lamp from your website, but it arrived with a cracked base. This is quite disappointing." },
+      { s: "M", t: "I'm very sorry about that. I can either send you a replacement right away or process a full refund. Which would you prefer?" },
+      { s: "W", t: "I'd still like the lamp, so a replacement would be best. But I don't want to pay for return shipping." },
+      { s: "M", t: "Absolutely, you won't. I'll email you a prepaid return label, and the new lamp will ship today. You should have it within three business days." }
+    ],
+    qs: [
+      { q: "What problem does the woman describe?", opts: ["A product arrived damaged", "An order never arrived", "She was charged twice", "The wrong item was sent"], ans: 0, exp: "女子說檯燈送達時底座裂了（arrived with a cracked base），屬於商品損壞。" },
+      { q: "What does the woman decide to do?", opts: ["Request a replacement", "Accept a refund", "Keep the damaged lamp", "Cancel her account"], ans: 0, exp: "女子說她還是想要檯燈，所以選擇更換（a replacement would be best）。" },
+      { q: "What does the man agree to provide?", opts: ["A prepaid return label", "A discount coupon", "A gift card", "An extended warranty"], ans: 0, exp: "男子說會 email you a prepaid return label（寄預付運費的退貨標籤）。" }
+    ]
+  },
+  {
+    type: "Part 4", title: "短講：員工訓練說明",
+    turns: [
+      { s: "N", t: "Good morning, everyone, and welcome to the customer service training. Over the next two days, we'll focus on handling difficult calls and using our new ticketing system. Today's session will be mostly hands-on, so please log in to the practice accounts we've set up for you. Before we begin, a quick reminder: the cafeteria is offering a free lunch for all training participants, so be sure to keep your name badge with you. We'll break at noon and resume at one o'clock. If you have any technical issues logging in, raise your hand and one of our assistants will help you right away." }
+    ],
+    qs: [
+      { q: "What is the main purpose of the talk?", opts: ["To introduce a training session", "To announce a company merger", "To launch a new product", "To review last year's sales"], ans: 0, exp: "講者歡迎大家參加客服訓練，並說明兩天的內容，屬於訓練說明。" },
+      { q: "What are listeners asked to do before beginning?", opts: ["Log in to practice accounts", "Sign an attendance sheet", "Read a handbook", "Introduce themselves"], ans: 0, exp: "講者請大家 log in to the practice accounts（登入練習帳號）。" },
+      { q: "Why should participants keep their name badges?", opts: ["To receive a free lunch", "To enter the building", "To claim a certificate", "To access the parking lot"], ans: 0, exp: "餐廳為訓練學員提供免費午餐，需憑名牌（keep your name badge with you）。" }
+    ]
+  },
+  {
+    type: "Part 4", title: "短講：博物館導覽廣播",
+    turns: [
+      { s: "N", t: "Welcome to the Riverside Museum of Modern Art. Please note that the third-floor photography exhibit is temporarily closed for the installation of a new collection and will reopen next Saturday. In the meantime, we invite you to explore our newly renovated sculpture garden on the ground floor. Guided tours depart from the main lobby every hour on the hour and are included with your admission. Photography is permitted throughout the museum, but please refrain from using flash, as it can damage the artwork. The gift shop and café are located near the east entrance and remain open until six p.m. Enjoy your visit." }
+    ],
+    qs: [
+      { q: "Why is the third-floor exhibit closed?", opts: ["A new collection is being installed", "The lighting is being repaired", "It is being cleaned", "An event is taking place"], ans: 0, exp: "廣播說三樓攝影展因 installation of a new collection（安裝新館藏）暫時關閉。" },
+      { q: "What does the speaker say about the guided tours?", opts: ["They are included with admission", "They must be booked in advance", "They cost an extra fee", "They are only on weekends"], ans: 0, exp: "導覽 included with your admission（含在門票內），每小時整點從大廳出發。" },
+      { q: "What are visitors asked NOT to do?", opts: ["Use flash photography", "Bring food inside", "Touch the sculptures", "Enter the garden"], ans: 0, exp: "廣播請訪客 refrain from using flash（勿使用閃光燈），以免損害藝術品。" }
     ]
   }
 ];

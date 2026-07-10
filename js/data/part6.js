@@ -103,5 +103,97 @@ Finance Department`,
       { opts: ["To make", "Making", "Made", "For making"], ans: 0, exp: "不定詞表目的：To make the transition easier（為了讓過渡更順利）置於句首。" },
       { opts: ["A calendar invitation with the session links will be sent tomorrow.", "The old system has been praised by all departments.", "Hotel prices are expected to rise sharply this year.", "The company picnic has been rescheduled to June."], ans: 0, exp: "句子插入題：上文提到將舉辦兩場線上訓練，接「明天會寄出含連結的行事曆邀請」最連貫。" }
     ]
+  },
+  {
+    title: "電子郵件：面試邀約",
+    text: `Dear Mr. Alvarez,
+
+Thank you for applying for the position of Marketing Coordinator at Vertex Media. After reviewing your application, we would like to invite you ___[1]___ an interview at our downtown office.
+
+The interview is ___[2]___ scheduled for Thursday, May 9, at 2:00 P.M. It will last approximately one hour and will include a short presentation task. ___[3]___ Please bring a copy of your résumé and a valid photo ID.
+
+If this time is not convenient, please let us know and we will do our best to ___[4]___ your schedule.
+
+We look forward to meeting you.
+
+Best regards,
+Hiring Team, Vertex Media`,
+    blanks: [
+      { opts: ["for", "to", "with", "on"], ans: 0, exp: "invite someone for an interview（邀請某人面試）為固定搭配。" },
+      { opts: ["tentatively", "tentative", "tentativeness", "tentativity"], ans: 0, exp: "修飾動詞 scheduled 需用副詞 tentatively（暫定地）。" },
+      { opts: ["Details about the presentation topic will be emailed to you separately.", "The position has already been filled.", "Our office is closed on public holidays.", "Thank you for your recent purchase."], ans: 0, exp: "句子插入題：上文提到面試含簡報任務，接「簡報主題細節將另行寄送」最連貫。" },
+      { opts: ["accommodate", "accommodation", "accommodating", "accommodated"], ans: 0, exp: "do our best to + 原形動詞 accommodate（配合您的時間）。" }
+    ]
+  },
+  {
+    title: "公告：停車場維修",
+    text: `NOTICE TO ALL EMPLOYEES
+
+Please be advised that the north parking lot will be closed for resurfacing ___[1]___ Monday, June 3 to Wednesday, June 5.
+
+During this period, employees are encouraged to use the south lot, which has ___[2]___ spaces available. Alternatively, the company will cover the cost of public transportation for those who choose not to drive. ___[3]___
+
+We apologize for any inconvenience this may cause and appreciate your ___[4]___ during the repairs.
+
+Sincerely,
+Facilities Management`,
+    blanks: [
+      { opts: ["from", "since", "by", "within"], ans: 0, exp: "from A to B（從六月三日到五日）表區間，與 to 呼應。" },
+      { opts: ["ample", "amply", "amplify", "amplitude"], ans: 0, exp: "形容詞修飾名詞 spaces，ample spaces（充足的車位）。" },
+      { opts: ["Simply keep your transit receipts and submit them for reimbursement.", "The parking lot will remain closed permanently.", "New employees will start next Monday.", "The cafeteria menu has been updated."], ans: 0, exp: "句子插入題：上文提到公司補助大眾運輸，接「保留車票收據報帳」最連貫。" },
+      { opts: ["cooperation", "cooperate", "cooperative", "cooperatively"], ans: 0, exp: "所有格 your 之後接名詞 cooperation（配合）。" }
+    ]
+  },
+  {
+    title: "報導：本地餐廳擴張",
+    text: `RIVERTON — Bella Cucina, a family-owned Italian restaurant, announced this week that it will open a second location downtown. The new branch, ___[1]___ is scheduled to open in October, will seat up to eighty guests.
+
+Owner Marco Bellini said the decision came after years of ___[2]___ demand. "Our regular customers have been asking us to expand for a long time," he said. ___[3]___ The new location will feature an open kitchen and a private dining room for events.
+
+The restaurant is currently ___[4]___ experienced chefs and servers. Interested applicants can apply through the company website.`,
+    blanks: [
+      { opts: ["which", "what", "who", "where"], ans: 0, exp: "非限定關係子句修飾事物 The new branch，用 which。" },
+      { opts: ["growing", "grown", "grows", "growth"], ans: 0, exp: "現在分詞作形容詞修飾 demand，growing demand（日益增長的需求）。" },
+      { opts: ["He added that the menu will remain largely the same.", "The original location will close next month.", "The city has banned outdoor seating.", "Ticket prices have increased this year."], ans: 0, exp: "句子插入題：延續老闆談擴張，接「他補充說菜單大致維持不變」最連貫。" },
+      { opts: ["recruiting", "recruit", "recruited", "recruitment"], ans: 0, exp: "is currently + V-ing 現在進行式，recruiting（正在招募）。" }
+    ]
+  },
+  {
+    title: "電子郵件：訂閱續約提醒",
+    text: `Dear Subscriber,
+
+This is a friendly reminder that your annual subscription to Business Insight Monthly will expire ___[1]___ June 30.
+
+To continue enjoying uninterrupted access to our articles and market reports, please renew ___[2]___ the expiration date. Renewing early also qualifies you for a ten percent loyalty discount. ___[3]___
+
+If you have already renewed, please ___[4]___ this reminder. Thank you for being a valued reader.
+
+Warm regards,
+The Business Insight Team`,
+    blanks: [
+      { opts: ["on", "in", "since", "by the"], ans: 0, exp: "on + 日期（六月三十日到期）。" },
+      { opts: ["before", "during", "despite", "although"], ans: 0, exp: "before the expiration date（在到期日之前）為介係詞接名詞片語。during 語意不合。" },
+      { opts: ["Simply click the link below to renew in seconds.", "Our office will be relocating next year.", "Print subscriptions are no longer available.", "The magazine won an industry award."], ans: 0, exp: "句子插入題：延續催促續約，接「點下方連結即可秒速續約」最連貫。" },
+      { opts: ["disregard", "disregarding", "disregarded", "disregards"], ans: 0, exp: "please + 原形動詞 disregard（請忽略此提醒）。" }
+    ]
+  },
+  {
+    title: "公告：新線上系統上線",
+    text: `MEMO — To All Staff
+
+We are pleased to announce that the new employee portal will go live on Monday. The portal allows you to view pay slips, request leave, and update personal information, all ___[1]___ one place.
+
+To access the portal, use your existing company email and the temporary password sent to you today. You will be prompted to ___[2]___ a new password upon your first login. ___[3]___
+
+Should you experience any difficulties, the IT help desk is available ___[4]___ to assist you.
+
+Thank you,
+Human Resources`,
+    blanks: [
+      { opts: ["in", "on", "at", "by"], ans: 0, exp: "in one place（在同一個地方）為固定用法。" },
+      { opts: ["create", "creating", "created", "creation"], ans: 0, exp: "be prompted to + 原形動詞 create（被提示建立新密碼）。" },
+      { opts: ["A short video tutorial is available on the homepage.", "The portal will be discontinued next month.", "Paper pay slips will still be mailed weekly.", "The office will close early on Friday."], ans: 0, exp: "句子插入題：延續操作說明，接「首頁有簡短影片教學」最連貫。" },
+      { opts: ["around the clock", "out of order", "on the house", "in the red"], ans: 0, exp: "around the clock（全天候）表 IT 支援隨時待命。其餘片語語意不合。" }
+    ]
   }
 ];

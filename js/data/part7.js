@@ -208,5 +208,142 @@ Olivia Trask`
       { q: "What does the notice suggest about Ms. Trask's second question?", opts: ["The movers may not use the Grandview Avenue entrance for loading.", "A second truck requires an extra fee.", "Trucks may park anywhere after business hours.", "The question should be sent to the moving company."], ans: 0, exp: "跨篇整合題：公告規定搬運人員必須使用 Harper Street 的卸貨區，主大廳與其他入口不得用於搬運，因此 Grandview Avenue 入口裝卸不被允許。" },
       { q: "In the email, what item is mentioned as needing special care?", opts: ["A conference table", "A photocopier", "A filing cabinet", "A chandelier"], ans: 0, exp: "郵件提到 a glass conference table that requires special handling（需要特殊處理的玻璃會議桌）。" }
     ]
+  },
+  {
+    title: "單篇：公司內部通知",
+    time: 180,
+    passages: [
+      `MEMORANDUM
+
+To: All Sales Staff
+From: Rachel Kim, Sales Director
+Date: February 3
+Re: New commission structure
+
+Effective March 1, the sales commission structure will be updated to better reward top performers. Under the new system, representatives who exceed their quarterly target by 20 percent or more will earn an additional 5 percent commission on all sales above that threshold.
+
+The base commission rate of 8 percent remains unchanged. However, the monthly bonus for new client acquisition will increase from $200 to $300 per client. These changes apply only to sales made on or after March 1; deals closed in February will be calculated under the current rates.
+
+A detailed breakdown of the new structure is attached. If you have questions, please attend the optional Q&A session on February 20 at 10 A.M. in Conference Room C, or email me directly.`
+    ],
+    qs: [
+      { q: "What is the main purpose of the memo?", opts: ["To announce changes to commission rates", "To introduce a new sales director", "To schedule a company retreat", "To report quarterly earnings"], ans: 0, exp: "備忘錄主旨是宣布三月一日起更新的佣金制度。" },
+      { q: "What will happen to the new client bonus?", opts: ["It will increase to $300", "It will be eliminated", "It will stay at $200", "It will be paid quarterly"], ans: 0, exp: "文中提到新客戶開發獎金將從 $200 增至 $300（increase from $200 to $300）。" },
+      { q: "How are February deals handled?", opts: ["Under the current rates", "Under the new rates", "With no commission", "At a reduced rate"], ans: 0, exp: "文中說二月成交的案子 calculated under the current rates（依現行費率計算）。" }
+    ]
+  },
+  {
+    title: "單篇：產品評論",
+    time: 180,
+    passages: [
+      `★★★★☆ A reliable printer with one drawback
+Reviewed by Kenji T. — Verified Purchase
+
+I bought the PrintPro X200 for my small home office three months ago, and overall I'm very satisfied. Setup was straightforward — it connected to my wireless network in under five minutes, and the print quality is excellent for both documents and photos. It's also remarkably quiet compared to my old model.
+
+The only real drawback is the cost of replacement ink. The cartridges are expensive and seem to run out faster than I expected, especially when printing in color. I'd recommend buying the high-capacity cartridges to save money in the long run.
+
+Customer service deserves a mention too. When I had trouble installing the software, I emailed support and received a helpful reply within a few hours. I'd recommend this printer to anyone who prints occasionally, though heavy users should factor in the ink costs.`
+    ],
+    qs: [
+      { q: "What does the reviewer like most about the printer?", opts: ["It was easy to set up and prints well", "It has very cheap ink", "It is large and powerful", "It came with free cartridges"], ans: 0, exp: "評論者稱讚安裝簡單、列印品質佳且安靜；最大優點是易用與品質。" },
+      { q: "What is the main disadvantage mentioned?", opts: ["The ink is costly and runs out quickly", "The print quality is poor", "It is very noisy", "It is difficult to connect"], ans: 0, exp: "唯一缺點是墨水昂貴且消耗快（cost of replacement ink... run out faster）。" },
+      { q: "What does the reviewer suggest to save money?", opts: ["Buying high-capacity cartridges", "Printing only in black and white", "Returning the printer", "Using a different brand of paper"], ans: 0, exp: "評論者建議買 high-capacity cartridges（大容量墨水匣）以長期省錢。" },
+      { q: "What is indicated about customer service?", opts: ["It responded quickly and helpfully", "It was difficult to reach", "It charged an extra fee", "It only operates by phone"], ans: 0, exp: "評論者說寄信給客服，幾小時內就收到有幫助的回覆（helpful reply within a few hours）。" }
+    ]
+  },
+  {
+    title: "雙篇：活動報名（電郵＋確認信）",
+    time: 240,
+    passages: [
+      `To: events@greentech-expo.com
+From: Laura Chen
+Subject: Group registration
+
+Hello,
+
+I would like to register a group of six people from Solaris Energy for the Green Technology Expo on April 18. I understand that groups of five or more receive a 15 percent discount on the standard $120 ticket price.
+
+Could you also confirm whether the workshop on battery storage is included in the standard admission, or whether it requires a separate ticket? Two of my colleagues are particularly interested in attending it.
+
+Thank you,
+Laura Chen`,
+      `To: Laura Chen
+From: events@greentech-expo.com
+Subject: RE: Group registration
+Date: March 25
+
+Dear Ms. Chen,
+
+Thank you for your interest. I'm pleased to confirm your group registration of six at the discounted rate. The battery storage workshop is indeed included in standard admission; however, seating is limited and assigned on a first-come, first-served basis, so I recommend arriving early.
+
+To complete your registration, please submit payment by April 4 using the secure link below. A confirmation and six entry badges will be emailed to you within two business days of payment.
+
+Best regards,
+Green Tech Expo Team`
+    ],
+    qs: [
+      { q: "Why did Ms. Chen write the first email?", opts: ["To register a group for an event", "To cancel a reservation", "To request a refund", "To apply for a booth"], ans: 0, exp: "Laura 為 Solaris Energy 的六人團體報名綠能科技展。" },
+      { q: "How much will each ticket cost Ms. Chen's group?", opts: ["$102", "$120", "$135", "$90"], ans: 0, exp: "跨篇計算：標準票 $120，五人以上打 85 折 = $120 × 0.85 = $102。" },
+      { q: "What is indicated about the battery storage workshop?", opts: ["Seats are limited, so early arrival is advised", "It requires a separate ticket", "It has been canceled", "It is only for speakers"], ans: 0, exp: "確認信說工作坊含在門票內，但 seating is limited... arriving early（座位有限，建議早到）。" },
+      { q: "What must Ms. Chen do by April 4?", opts: ["Submit payment", "Choose workshop seats", "Send a guest list", "Confirm dietary needs"], ans: 0, exp: "確認信要求 submit payment by April 4（四月四日前付款）以完成報名。" }
+    ]
+  },
+  {
+    title: "雙篇：飯店預訂（確認信＋詢問）",
+    time: 240,
+    passages: [
+      `HARBORVIEW HOTEL — Reservation Confirmation
+
+Guest: Mr. David Ortiz
+Confirmation #: HV-77218
+Check-in: May 12 (3:00 P.M.)  Check-out: May 15 (11:00 A.M.)
+Room: Deluxe King, 2 nights... please note this reservation is for 3 nights.
+Rate: $145 per night (breakfast included)
+Note: Free cancellation up to 48 hours before check-in. Airport shuttle available on request for $25 each way.`,
+      `To: reservations@harborviewhotel.com
+From: David Ortiz
+Subject: Reservation HV-77218
+
+Hello,
+
+I noticed my confirmation lists both "2 nights" and "3 nights," which is confusing. To clarify, I need the room for three nights, checking out on May 15 as stated. Please correct any error so I'm not undercharged or overcharged.
+
+Also, I would like to arrange the airport shuttle for my arrival only, not the return. Finally, is it possible to guarantee an early check-in at around 1:00 P.M.? My flight lands in the morning.
+
+Thank you,
+David Ortiz`
+    ],
+    qs: [
+      { q: "What is the main reason for Mr. Ortiz's email?", opts: ["To clarify the length of his stay", "To cancel his reservation", "To request a different hotel", "To complain about the breakfast"], ans: 0, exp: "確認信同時寫了 2 晚與 3 晚，Ortiz 寫信澄清他需要住三晚。" },
+      { q: "How much will Mr. Ortiz pay for his room, excluding extras?", opts: ["$435", "$290", "$145", "$390"], ans: 0, exp: "跨篇計算：確認住三晚，$145 × 3 = $435（早餐已含）。" },
+      { q: "What shuttle service does Mr. Ortiz request?", opts: ["One-way for his arrival", "Round-trip", "Return only", "None"], ans: 0, exp: "郵件說 shuttle for my arrival only, not the return（只要抵達單程）。" },
+      { q: "What additional request does Mr. Ortiz make?", opts: ["An early check-in", "A late check-out", "A room upgrade", "Extra towels"], ans: 0, exp: "郵件詢問能否保證約下午一點的提前入住（guarantee an early check-in）。" }
+    ]
+  },
+  {
+    title: "單篇：徵才啟事",
+    time: 180,
+    passages: [
+      `NOW HIRING — Warehouse Operations Supervisor
+Northgate Distribution, Riverton
+
+Northgate Distribution is seeking an experienced Operations Supervisor to oversee daily activities at our Riverton warehouse. This is a full-time position with occasional weekend shifts during peak season.
+
+Responsibilities include managing a team of 15 warehouse staff, coordinating inbound and outbound shipments, ensuring compliance with safety regulations, and maintaining accurate inventory records.
+
+Requirements:
+• At least three years of supervisory experience in logistics or a related field
+• Familiarity with warehouse management software
+• Forklift certification (or willingness to obtain one within 60 days of hire)
+• Strong communication and problem-solving skills
+
+We offer a competitive salary, health benefits, paid time off, and opportunities for advancement. Interested candidates should submit a résumé and cover letter through our careers portal by March 20. Only shortlisted applicants will be contacted.`
+    ],
+    qs: [
+      { q: "What position is being advertised?", opts: ["A warehouse supervisor", "A delivery driver", "A software engineer", "A safety inspector"], ans: 0, exp: "啟事招募倉庫營運主管（Operations Supervisor）。" },
+      { q: "What is stated about forklift certification?", opts: ["It can be obtained within 60 days of hire", "It is not required", "It must be renewed yearly", "It is provided during training"], ans: 0, exp: "要求持堆高機證照，或 willingness to obtain one within 60 days（願於錄取後 60 天內取得）。" },
+      { q: "What are applicants asked to submit?", opts: ["A résumé and cover letter", "Three references", "A portfolio", "A completed test"], ans: 0, exp: "啟事要求透過招募入口提交 résumé and cover letter（履歷與求職信）。" }
+    ]
   }
 ];
