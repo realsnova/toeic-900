@@ -185,7 +185,10 @@ function phase() {
   if (d > 14) return { name: "強化期", icon: "⚙️", desc: "攻克長對話與多篇閱讀" };
   return { name: "衝刺期", icon: "🚀", desc: "限時訓練、錯題清零、穩定節奏" };
 }
-function newPerDay() { return phase().name === "衝刺期" ? 5 : 10; }
+function newPerDay() {
+  const base = (typeof Settings !== "undefined" ? Settings.get("newPerDay") : 10) || 10;
+  return phase().name === "衝刺期" ? Math.max(1, Math.round(base / 2)) : base;
+}
 // 各階段每日菜單（label, done 判斷, 跳轉分頁, 預估時間）
 function todayPlan() {
   const d = daily(), ph = phase().name, due = dueCount(), wrongs = wrongCount();
@@ -214,30 +217,45 @@ function todayPlan() {
 const TTS = {
   ok: "speechSynthesis" in window,
   voices: [],
+  currentLang: "en-US", // 這一組播放（一題 Part2 / 一組 Part3-4）目前用的腔調
   init() {
     if (!TTS.ok) return;
-    const pick = () => { TTS.voices = speechSynthesis.getVoices().filter(v => v.lang.startsWith("en")); };
+    const pick = () => {
+      TTS.voices = speechSynthesis.getVoices().filter(v => v.lang.startsWith("en"));
+      if (typeof Accents !== "undefined") Accents.scan();
+    };
     pick();
     speechSynthesis.onvoiceschanged = pick;
   },
+  // 依「聽力腔調」設定，為即將播放的這一組音檔決定要用哪個腔調
+  // auto=裝置預設；mixed=每組隨機挑一個可用腔調（仿真考試混腔）；否則固定使用指定腔調
+  chooseLang() {
+    if (typeof Accents === "undefined" || !Accents.ready) return "en-US";
+    const avail = Accents.available();
+    if (!avail.length) return "en-US";
+    const setting = (typeof Settings !== "undefined" && Settings.get("accent")) || "auto";
+    if (setting === "mixed") return avail[Math.floor(Math.random() * avail.length)];
+    if (avail.includes(setting)) return setting;
+    return avail[0];
+  },
   voiceFor(speaker) {
-    const us = TTS.voices.filter(v => v.lang === "en-US");
-    const pool = us.length ? us : TTS.voices;
+    const pool = (typeof Accents !== "undefined" && Accents.pool[TTS.currentLang]) || TTS.voices;
     if (!pool.length) return null;
     // 盡量讓男女聲用不同語音
     if (speaker === "W") return pool.find(v => /female|zira|aria|jenny/i.test(v.name)) || pool[0];
     if (speaker === "M") return pool.find(v => /male|david|guy|mark/i.test(v.name)) || pool[pool.length - 1];
     return pool[0];
   },
-  speak(text, speaker = "N", rate = 0.92) {
+  speak(text, speaker = "N", rate) {
     return new Promise(res => {
       const u = new SpeechSynthesisUtterance(text);
       const v = TTS.voiceFor(speaker);
       if (v) u.voice = v;
-      u.lang = "en-US"; u.rate = rate;
+      u.lang = TTS.currentLang;
+      u.rate = rate || (typeof Settings !== "undefined" ? Settings.get("ttsRate") : 0.92) || 0.92;
       // 同一語音時用音高區分男女
-      if (speaker === "W") u.pitch = 1.2;
-      if (speaker === "M") u.pitch = 0.85;
+      if (speaker === "W") u.pitch = 1.15;
+      if (speaker === "M") u.pitch = 0.9;
       u.onend = res; u.onerror = res;
       speechSynthesis.speak(u);
     });
@@ -245,6 +263,7 @@ const TTS = {
   async seq(parts) {
     if (!TTS.ok) return;
     TTS.stop();
+    TTS.currentLang = TTS.chooseLang(); // 整組（一題或一組對話）用同一個腔調，同步且在第一個 await 之前完成
     TTS.playing = true;
     for (const p of parts) {
       if (!TTS.playing) break;
@@ -258,29 +277,69 @@ const TTS = {
 TTS.init();
 
 /* ============ 分頁切換 ============ */
-const tabs = ["home", "vocab", "listen", "p5", "p6", "p7", "wrong", "bank", "stats"];
+// 頂層導覽（nav 按鈕、底部導覽列都對應這 5 個）
+const NAV_TABS = ["home", "practice", "mock", "wrong", "me"];
+// 全部實際存在的內容區塊——頂層 5 個 + 練習/我的兩個 hub 內部的子頁面
+const tabs = ["home", "practice", "vocab", "listen", "p5", "p6", "p7", "mock", "wrong", "me", "bank", "stats", "settings"];
 const renderers = {};
 let activeTimer = null;
 
-document.getElementById("nav").addEventListener("click", (e) => {
-  const btn = e.target.closest("button");
-  if (btn) switchTab(btn.dataset.tab);
+// 子頁面所屬的 hub、與子頁面顯示用標題（給 subheader 返回鈕與首頁捷徑按鈕用）
+const HUB_OF = { vocab: "practice", listen: "practice", p5: "practice", p6: "practice", p7: "practice", bank: "me", stats: "me", settings: "me" };
+const HUB_LABELS = { practice: "練習", me: "我的" };
+const TAB_TITLES = { vocab: "單字卡", listen: "聽力", p5: "Part 5 文法", p6: "Part 6 段落填空", p7: "Part 7 閱讀", stats: "統計", bank: "題庫/備份", settings: "設定" };
+
+["nav", "bottomnav"].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-tab]");
+    if (btn) switchTab(btn.dataset.tab);
+  });
 });
-function switchTab(name) {
+// 顯示某個內容區塊並執行它的 renderer；子頁面會在頂端加一列「← 返回」，不需要更動各 renderer 內部邏輯
+function showTab(name) {
   if (activeTimer) { clearInterval(activeTimer); activeTimer = null; }
   TTS.stop();
-  document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("active", b.dataset.tab === name));
   tabs.forEach(t => document.getElementById("tab-" + t).classList.toggle("active", t === name));
+  const sub = document.getElementById("subheader");
+  if (sub) {
+    const hub = HUB_OF[name];
+    if (hub) {
+      sub.style.display = "flex";
+      document.getElementById("subheader-title").textContent = TAB_TITLES[name] || "";
+      document.getElementById("subheader-hub").textContent = HUB_LABELS[hub] || "返回";
+      document.getElementById("subheader-back").onclick = () => switchTab(hub);
+    } else {
+      sub.style.display = "none";
+    }
+  }
   renderers[name]();
+}
+// 給 nav / 底部導覽列用：切到頂層 5 區之一
+function switchTab(name) {
+  document.querySelectorAll("#nav button, #bottomnav button").forEach(b => b.classList.toggle("active", b.dataset.tab === name));
+  showTab(name);
   updateNavBadges();
+}
+// 給「練習」「我的」兩個 hub 內的卡片用：進入子頁面，但 nav 高亮維持在該 hub 上
+function enterSub(name, hubId) {
+  document.querySelectorAll("#nav button, #bottomnav button").forEach(b => b.classList.toggle("active", b.dataset.tab === hubId));
+  showTab(name);
+  updateNavBadges();
+}
+function goTo(name) {
+  if (NAV_TABS.includes(name)) switchTab(name);
+  else enterSub(name, HUB_OF[name] || "home");
 }
 function updateNavBadges() {
   const due = dueCount();
   const wrongN = wrongCount();
-  const vBtn = document.querySelector('#nav button[data-tab="vocab"]');
-  const wBtn = document.querySelector('#nav button[data-tab="wrong"]');
-  vBtn.innerHTML = "單字卡" + (due ? ` <span class="badge">${due}</span>` : "");
-  wBtn.innerHTML = "錯題本" + (wrongN ? ` <span class="badge">${wrongN}</span>` : "");
+  document.querySelectorAll('button[data-tab="practice"] .badge-slot').forEach(el => {
+    el.innerHTML = due ? ` <span class="badge">${due}</span>` : "";
+  });
+  document.querySelectorAll('button[data-tab="wrong"] .badge-slot').forEach(el => {
+    el.innerHTML = wrongN ? ` <span class="badge">${wrongN}</span>` : "";
+  });
 }
 function dueCount() {
   const t = todayStr();
@@ -336,7 +395,7 @@ renderers.home = function () {
       <h3>🎯 考試日期與預估分數</h3>
       <div class="item-row">
         <div>考試日期：<input type="date" id="exam-date" value="${examDate()}"
-          style="background:var(--panel2);color:var(--text);border:1px solid #3a4a6e;border-radius:8px;padding:6px 10px;font-family:inherit"></div>
+          style="background:var(--panel2);color:var(--text);border:1px solid var(--border2);border-radius:8px;padding:6px 10px;font-family:inherit"></div>
         <div>${est.ready ? `目前實力粗估：<b style="color:var(--accent)">L ${est.L} + R ${est.R} = ${est.L + est.R}</b>` : `<span class="muted">累積更多作答後將顯示預估分數</span>`}</div>
       </div>
       <p class="muted">計畫的三個階段（基礎→強化→衝刺）會依考試日期自動切換，改日期即重新規劃。</p>
@@ -346,7 +405,7 @@ renderers.home = function () {
       <p class="muted">${phaseTips()}</p>
     </div>`;
   $("#tab-home").querySelectorAll("[data-goto]").forEach(b =>
-    b.addEventListener("click", () => switchTab(b.dataset.goto)));
+    b.addEventListener("click", () => goTo(b.dataset.goto)));
   $("#exam-date").addEventListener("change", (e) => {
     if (e.target.value) { S.exam = e.target.value; save(); renderers.home(); }
   });
@@ -495,6 +554,11 @@ function renderMCQ(container, item, meta, onDone) {
     });
   });
 }
+// 只有裝置上偵測到 2 種以上腔調時才顯示標籤，避免對只有預設腔調的裝置造成無意義的雜訊
+function accentTag() {
+  if (typeof Accents === "undefined" || !Accents.ready || Accents.available().length <= 1) return "";
+  return `<span class="pill accent-pill">🔊 ${esc(Accents.label(TTS.currentLang))}</span>`;
+}
 function trackReading(correct) { correct ? S.racc.r++ : S.racc.w++; }
 function trackListening(cat, correct) {
   if (!S.lcat[cat]) S.lcat[cat] = { r: 0, w: 0 };
@@ -566,15 +630,16 @@ function l2Next() {
       <div style="text-align:center;padding:16px">
         <div style="font-size:2.4rem">🔊</div>
         <p class="muted">聆聽問句與 (A)(B)(C) 三個回應</p>
+        <div id="l2-accent" style="margin-bottom:8px"></div>
         <button class="btn ghost small" id="l2-replay">↻ 重播</button>
       </div>
       <div class="rating-row" id="l2-abc">
-        ${order.map((_, pos) => `<button style="background:var(--panel2);border:1px solid #3a4a6e" data-pos="${pos}">${"ABC"[pos]}</button>`).join("")}
+        ${order.map((_, pos) => `<button style="background:var(--panel2);border:1px solid var(--border2)" data-pos="${pos}">${"ABC"[pos]}</button>`).join("")}
       </div>
       <div class="feedback"></div>
       <div id="l2-nav" style="text-align:right;margin-top:10px"></div>
     </div>`;
-  const play = () => TTS.seq(l2Audio(item, order));
+  const play = () => { TTS.seq(l2Audio(item, order)); $("#l2-accent").innerHTML = accentTag(); };
   play();
   $("#l2-replay").addEventListener("click", play);
   $("#l2-abc").querySelectorAll("button").forEach(btn => {
@@ -637,11 +702,13 @@ function startL34(si) {
           <button class="btn ghost small" id="l34-replay">↻ 重播音檔</button>
         </div>
         <p class="muted">先讀題目，音檔播放中即可作答。</p>
+        <div id="l34-accent" style="margin:4px 0 8px"></div>
         <div id="l34-q"></div>
         <div id="l34-nav" style="text-align:right"></div>
       </div>`;
-    if (state.at === 0) TTS.seq(l34Audio(set));
-    $("#l34-replay").addEventListener("click", () => TTS.seq(l34Audio(set)));
+    const playL34 = () => { TTS.seq(l34Audio(set)); $("#l34-accent").innerHTML = accentTag(); };
+    if (state.at === 0) playL34();
+    $("#l34-replay").addEventListener("click", playL34);
     const q = set.qs[state.at];
     renderMCQ($("#l34-q"), q, { progress: `第 ${state.at + 1} / ${set.qs.length} 題` }, (correct) => {
       const key = `${si}-${state.at}`;
@@ -912,7 +979,7 @@ function retryWrong(entry) {
       <div style="text-align:center;padding:12px"><div style="font-size:2rem">🔊</div>
         <button class="btn ghost small" id="wq-replay">↻ 重播</button></div>
       <div class="rating-row" id="wq-abc">
-        ${order.map((_, pos) => `<button style="background:var(--panel2);border:1px solid #3a4a6e" data-pos="${pos}">${"ABC"[pos]}</button>`).join("")}
+        ${order.map((_, pos) => `<button style="background:var(--panel2);border:1px solid var(--border2)" data-pos="${pos}">${"ABC"[pos]}</button>`).join("")}
       </div>
       <div class="feedback"></div><div id="wq-nav" style="text-align:right;margin-top:10px"></div>`;
     const play = () => TTS.seq(l2Audio(item, order));
@@ -1018,22 +1085,22 @@ renderers.bank = function () {
       <h2>✨ 一鍵擴增題庫</h2>
       <p class="muted">三步驟：① 選類型按「產生擴充指令」並複製 → ② 貼給 Claude（或任何 AI）→ ③ 把 AI 回覆的 JSON 貼到下方按「匯入」。新題目立即加入練習輪替，換題型時重複相同步驟即可。</p><br>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <select id="bank-type" style="background:var(--panel2);color:var(--text);border:1px solid #3a4a6e;border-radius:8px;padding:8px 10px;font-family:inherit">
+        <select id="bank-type" style="background:var(--panel2);color:var(--text);border:1px solid var(--border2);border-radius:8px;padding:8px 10px;font-family:inherit">
           ${Object.keys(BANK_TYPES).map(k => `<option value="${k}">${BANK_TYPES[k].name}</option>`).join("")}
         </select>
         <label class="muted">數量 <input type="number" id="bank-n" value="30" min="1" max="100"
-          style="width:64px;background:var(--panel2);color:var(--text);border:1px solid #3a4a6e;border-radius:8px;padding:8px;font-family:inherit"></label>
+          style="width:64px;background:var(--panel2);color:var(--text);border:1px solid var(--border2);border-radius:8px;padding:8px;font-family:inherit"></label>
         <button class="btn" id="bank-gen">產生擴充指令</button>
       </div>
       <div id="bank-prompt-area" style="display:none;margin-top:12px">
         <textarea id="bank-prompt" readonly rows="7"
-          style="width:100%;background:var(--panel2);color:var(--text);border:1px solid #3a4a6e;border-radius:10px;padding:10px;font-family:inherit;font-size:0.85rem"></textarea>
+          style="width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--border2);border-radius:10px;padding:10px;font-family:inherit;font-size:0.85rem"></textarea>
         <div style="text-align:right;margin-top:6px"><button class="btn small" id="bank-copy">📋 複製指令</button></div>
       </div>
-      <hr style="border-color:#2a3550;margin:16px 0">
+      <hr style="border-color:var(--border);margin:16px 0">
       <p class="muted">把 AI 產生的 JSON 貼到這裡：</p>
       <textarea id="bank-paste" rows="5" placeholder='[{"w":"...", ...}]'
-        style="width:100%;background:var(--panel2);color:var(--text);border:1px solid #3a4a6e;border-radius:10px;padding:10px;font-family:inherit;font-size:0.85rem;margin-top:6px"></textarea>
+        style="width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--border2);border-radius:10px;padding:10px;font-family:inherit;font-size:0.85rem;margin-top:6px"></textarea>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:8px;flex-wrap:wrap">
         <span class="muted" id="bank-result"></span>
         <button class="btn" id="bank-import">匯入題庫</button>
@@ -1050,7 +1117,7 @@ renderers.bank = function () {
         <p class="muted">在第一台裝置按「產生新代碼」，然後把代碼抄到第二台裝置的輸入框按「套用」——兩台裝置從此自動同步（存檔後約 1.5 秒推送雲端，開啟頁面時自動抓取最新進度）。</p><br>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <input id="sync-code-input" value="${esc(Sync.code)}" placeholder="貼上同步代碼，如 ab3de-f7gh9"
-            style="background:var(--panel2);color:var(--text);border:1px solid #3a4a6e;border-radius:8px;padding:8px 10px;font-family:inherit;min-width:180px">
+            style="background:var(--panel2);color:var(--text);border:1px solid var(--border2);border-radius:8px;padding:8px 10px;font-family:inherit;min-width:180px">
           <button class="btn small" id="sync-apply">套用</button>
           <button class="btn secondary small" id="sync-gen">產生新代碼</button>
           ${Sync.code ? `<button class="btn ghost small" id="sync-now">立即同步</button><button class="btn ghost small" id="sync-clear">解除此裝置同步</button>` : ""}
