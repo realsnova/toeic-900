@@ -34,17 +34,20 @@ const Sync = {
     if (!Sync.ready || !Sync.code) return null;
     return Sync.db.ref("sync/" + Sync.code.replace(/[^a-z0-9-]/g, ""));
   },
-  // 啟動時抓一次雲端資料，若比本機新就採用雲端版本
-  async pullOnStartup() {
+  // 背景抓一次雲端資料。baseline = 開機當下的本機時間戳。
+  // 只有在「雲端比開機當下的本機新」且「使用者這段背景時間內沒有動過本機」時才套用，
+  // 避免蓋掉使用者開 App 後、雲端回應前就已經開始的作答。
+  async pullOnStartup(baseline) {
     const ref = Sync.ref();
     if (!ref) return false;
+    const base = baseline == null ? (S.updatedAt || 0) : baseline;
     try {
       const snap = await ref.get();
       const remote = snap.val();
       if (!remote || !remote.records) return false;
-      const localTime = S.updatedAt || 0;
       const remoteTime = remote.updatedAt || 0;
-      if (remoteTime > localTime) {
+      const localNow = S.updatedAt || 0;
+      if (remoteTime > base && localNow === base) {
         S = Object.assign(defaultState(), remote.records);
         localStorage.setItem(STORE_KEY, JSON.stringify(S));
         if (remote.bank) saveBank(Object.assign(emptyBank(), remote.bank));

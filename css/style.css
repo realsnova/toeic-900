@@ -57,7 +57,6 @@
   }
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-* { transition: background-color .2s ease, border-color .2s ease, color .2s ease; }
 body {
   background: var(--bg);
   color: var(--text);
@@ -65,6 +64,23 @@ body {
   line-height: 1.6;
   min-height: 100vh;
 }
+/* 主題切換時只讓「面板／文字色」這類大面積表面做漸變，不套在全部元素上
+   （全域 * transition 會拖慢計時器變色、進度條、hover 等即時回饋，屬效能與體感反模式）。 */
+body, header, #bottomnav, .card, .hub-card, .stat-tile, .plan-item, .item-row,
+.opt, .passage, .flashcard, .modal, .toast, .bar-track, nav button {
+  transition: background-color .2s ease, border-color .2s ease, color .2s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+
+/* 鍵盤焦點可見樣式（滑鼠點擊不顯示，僅鍵盤 Tab 導覽時顯示） */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+button:focus:not(:focus-visible) { outline: none; }
 header {
   position: sticky; top: 0; z-index: 10;
   background: var(--header-bg);

@@ -466,7 +466,7 @@ function nextCard() {
   box.innerHTML = `
     <p class="q-progress">剩餘 ${vq.length} 張 ${isNew ? "· 🆕 新單字" : "· 🔁 複習"}</p>
     <div class="flashcard" id="fc">
-      <div class="word">${esc(card.w)} <button class="speak-btn" id="spk" title="發音">🔊</button></div>
+      <div class="word">${esc(card.w)} <button class="speak-btn" id="spk" title="發音" aria-label="播放單字發音">🔊</button></div>
       <div class="pos">${esc(card.pos)}</div>
       <div class="hint">點擊卡片顯示答案</div>
     </div>
@@ -477,7 +477,7 @@ function nextCard() {
 }
 function revealCard(card) {
   $("#fc").innerHTML = `
-    <div class="word">${esc(card.w)} <button class="speak-btn" id="spk2" title="發音">🔊</button></div>
+    <div class="word">${esc(card.w)} <button class="speak-btn" id="spk2" title="發音" aria-label="播放單字與例句發音">🔊</button></div>
     <div class="pos">${esc(card.pos)}</div>
     <div class="zh">${esc(card.zh)}</div>
     <div class="ex">${esc(card.ex)}</div>
@@ -1265,14 +1265,21 @@ renderers.stats = function () {
 /* ============ 啟動 ============ */
 mergeBank();
 async function boot() {
-  // 雲端同步的拉取務必在第一次 render 之前完成，
-  // 否則任何在 render 過程中觸發的 save()（例如指定預設考試日期）會搶先寫入時間戳，
-  // 導致「較新」的空白本機狀態誤判為比雲端資料新，蓋掉雲端的真實進度。
-  if (typeof Sync !== "undefined") {
-    Sync.init();
-    if (await Sync.pullOnStartup()) mergeBank();
-  }
+  // 先用本機資料立刻渲染首頁（秒開，不等網路）——避免網路慢時白屏。
+  // 記下開機當下的本機時間戳當基準，雲端在背景對帳，只有雲端確實較新且這段時間
+  // 使用者沒動過本機時才套用並重繪，兼顧「秒開」與「不蓋掉進度」。
+  const bootLocalTime = S.updatedAt || 0;
   renderers.home();
   updateNavBadges();
+  if (typeof Sync !== "undefined") {
+    Sync.init();
+    Sync.pullOnStartup(bootLocalTime).then(applied => {
+      if (!applied) return;
+      mergeBank();
+      const active = document.querySelector("#nav button.active, #bottomnav button.active")?.dataset.tab || "home";
+      showTab(active);
+      updateNavBadges();
+    });
+  }
 }
 boot();
