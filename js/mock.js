@@ -379,6 +379,9 @@ const Mock = {
           </details>`).join("") : `<p class="muted">全對！🏆</p>`}
       </div>
       <div style="text-align:center"><button class="btn" id="mock-back">返回模擬考首頁</button></div>`;
+    const scoreVal = r.mode === "full" ? total : (r.L ?? r.R);
+    Anim.numberReveal(Mock.box().querySelector(".score"), scoreVal);
+    if (r.wrongs.length === 0) setTimeout(() => Anim.confetti(), 350);
     Mock.box().querySelectorAll("[data-weak]").forEach(b =>
       b.addEventListener("click", () => goTo(b.dataset.weak)));
     $("#mock-back").addEventListener("click", () => renderers.mock());

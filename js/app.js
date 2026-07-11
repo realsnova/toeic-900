@@ -384,7 +384,7 @@ renderers.home = function () {
       <div class="stat-tile"><div class="num">${dl >= 0 ? dl : 0}</div><div class="lbl">距離考試（天）</div></div>
       <div class="stat-tile"><div class="num">${ph.icon} ${ph.name}</div><div class="lbl">${ph.desc}</div></div>
       <div class="stat-tile"><div class="num">🔥 ${streak()}</div><div class="lbl">連續學習天數</div></div>
-      <div class="stat-tile"><div class="num">${doneCount}/${plan.length}</div><div class="lbl">今日任務</div></div>
+      <div class="stat-tile ring-tile">${Anim.ringSVG("home-ring")}<div class="lbl">今日任務</div></div>
     </div>
     ${backupDue() ? `<div class="card" style="border-color:var(--warn)">
       <div class="item-row" style="background:transparent;margin:0;padding:0">
@@ -414,6 +414,7 @@ renderers.home = function () {
       <h3>💡 ${ph.name}重點</h3>
       <p class="muted">${phaseTips()}</p>
     </div>`;
+  Anim.ringAnimate("home-ring", doneCount, plan.length);
   $("#tab-home").querySelectorAll("[data-goto]").forEach(b =>
     b.addEventListener("click", () => goTo(b.dataset.goto)));
   $("#exam-date").addEventListener("change", (e) => {
@@ -475,10 +476,17 @@ function nextCard() {
   const isNew = !S.vocab[card.w];
   box.innerHTML = `
     <p class="q-progress">剩餘 ${vq.length} 張 ${isNew ? "· 🆕 新單字" : "· 🔁 複習"}</p>
-    <div class="flashcard" id="fc">
-      <div class="word">${esc(card.w)} <button class="speak-btn" id="spk" title="發音" aria-label="播放單字發音">🔊</button></div>
-      <div class="pos">${esc(card.pos)}</div>
-      <div class="hint">點擊卡片顯示答案</div>
+    <div class="flashcard-stage">
+      <div class="flashcard flip-inner" id="fc">
+        <div class="fc-face fc-front">
+          <div class="word">${esc(card.w)} <button class="speak-btn" id="spk" title="發音" aria-label="播放單字發音">🔊</button></div>
+          <div class="pos">${esc(card.pos)}</div>
+          <div class="hint">點擊卡片顯示答案</div>
+        </div>
+        <div class="fc-face fc-back" id="fc-back"></div>
+      </div>
+      <div class="swipe-hint left">😕 忘記</div>
+      <div class="swipe-hint right">✅ 記得</div>
     </div>
     <div id="rating"></div>`;
   speakWord(card.w);
@@ -486,12 +494,13 @@ function nextCard() {
   $("#fc").addEventListener("click", (e) => { if (e.target.id !== "spk") revealCard(card); });
 }
 function revealCard(card) {
-  $("#fc").innerHTML = `
+  $("#fc-back").innerHTML = `
     <div class="word">${esc(card.w)} <button class="speak-btn" id="spk2" title="發音" aria-label="播放單字與例句發音">🔊</button></div>
     <div class="pos">${esc(card.pos)}</div>
     <div class="zh">${esc(card.zh)}</div>
     <div class="ex">${esc(card.ex)}</div>
     <div class="exzh">${esc(card.exZh)}</div>`;
+  $("#fc").classList.add("flipped");
   $("#spk2").addEventListener("click", (e) => {
     e.stopPropagation();
     if (TTS.ok) TTS.seq([{ t: card.w, s: "N", rate: 0.85, pause: 250 }, { t: card.ex, s: "N" }]);
@@ -513,6 +522,59 @@ function revealCard(card) {
     </div>`;
   $("#rating").querySelectorAll("button").forEach(b =>
     b.addEventListener("click", () => rateCard(card, b.dataset.r, iv)));
+  attachSwipeRating(card, iv);
+}
+// 卡片翻面後的滑動評分手勢：左滑=忘記、右滑=記得。位移動畫套用在外層 .flashcard-stage，
+// 與內層 #fc 的 3D 翻面 rotateY 分開處理，避免兩個 transform 疊加造成座標混亂。
+function attachSwipeRating(card, iv) {
+  const fc = $("#fc");
+  const stage = document.querySelector(".flashcard-stage");
+  const hintL = stage.querySelector(".swipe-hint.left");
+  const hintR = stage.querySelector(".swipe-hint.right");
+  const threshold = 90;
+  let startX = null, dx = 0, dragging = false, done = false;
+  const reset = () => {
+    stage.style.transition = reducedMotion() ? "none" : "transform .3s cubic-bezier(.34,1.56,.64,1)";
+    stage.style.transform = "";
+    hintL.style.opacity = 0; hintR.style.opacity = 0;
+  };
+  const onStart = (e) => {
+    if (done) return;
+    const t = e.touches ? e.touches[0] : e;
+    startX = t.clientX; dx = 0; dragging = true;
+    stage.style.transition = "none";
+  };
+  const onMove = (e) => {
+    if (!dragging || done) return;
+    const t = e.touches ? e.touches[0] : e;
+    dx = t.clientX - startX;
+    if (!reducedMotion()) {
+      stage.style.transform = `translateX(${dx}px) rotate(${dx / 20}deg)`;
+      const op = Math.min(1, Math.abs(dx) / threshold);
+      if (dx < 0) { hintL.style.opacity = op; hintR.style.opacity = 0; }
+      else { hintR.style.opacity = op; hintL.style.opacity = 0; }
+    }
+  };
+  const onEnd = () => {
+    if (!dragging || done) return;
+    dragging = false;
+    if (Math.abs(dx) > threshold) {
+      done = true;
+      const dir = dx < 0 ? "again" : "good";
+      if (!reducedMotion()) {
+        stage.style.transition = "transform .25s ease, opacity .25s ease";
+        stage.style.transform = `translateX(${dx < 0 ? -500 : 500}px) rotate(${dx < 0 ? -25 : 25}deg)`;
+        stage.style.opacity = "0";
+      }
+      setTimeout(() => rateCard(card, dir, iv), reducedMotion() ? 0 : 200);
+    } else {
+      reset();
+    }
+  };
+  fc.addEventListener("touchstart", onStart, { passive: true });
+  fc.addEventListener("touchmove", onMove, { passive: true });
+  fc.addEventListener("touchend", onEnd);
+  fc.addEventListener("touchcancel", onEnd);
 }
 function rateCard(card, r, iv) {
   const isNew = !S.vocab[card.w];
@@ -568,6 +630,24 @@ function renderMCQ(container, item, meta, onDone) {
 function accentTag() {
   if (typeof Accents === "undefined" || !Accents.ready || Accents.available().length <= 1) return "";
   return `<span class="pill accent-pill">🔊 ${esc(Accents.label(TTS.currentLang))}</span>`;
+}
+// 聽力播放視覺化（波紋動畫）與語速快捷鈕，Part 2 / Part 3-4 共用
+function waveHTML() {
+  return `<div class="wave-bars" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>`;
+}
+function rateQuickHTML() {
+  const rates = [0.8, 0.9, 1.0, 1.1];
+  const cur = Settings.get("ttsRate");
+  const nearest = rates.reduce((a, b) => Math.abs(b - cur) < Math.abs(a - cur) ? b : a);
+  return `<div class="rate-quick">${rates.map(r =>
+    `<button data-rate="${r}" class="${r === nearest ? "active" : ""}">${r}x</button>`).join("")}</div>`;
+}
+function wireRateQuick(container, onChange) {
+  container.querySelectorAll(".rate-quick button").forEach(b => b.addEventListener("click", () => {
+    Settings.set("ttsRate", Number(b.dataset.rate));
+    container.querySelectorAll(".rate-quick button").forEach(x => x.classList.toggle("active", x === b));
+    if (onChange) onChange();
+  }));
 }
 function trackReading(correct) { correct ? S.racc.r++ : S.racc.w++; }
 function trackListening(cat, correct) {
@@ -626,6 +706,7 @@ function l2Next() {
         <br><button class="btn" id="l2-again">再來 10 題</button>
         <button class="btn secondary" id="l2-back">返回</button>
       </div>`;
+    Anim.scoreReveal(box.querySelector(".score"), s.right, s.ids.length);
     $("#l2-again").addEventListener("click", startL2);
     $("#l2-back").addEventListener("click", renderers.listen);
     updateNavBadges();
@@ -638,10 +719,11 @@ function l2Next() {
     <div class="card">
       <p class="q-progress">第 ${s.at + 1} / ${s.ids.length} 題</p>
       <div style="text-align:center;padding:16px">
-        <div style="font-size:2.4rem">🔊</div>
+        ${waveHTML()}
         <p class="muted">聆聽問句與 (A)(B)(C) 三個回應</p>
         <div id="l2-accent" style="margin-bottom:8px"></div>
         <button class="btn ghost small" id="l2-replay">↻ 重播</button>
+        ${rateQuickHTML()}
       </div>
       <div class="rating-row" id="l2-abc">
         ${order.map((_, pos) => `<button style="background:var(--panel2);border:1px solid var(--border2)" data-pos="${pos}">${"ABC"[pos]}</button>`).join("")}
@@ -652,6 +734,7 @@ function l2Next() {
   const play = () => { TTS.seq(l2Audio(item, order)); $("#l2-accent").innerHTML = accentTag(); };
   play();
   $("#l2-replay").addEventListener("click", play);
+  wireRateQuick(box, play);
   $("#l2-abc").querySelectorAll("button").forEach(btn => {
     btn.addEventListener("click", () => {
       TTS.stop();
@@ -701,6 +784,7 @@ function startL34(si) {
         </div>
         <div class="card"><h3>📜 逐字稿</h3><div class="passage">${transcript(set)}</div>
           <div style="text-align:right"><button class="btn" id="l34-back">返回列表</button></div></div>`;
+      Anim.scoreReveal(box.querySelector(".score"), state.right, set.qs.length);
       $("#l34-back").addEventListener("click", renderers.listen);
       updateNavBadges();
       return;
@@ -712,13 +796,16 @@ function startL34(si) {
           <button class="btn ghost small" id="l34-replay">↻ 重播音檔</button>
         </div>
         <p class="muted">先讀題目，音檔播放中即可作答。</p>
-        <div id="l34-accent" style="margin:4px 0 8px"></div>
+        ${waveHTML()}
+        <div id="l34-accent" style="margin:4px 0 8px;text-align:center"></div>
+        ${rateQuickHTML()}
         <div id="l34-q"></div>
         <div id="l34-nav" style="text-align:right"></div>
       </div>`;
     const playL34 = () => { TTS.seq(l34Audio(set)); $("#l34-accent").innerHTML = accentTag(); };
     if (state.at === 0) playL34();
     $("#l34-replay").addEventListener("click", playL34);
+    wireRateQuick(box, playL34);
     const q = set.qs[state.at];
     renderMCQ($("#l34-q"), q, { progress: `第 ${state.at + 1} / ${set.qs.length} 題` }, (correct) => {
       const key = `${si}-${state.at}`;
@@ -778,6 +865,7 @@ function p5Next() {
         <br><button class="btn" id="p5-again">再來 10 題</button>
         <button class="btn secondary" id="p5-back">返回</button>
       </div>`;
+    Anim.scoreReveal(document.querySelector("#tab-p5 .score"), s.right, s.ids.length);
     $("#p5-again").addEventListener("click", startP5);
     $("#p5-back").addEventListener("click", p5Menu);
     updateNavBadges();
@@ -830,6 +918,7 @@ function startP6(pi) {
           <p class="muted">${state.right === p.blanks.length ? "全對！🏆" : "答錯的空格已加入錯題本。"}</p>
           <br><button class="btn" id="p6-back">返回列表</button>
         </div>`;
+      Anim.scoreReveal(box.querySelector(".score"), state.right, p.blanks.length);
       $("#p6-back").addEventListener("click", renderers.p6);
       updateNavBadges();
       return;
@@ -914,6 +1003,7 @@ function startP7(si) {
           <p class="muted">${state.right === set.qs.length ? "全對！閱讀力已達高分水準 🏆" : "答錯的題目已加入錯題本。"}</p>
           <br><button class="btn" id="p7-back">返回列表</button>
         </div>`;
+      Anim.scoreReveal(box.querySelector(".score"), state.right, set.qs.length);
       $("#p7-back").addEventListener("click", renderers.p7);
       updateNavBadges();
       return;

@@ -374,3 +374,77 @@ main { max-width: 860px; margin: 0 auto; padding: 24px 16px 80px; }
 .mock-wrong summary { cursor: pointer; font-size: 0.92rem; }
 .mock-wrong summary::marker { color: var(--accent); }
 .mock-wrong .explain { margin-top: 10px; margin-bottom: 0; }
+
+/* 進度環 */
+.ring-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+.progress-ring .ring-bg { fill: none; stroke: var(--panel3); stroke-width: 6; }
+.progress-ring .ring-fg {
+  fill: none; stroke: var(--accent); stroke-width: 6; stroke-linecap: round;
+  transition: stroke-dashoffset .8s cubic-bezier(.4,0,.2,1);
+}
+.progress-ring .ring-text { fill: var(--text); font-size: 15px; font-weight: 700; text-anchor: middle; dominant-baseline: middle; font-family: inherit; }
+
+/* 分數揭曉／confetti */
+.score-num { display: inline-block; }
+.confetti-holder { position: fixed; inset: 0; pointer-events: none; z-index: 1200; overflow: hidden; }
+.confetti-piece {
+  position: absolute; top: -12px; width: 8px; height: 14px; opacity: .9; border-radius: 2px;
+  animation: confettiFall 1.8s ease-in forwards;
+}
+@keyframes confettiFall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(var(--rot, 360deg)); opacity: 0; }
+}
+
+/* 按鈕按壓回饋 */
+.btn:active, .opt:active:not(:disabled), .hub-card:active, .qcell:active { transform: scale(.96); }
+
+/* 選項作答對錯微動效 */
+.opt.correct { animation: optPop .35s ease; }
+.opt.incorrect { animation: optShake .35s ease; }
+@keyframes optPop { 0% { transform: scale(1); } 40% { transform: scale(1.025); } 100% { transform: scale(1); } }
+@keyframes optShake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+
+/* 單字卡 3D 翻面 + 滑動手勢 */
+.flashcard-stage { perspective: 1200px; position: relative; }
+.flashcard.flip-inner {
+  position: relative; transform-style: preserve-3d; transition: transform .45s cubic-bezier(.4,0,.2,1);
+}
+.flashcard.flip-inner.flipped { transform: rotateY(180deg); }
+.fc-face { backface-visibility: hidden; }
+.fc-front { position: relative; }
+.fc-back {
+  position: absolute; inset: 0; transform: rotateY(180deg);
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 40px 24px; box-sizing: border-box; gap: 10px;
+}
+.flashcard.swiping { transition: none; }
+.swipe-hint {
+  position: absolute; top: 50%; transform: translateY(-50%); font-size: 1.6rem; font-weight: 800;
+  opacity: 0; transition: opacity .15s; pointer-events: none; padding: 6px 14px; border-radius: 10px;
+}
+.swipe-hint.left { left: 14px; color: var(--bad); }
+.swipe-hint.right { right: 14px; color: var(--good); }
+
+@media (prefers-reduced-motion: reduce) {
+  .flashcard.flip-inner, .progress-ring .ring-fg { transition: none !important; }
+  .opt.correct, .opt.incorrect, .mock-audio .wave { animation: none !important; }
+}
+
+/* 聽力播放視覺化 */
+.wave-bars { display: flex; align-items: flex-end; justify-content: center; gap: 4px; height: 40px; margin: 10px 0; }
+.wave-bars span {
+  width: 5px; background: var(--accent); border-radius: 3px; animation: waveBar 1s ease-in-out infinite;
+}
+.wave-bars span:nth-child(1) { height: 40%; animation-delay: 0s; }
+.wave-bars span:nth-child(2) { height: 70%; animation-delay: .1s; }
+.wave-bars span:nth-child(3) { height: 100%; animation-delay: .2s; }
+.wave-bars span:nth-child(4) { height: 60%; animation-delay: .3s; }
+.wave-bars span:nth-child(5) { height: 85%; animation-delay: .4s; }
+@keyframes waveBar { 0%, 100% { transform: scaleY(.4); } 50% { transform: scaleY(1); } }
+.rate-quick { display: flex; gap: 6px; justify-content: center; margin-top: 8px; }
+.rate-quick button {
+  background: var(--panel2); border: 1px solid var(--border2); color: var(--muted);
+  border-radius: 999px; padding: 4px 12px; font-size: 0.8rem; font-family: inherit; cursor: pointer;
+}
+.rate-quick button.active { background: var(--accent); border-color: var(--accent); color: #fff; }

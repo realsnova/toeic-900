@@ -106,3 +106,73 @@ const UI = {
     });
   }
 };
+
+/* ============ 動效工具：進度環、數字滾動、confetti ============ */
+const reducedMotion = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const Anim = {
+  // 回傳一個帶 id 的 SVG 圓環字串，插入 DOM 後呼叫 ringAnimate(id, done, total) 讓它動畫轉入
+  ringSVG(id, size = 64) {
+    const r = size / 2 - 6;
+    return `<svg class="progress-ring" id="${id}" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">
+      <circle class="ring-bg" cx="${size / 2}" cy="${size / 2}" r="${r}"/>
+      <circle class="ring-fg" cx="${size / 2}" cy="${size / 2}" r="${r}" transform="rotate(-90 ${size / 2} ${size / 2})"/>
+      <text class="ring-text" x="50%" y="52%">0/0</text>
+    </svg>`;
+  },
+  ringAnimate(id, done, total) {
+    const svg = document.getElementById(id);
+    if (!svg) return;
+    const circle = svg.querySelector(".ring-fg");
+    const r = circle.r.baseVal.value;
+    const c = 2 * Math.PI * r;
+    const pct = total ? Math.min(1, done / total) : 0;
+    svg.querySelector(".ring-text").textContent = `${done}/${total}`;
+    circle.style.strokeDasharray = `${c} ${c}`;
+    if (reducedMotion()) { circle.style.strokeDashoffset = c * (1 - pct); return; }
+    circle.style.strokeDashoffset = c;
+    requestAnimationFrame(() => requestAnimationFrame(() => { circle.style.strokeDashoffset = c * (1 - pct); }));
+  },
+  // 讓一個元素的文字內容從 0 數到 to
+  countUp(el, to, duration = 700) {
+    if (!el) return;
+    if (reducedMotion() || !to) { el.textContent = to; return; }
+    const t0 = performance.now();
+    const tick = now => {
+      const p = Math.min(1, (now - t0) / duration);
+      const eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(eased * to);
+      if (p < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  },
+  // scoreEl 是外層容器（含「X / Y」），right/total 用於決定是否觸發 confetti
+  scoreReveal(scoreEl, right, total) {
+    if (!scoreEl) return;
+    scoreEl.innerHTML = `<span class="score-num">0</span> / ${total}`;
+    Anim.countUp(scoreEl.querySelector(".score-num"), right, 700);
+    if (total > 0 && right === total) setTimeout(() => Anim.confetti(), 350);
+  },
+  numberReveal(scoreEl, value) {
+    if (!scoreEl) return;
+    scoreEl.textContent = "0";
+    Anim.countUp(scoreEl, value, 700);
+  },
+  confetti() {
+    if (reducedMotion()) return;
+    const colors = ["#4f8ef7", "#8b5cf6", "#34d399", "#fbbf24", "#f87171"];
+    const holder = document.createElement("div");
+    holder.className = "confetti-holder";
+    for (let i = 0; i < 32; i++) {
+      const p = document.createElement("div");
+      p.className = "confetti-piece";
+      p.style.left = Math.random() * 100 + "%";
+      p.style.background = colors[i % colors.length];
+      p.style.animationDelay = (Math.random() * 0.3) + "s";
+      p.style.setProperty("--rot", Math.round(Math.random() * 540 - 270) + "deg");
+      holder.appendChild(p);
+    }
+    document.body.appendChild(holder);
+    setTimeout(() => holder.remove(), 2200);
+  }
+};
