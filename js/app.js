@@ -40,6 +40,14 @@ function load() {
       d.lcat = parsed.lcat || {};
       d.racc = parsed.racc || { r: 0, w: 0 };
       d.l34done = parsed.l34done || {};
+      // 遷移：舊版用 "Part 3/4" 當 S.lcat 的 key，但 "/" 是 Firebase 資料庫的禁用字元，
+      // 只要使用者練過聽力 Part 3/4，雲端同步就會整批靜默失敗。改用 "Part 3-4"，並合併舊資料避免遺失。
+      if (d.lcat["Part 3/4"]) {
+        const old = d.lcat["Part 3/4"];
+        const cur = d.lcat["Part 3-4"] || { r: 0, w: 0 };
+        d.lcat["Part 3-4"] = { r: cur.r + old.r, w: cur.w + old.w };
+        delete d.lcat["Part 3/4"];
+      }
     }
   } catch (e) { /* 資料損毀時重置 */ }
   return d;
@@ -820,7 +828,7 @@ function startL34(si) {
     const q = set.qs[state.at];
     renderMCQ($("#l34-q"), q, { progress: `第 ${state.at + 1} / ${set.qs.length} 題` }, (correct) => {
       const key = `${si}-${state.at}`;
-      trackListening("Part 3/4", correct);
+      trackListening("Part 3-4", correct);
       if (correct) { state.right++; delete S.wb.l34[key]; }
       else S.wb.l34[key] = true;
       save();
@@ -1144,7 +1152,7 @@ function retryWrong(entry) {
     $("#wq-replay").addEventListener("click", () => TTS.seq(l34Audio(audio)));
   }
   renderMCQ($("#wq-q"), item, meta, (correct) => {
-    if (entry.type === "l34") trackListening("Part 3/4", correct);
+    if (entry.type === "l34") trackListening("Part 3-4", correct);
     finish(correct);
   });
 }
@@ -1338,9 +1346,10 @@ renderers.stats = function () {
     heat.push(`<div class="cell ${lvl}" title="${todayStr(-i)}：${n} 項">${Number(todayStr(-i).slice(8))}</div>`);
   }
   const vocabPct = (n) => VOCAB.length ? Math.round(n / VOCAB.length * 100) : 0;
+  const lcatLabel = { "Part 3-4": "Part 3/4" }; // 儲存用的 key 不可含 "/"（Firebase 限制），顯示時換回正確名稱
   const lBars = Object.entries(S.lcat).map(([c, s]) => {
     const total = s.r + s.w, pct = total ? Math.round(s.r / total * 100) : 0;
-    return `<div class="bar-row"><span class="lbl">${esc(c)}</span>
+    return `<div class="bar-row"><span class="lbl">${esc(lcatLabel[c] || c)}</span>
       <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
       <span class="val">${pct}%（${s.r}/${total}）</span></div>`;
   }).join("") || `<p class="muted">尚無聽力作答紀錄</p>`;

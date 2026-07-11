@@ -314,7 +314,7 @@ const Mock = {
         chosen = s.lAnswers[i] === null ? null : it.q.opts[s.lAnswers[i]];
         const key = `${it.si}-${it.qi}`;
         if (correct) delete S.wb.l34[key]; else S.wb.l34[key] = true;
-        trackListening("Part 3/4", !!correct);
+        trackListening("Part 3-4", !!correct);
       }
       bump(it.part, correct);
       if (correct) lR++;
