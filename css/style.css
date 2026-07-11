@@ -448,3 +448,14 @@ main { max-width: 860px; margin: 0 auto; padding: 24px 16px 80px; }
   border-radius: 999px; padding: 4px 12px; font-size: 0.8rem; font-family: inherit; cursor: pointer;
 }
 .rate-quick button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* 新手引導步驟指示點 */
+.onb-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border2); transition: all .25s ease; display: inline-block; }
+.onb-dot.cur { background: var(--accent); width: 22px; border-radius: 4px; }
+.onb-dot.done { background: var(--good); }
+
+/* 版本資訊 */
+.changelog-entry { padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.87rem; }
+.changelog-entry:last-child { border-bottom: none; }
+.changelog-entry .v { font-weight: 700; color: var(--accent); }
+.changelog-entry .d { color: var(--muted); font-size: 0.78rem; margin-left: 6px; }

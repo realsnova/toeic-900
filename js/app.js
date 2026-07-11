@@ -13,9 +13,20 @@ function defaultState() {
     wb: { p5: {}, p6: {}, p7: {}, l2: {}, l34: {} }, // 錯題本
     p6done: {}, p7done: {}, l34done: {},
     mocks: [],                // 模擬考歷史 [{date, mode, L, R, parts, secs}]
-    mockSeen: {}              // 模考出過的題（各類別索引），支撐不重複組卷
+    mockSeen: {},             // 模考出過的題（各類別索引），支撐不重複組卷
+    targetScore: null,        // 新手引導設定的目標分數
+    onboarded: false          // 是否已完成（或略過）新手引導
   };
 }
+const APP_VERSION = "1.0.0";
+const CHANGELOG = [
+  { v: "1.0.0", d: "2026-07-11", notes: "新手引導、全域錯誤處理、版本資訊上線；商業級強化收尾完成" },
+  { v: "0.4.0", d: "2026-07-11", notes: "互動打磨：單字卡 3D 翻面與滑動評分手勢、進度環、結算動效、聽力播放視覺化" },
+  { v: "0.3.0", d: "2026-07-11", notes: "完整模擬考上線：仿真聽力節／閱讀節、成績報告、歷史趨勢" },
+  { v: "0.2.1", d: "2026-07-10", notes: "題庫擴充至 1,000+ 題" },
+  { v: "0.2.0", d: "2026-07-10", notes: "白屏修復、鍵盤無障礙、App 圖示、5 大分區介面、雙主題、聽力腔調選擇" },
+  { v: "0.1.0", d: "2026-07-09", notes: "雲端同步、SRS 單字卡、Part 5–7 練習、聽力訓練上線" }
+];
 let S = load();
 function load() {
   const d = defaultState();
@@ -1042,7 +1053,9 @@ renderers.wrong = function () {
   const box = $("#tab-wrong");
   if (!entries.length) {
     box.innerHTML = `<div class="card result-banner"><div style="font-size:3rem">✨</div>
-      <h2>錯題本是空的</h2><p class="muted">答錯的題目會自動收錄到這裡，重新答對即可移除。</p></div>`;
+      <h2>錯題本是空的</h2><p class="muted">答錯的題目會自動收錄到這裡，重新答對即可移除。</p>
+      <br><button class="btn" id="wrong-empty-go">去練習</button></div>`;
+    $("#wrong-empty-go").addEventListener("click", () => switchTab("practice"));
     return;
   }
   box.innerHTML = `
@@ -1212,7 +1225,8 @@ renderers.bank = function () {
         <p class="muted">尚未設定雲端同步。設定步驟請見 README.md「雲端同步設定」一節（約 3 分鐘，需要一個免費 Google 帳號建立 Firebase 專案）。設定完成前，各裝置的紀錄各自獨立，可用上方「匯出/匯入備份檔」手動搬移。</p>` : `
         <p class="muted">
           目前同步代碼：<b>${Sync.code ? esc(Sync.code) : "尚未設定"}</b>
-          ${Sync.lastSynced ? `上次同步：${Sync.lastSynced.toLocaleTimeString("zh-TW")}` : ""}
+          ${Sync.lastSynced ? `上次同步：${Sync.lastSynced.toLocaleTimeString("zh-TW")}` : Sync.code ? "尚未完成過同步" : ""}
+          ${!navigator.onLine ? `<br><span style="color:var(--warn)">⚠️ 目前離線，紀錄先存本機，恢復網路後會自動同步</span>` : ""}
         </p>
         <p class="muted">在第一台裝置按「產生新代碼」，然後把代碼抄到第二台裝置的輸入框按「套用」——兩台裝置從此自動同步（存檔後約 1.5 秒推送雲端，開啟頁面時自動抓取最新進度）。</p><br>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -1369,17 +1383,24 @@ async function boot() {
   // 記下開機當下的本機時間戳當基準，雲端在背景對帳，只有雲端確實較新且這段時間
   // 使用者沒動過本機時才套用並重繪，兼顧「秒開」與「不蓋掉進度」。
   const bootLocalTime = S.updatedAt || 0;
+  ensureOnboardFlag();
   renderers.home();
   updateNavBadges();
   if (typeof Sync !== "undefined") {
     Sync.init();
     Sync.pullOnStartup(bootLocalTime).then(applied => {
-      if (!applied) return;
-      mergeBank();
-      const active = document.querySelector("#nav button.active, #bottomnav button.active")?.dataset.tab || "home";
-      showTab(active);
-      updateNavBadges();
+      if (applied) {
+        mergeBank();
+        const active = document.querySelector("#nav button.active, #bottomnav button.active")?.dataset.tab || "home";
+        showTab(active);
+        updateNavBadges();
+      }
+      // 引導的判斷務必等雲端拉取結果出爐後才做，否則裝置 B 帶著同步代碼登入時，
+      // 對帳完成前那一瞬間的空白本機狀態會被誤判成「全新使用者」而彈出引導。
+      maybeOnboard();
     });
+  } else {
+    maybeOnboard();
   }
 }
 boot();
@@ -1389,4 +1410,112 @@ window.addEventListener("beforeunload", (e) => {
     e.preventDefault();
     e.returnValue = "";
   }
+});
+
+/* ============ 新手引導 ============ */
+function isFreshUser() {
+  // 注意：不可用 Object.keys(S.daily).length 判斷——daily() 只要被呼叫過（例如首頁 render
+  // 時算今日菜單）就會自動幫今天建立一筆全零的空物件，導致永遠判定為「非全新使用者」。
+  // 改用活動總量加總，dayTotal() 對全零/空物件會正確回傳 0。
+  const totalActivity = Object.values(S.daily).reduce((sum, d) => sum + dayTotal(d), 0);
+  return Object.keys(S.vocab).length === 0 && !S.exam &&
+    totalActivity === 0 && (!S.mocks || S.mocks.length === 0);
+}
+// 舊使用者（欄位是後來才加的，本地資料裡不會有 onboarded）不強制引導，靜默補標記即可；
+// 只有真正沒有任何使用痕跡的全新使用者才會在 maybeOnboard() 觸發引導畫面。
+function ensureOnboardFlag() {
+  if (!S.onboarded && !isFreshUser()) S.onboarded = true;
+}
+function maybeOnboard() {
+  ensureOnboardFlag();
+  if (!S.onboarded && isFreshUser()) showOnboarding();
+}
+function showOnboarding() {
+  const wrap = document.createElement("div");
+  wrap.className = "modal-backdrop";
+  const state = { target: 900, exam: todayStr(49), minutes: 30 };
+  let step = 1;
+  const minuteMap = { 15: 5, 30: 10, 60: 15, 90: 20 };
+  function finish() {
+    S.targetScore = state.target;
+    S.exam = state.exam || todayStr(49);
+    Settings.set("newPerDay", minuteMap[state.minutes] || 10);
+    S.onboarded = true;
+    save();
+    close();
+    renderers.home();
+  }
+  function close() {
+    wrap.classList.remove("open");
+    setTimeout(() => wrap.remove(), 200);
+  }
+  function render() {
+    const dots = [1, 2, 3].map(n => `<span class="onb-dot ${n === step ? "cur" : ""} ${n < step ? "done" : ""}"></span>`).join("");
+    let body;
+    if (step === 1) {
+      body = `
+        <h3>🎯 歡迎使用 TOEIC 900+ 衝刺</h3>
+        <p class="muted">先花 30 秒設定，幫你排出每天的學習菜單，之後隨時可以在「我的」重新調整。</p>
+        <div class="item-row"><div>目標分數</div>
+          <input type="number" id="onb-target" min="400" max="990" step="5" value="${state.target}"
+            style="width:80px;background:var(--panel2);color:var(--text);border:1px solid var(--border2);border-radius:8px;padding:8px;font-family:inherit"></div>`;
+    } else if (step === 2) {
+      body = `
+        <h3>📅 預計考試日期</h3>
+        <p class="muted">用來自動切換基礎期／強化期／衝刺期的訓練重點。不確定可以先抓個大概。</p>
+        <div class="item-row"><div>考試日</div>
+          <input type="date" id="onb-exam" value="${state.exam}"
+            style="background:var(--panel2);color:var(--text);border:1px solid var(--border2);border-radius:8px;padding:8px;font-family:inherit"></div>`;
+    } else {
+      body = `
+        <h3>⏱️ 每天能投入多少時間？</h3>
+        <p class="muted">決定每天新單字的量，練習量隨時可以在「我的→設定」調整。</p>
+        <div class="rating-row" id="onb-minutes">
+          ${[15, 30, 60, 90].map(m => `<button data-m="${m}" style="flex:1;background:${m === state.minutes ? "var(--accent)" : "var(--panel2)"};color:${m === state.minutes ? "#fff" : "var(--text)"};border:1px solid var(--border2);border-radius:10px;padding:10px;font-family:inherit;cursor:pointer;font-weight:600">${m} 分</button>`).join("")}
+        </div>`;
+    }
+    wrap.innerHTML = `
+      <div class="modal" style="max-width:420px">
+        <div style="display:flex;justify-content:center;gap:6px;margin-bottom:14px">${dots}</div>
+        ${body}
+        <div class="modal-actions" style="margin-top:20px;justify-content:space-between">
+          ${step > 1 ? `<button class="btn secondary" id="onb-back">上一步</button>` : `<span></span>`}
+          <button class="btn" id="onb-next">${step < 3 ? "下一步" : "開始學習 🚀"}</button>
+        </div>
+      </div>`;
+    const targetInput = wrap.querySelector("#onb-target");
+    if (targetInput) targetInput.addEventListener("input", e => { state.target = Number(e.target.value) || 900; });
+    const examInput = wrap.querySelector("#onb-exam");
+    if (examInput) examInput.addEventListener("input", e => { if (e.target.value) state.exam = e.target.value; });
+    wrap.querySelectorAll("#onb-minutes button").forEach(b =>
+      b.addEventListener("click", () => { state.minutes = Number(b.dataset.m); render(); }));
+    const back = wrap.querySelector("#onb-back");
+    if (back) back.addEventListener("click", () => { step--; render(); });
+    wrap.querySelector("#onb-next").addEventListener("click", () => {
+      if (step < 3) { step++; render(); } else { finish(); }
+    });
+  }
+  // 點背景關閉＝略過引導，仍標記為已引導避免下次又彈出（不強迫使用者完成設定）
+  wrap.addEventListener("click", (e) => {
+    if (e.target === wrap) { S.onboarded = true; save(); close(); }
+  });
+  render();
+  document.body.appendChild(wrap);
+  requestAnimationFrame(() => wrap.classList.add("open"));
+}
+
+/* ============ 全域錯誤處理與連線狀態 ============ */
+window.addEventListener("error", (e) => {
+  console.error("未捕捉的錯誤：", e.error || e.message);
+  if (typeof UI !== "undefined") UI.toast("發生了一個小問題，但不影響你目前的進度。若持續發生請重新整理頁面。", "err", 4000);
+});
+window.addEventListener("unhandledrejection", (e) => {
+  console.error("未處理的 Promise 拒絕：", e.reason);
+  if (typeof UI !== "undefined") UI.toast("發生了一個小問題，但不影響你目前的進度。", "err", 4000);
+});
+window.addEventListener("offline", () => {
+  if (typeof UI !== "undefined") UI.toast("目前離線，練習紀錄會存在本機，恢復網路後自動同步。", "info", 3500);
+});
+window.addEventListener("online", () => {
+  if (typeof UI !== "undefined") UI.toast("網路已恢復連線。", "ok", 2500);
 });

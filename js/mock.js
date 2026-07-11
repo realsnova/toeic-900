@@ -427,6 +427,7 @@ const Mock = {
         <div class="hub-text"><div class="hub-title">只考閱讀節</div><div class="hub-sub muted">P5 ×15＋P6 ×1 篇＋P7 ×2 組 · 限時 22 分鐘</div></div>
         <div class="hub-arrow">›</div>
       </div>
+      ${!mocks.length ? `<p class="muted" style="text-align:center;margin-top:8px">完成第一次模擬考後，這裡會顯示成績報告與歷史趨勢。</p>` : ""}
       ${mocks.length ? `
       <div class="card">
         <h2>📈 歷史成績${best ? ` <span class="muted">· 最佳 ${best}</span>` : ""}</h2>

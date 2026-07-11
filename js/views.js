@@ -34,7 +34,7 @@ renderers.me = function () {
     { id: "settings", icon: "⚙️", title: "設定", sub: "主題、聽力語速與腔調、每日新字量" }
   ];
   $("#tab-me").innerHTML = `
-    <div class="card"><h2>👤 我的</h2></div>
+    <div class="card"><h2>👤 我的</h2>${S.targetScore ? `<p class="muted">目標分數 ${S.targetScore} 分</p>` : ""}</div>
     ${cards.map(c => `
       <div class="hub-card" data-go="${c.id}">
         <div class="hub-icon">${c.icon}</div>
@@ -43,9 +43,22 @@ renderers.me = function () {
           <div class="hub-sub muted">${esc(c.sub)}</div>
         </div>
         <div class="hub-arrow">›</div>
-      </div>`).join("")}`;
+      </div>`).join("")}
+    <div class="card">
+      <h3>版本資訊 <span class="muted" style="font-weight:400">v${APP_VERSION}</span></h3>
+      <div id="changelog-list">
+        ${CHANGELOG.slice(0, 3).map(c => `<div class="changelog-entry"><span class="v">v${c.v}</span><span class="d">${c.d}</span><br>${esc(c.notes)}</div>`).join("")}
+      </div>
+      ${CHANGELOG.length > 3 ? `<button class="btn ghost small" id="changelog-more" style="margin-top:8px">顯示完整更新紀錄</button>` : ""}
+    </div>`;
   $("#tab-me").querySelectorAll("[data-go]").forEach(el =>
     el.addEventListener("click", () => enterSub(el.dataset.go, "me")));
+  const moreBtn = $("#changelog-more");
+  if (moreBtn) moreBtn.addEventListener("click", () => {
+    $("#changelog-list").innerHTML = CHANGELOG.map(c =>
+      `<div class="changelog-entry"><span class="v">v${c.v}</span><span class="d">${c.d}</span><br>${esc(c.notes)}</div>`).join("");
+    moreBtn.remove();
+  });
 };
 
 /* ============ 模擬考 ============ */
