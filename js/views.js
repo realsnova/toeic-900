@@ -48,30 +48,8 @@ renderers.me = function () {
     el.addEventListener("click", () => enterSub(el.dataset.go, "me")));
 };
 
-/* ============ 模擬考（第 3 批施工中，先放正式感的預告頁） ============ */
-renderers.mock = function () {
-  const feats = [
-    { icon: "⏱", t: "仿真限時", d: "聽力節連續播放不可暫停、閱讀節限時，重現考場節奏與壓力" },
-    { icon: "🗂", t: "答卷卡模式", d: "作答中不揭曉對錯，可標記🚩待回頭，題號導航一覽已答／未答" },
-    { icon: "📈", t: "成績報告", d: "換算預估 L／R 分數、各 Part 正確率、弱項 Top 3 直接連到練習" },
-    { icon: "📉", t: "歷次趨勢", d: "每次模考自動記錄，折線圖追蹤分數成長與最佳紀錄" }
-  ];
-  $("#tab-mock").innerHTML = `
-    <div class="card" style="text-align:center">
-      <div style="font-size:2.6rem;margin-bottom:6px">🚀</div>
-      <h2 style="justify-content:center">完整模擬考</h2>
-      <p class="muted">仿真整卷測驗即將推出。以下是規劃中的功能：</p>
-    </div>
-    ${feats.map(f => `
-      <div class="hub-card" style="cursor:default">
-        <div class="hub-icon">${f.icon}</div>
-        <div class="hub-text">
-          <div class="hub-title">${f.t}</div>
-          <div class="hub-sub muted">${f.d}</div>
-        </div>
-      </div>`).join("")}
-    <div class="card"><p class="muted">在此之前，你可以到「練習」分頁針對單項限時作答；Part 7 已內建計時器可先養成答題節奏。</p></div>`;
-};
+/* ============ 模擬考 ============ */
+renderers.mock = function () { Mock.menu(); };
 
 /* ============ 設定 ============ */
 renderers.settings = function () {

@@ -11,7 +11,9 @@ function defaultState() {
     racc: { r: 0, w: 0 },     // 閱讀總作答（估分用）
     daily: {},                // date -> {v, p5, p6, p7, l2, l34, newV}
     wb: { p5: {}, p6: {}, p7: {}, l2: {}, l34: {} }, // 錯題本
-    p6done: {}, p7done: {}, l34done: {}
+    p6done: {}, p7done: {}, l34done: {},
+    mocks: [],                // 模擬考歷史 [{date, mode, L, R, parts, secs}]
+    mockSeen: {}              // 模考出過的題（各類別索引），支撐不重複組卷
   };
 }
 let S = load();
@@ -317,12 +319,20 @@ function showTab(name) {
 }
 // 給 nav / 底部導覽列用：切到頂層 5 區之一
 function switchTab(name) {
+  if (name !== "mock" && typeof Mock !== "undefined" && Mock.inProgress()) {
+    Mock.confirmLeave(() => switchTab(name));
+    return;
+  }
   document.querySelectorAll("#nav button, #bottomnav button").forEach(b => b.classList.toggle("active", b.dataset.tab === name));
   showTab(name);
   updateNavBadges();
 }
 // 給「練習」「我的」兩個 hub 內的卡片用：進入子頁面，但 nav 高亮維持在該 hub 上
 function enterSub(name, hubId) {
+  if (typeof Mock !== "undefined" && Mock.inProgress()) {
+    Mock.confirmLeave(() => enterSub(name, hubId));
+    return;
+  }
   document.querySelectorAll("#nav button, #bottomnav button").forEach(b => b.classList.toggle("active", b.dataset.tab === hubId));
   showTab(name);
   updateNavBadges();
@@ -1283,3 +1293,10 @@ async function boot() {
   }
 }
 boot();
+
+window.addEventListener("beforeunload", (e) => {
+  if (typeof Mock !== "undefined" && Mock.inProgress()) {
+    e.preventDefault();
+    e.returnValue = "";
+  }
+});
