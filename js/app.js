@@ -18,8 +18,10 @@ function defaultState() {
     onboarded: false          // 是否已完成（或略過）新手引導
   };
 }
-const APP_VERSION = "1.0.0";
+const APP_VERSION = "1.0.2";
 const CHANGELOG = [
+  { v: "1.0.2", d: "2026-07-12", notes: "驗收稽核：修復自訂題庫匯入可能讓雲端同步靜默失敗的資料安全性問題" },
+  { v: "1.0.1", d: "2026-07-11", notes: "修復雲端同步在練過聽力 Part 3/4 後會靜默失敗的問題" },
   { v: "1.0.0", d: "2026-07-11", notes: "新手引導、全域錯誤處理、版本資訊上線；商業級強化收尾完成" },
   { v: "0.4.0", d: "2026-07-11", notes: "互動打磨：單字卡 3D 翻面與滑動評分手勢、進度環、結算動效、聽力播放視覺化" },
   { v: "0.3.0", d: "2026-07-11", notes: "完整模擬考上線：仿真聽力節／閱讀節、成績報告、歷史趨勢" },
@@ -90,7 +92,10 @@ function validateItem(type, it) {
   const mcq = (q, n) => q && typeof q.q === "string" && Array.isArray(q.opts) && q.opts.length === n &&
     q.opts.every(o => typeof o === "string") && Number.isInteger(q.ans) && q.ans >= 0 && q.ans < n && typeof q.exp === "string";
   switch (type) {
-    case "vocab": return ["w", "pos", "zh", "ex", "exZh"].every(k => typeof it[k] === "string" && it[k]);
+    // w 會被直接當成 S.vocab 的 key（不像 p5 的 cat 可以靜默改字，改字會讓卡片顯示錯誤拼字），
+    // 所以含 Firebase 禁用字元的單字直接拒絕匯入，而不是清洗。
+    case "vocab": return ["w", "pos", "zh", "ex", "exZh"].every(k => typeof it[k] === "string" && it[k]) &&
+      !/[.#$/\[\]]/.test(it.w);
     case "p5": return mcq(it, 4) && typeof it.cat === "string";
     case "p6": return typeof it.title === "string" && typeof it.text === "string" &&
       /___\[1\]___/.test(it.text) && Array.isArray(it.blanks) && it.blanks.length === 4 &&
@@ -111,6 +116,13 @@ function itemKey(type, it) {
   if (type === "p5" || type === "l2") return it.q.toLowerCase().trim();
   return (it.title || "").toLowerCase().trim();
 }
+// Part5 的 cat 欄位最終會被當成 S.cat 物件的 key 存進雲端同步的資料裡；
+// Firebase Realtime Database 的 key 禁止 ". # $ / [ ]"，使用者手動編輯匯入 JSON
+// 時很可能寫出「詞性/詞彙」這種人類習慣的斜線分類，一旦答題觸發 S.cat[cat] 建立，
+// 就會重演 "Part 3/4" 那個讓雲端同步整批靜默失敗的 bug。這裡在匯入當下就清洗掉。
+function sanitizeFirebaseKey(s) {
+  return String(s).replace(/[.#$/\[\]]/g, "-");
+}
 function importBank(type, text) {
   let raw = text.trim().replace(/^```(json)?/i, "").replace(/```$/, "").trim();
   let arr;
@@ -121,6 +133,7 @@ function importBank(type, text) {
   const ok = [];
   arr.forEach(it => {
     if (!validateItem(type, it)) { invalid++; return; }
+    if (type === "p5") it.cat = sanitizeFirebaseKey(it.cat);
     const key = itemKey(type, it);
     if (existing.has(key)) { dup++; return; }
     existing.add(key);
