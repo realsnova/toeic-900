@@ -10,6 +10,8 @@
   --muted: #93a1bd;
   --accent: #4f8ef7;
   --accent2: #8b5cf6;
+  /* 按鈕底色專用：比 --accent 深，確保白色按鈕文字達 WCAG AA 4.5:1（--accent 本身只有 3.21:1） */
+  --accent-btn: #3f72c6;
   --good: #34d399;
   --bad: #f87171;
   --warn: #fbbf24;
@@ -39,6 +41,7 @@
   --muted: #5c6a8a;
   --accent: #3568d6;
   --accent2: #7c4fd6;
+  --accent-btn: var(--accent);
   --good: #17915f;
   --bad: #d64545;
   --warn: #b8790b;
@@ -51,7 +54,7 @@
   :root:not([data-theme]) {
     --bg: #f4f6fb; --panel: #ffffff; --panel2: #eef1f8; --panel3: #e3e8f4;
     --border: #dde3f0; --border2: #c7d0e6; --text: #16213a; --muted: #5c6a8a;
-    --accent: #3568d6; --accent2: #7c4fd6; --good: #17915f; --bad: #d64545; --warn: #b8790b;
+    --accent: #3568d6; --accent2: #7c4fd6; --accent-btn: #3568d6; --good: #17915f; --bad: #d64545; --warn: #b8790b;
     --shadow-1: 0 1px 3px rgba(30,40,80,.08); --shadow-2: 0 6px 20px rgba(30,40,80,.10); --shadow-3: 0 16px 40px rgba(30,40,80,.14);
     --header-bg: rgba(244, 246, 251, 0.85);
   }
@@ -98,7 +101,7 @@ nav button {
   font-size: 0.95rem; font-family: inherit; transition: all .15s;
 }
 nav button:hover { background: var(--panel2); color: var(--text); }
-nav button.active { background: var(--accent); color: #fff; font-weight: 600; }
+nav button.active { background: var(--accent-btn); color: #fff; font-weight: 600; }
 nav button .badge {
   background: var(--bad); color: #fff; border-radius: 10px;
   font-size: 0.7rem; padding: 0 6px; margin-left: 4px;
@@ -117,7 +120,7 @@ main { max-width: 860px; margin: 0 auto; padding: 24px 16px 80px; }
 .muted { color: var(--muted); font-size: 0.9rem; }
 
 .btn {
-  display: inline-block; background: var(--accent); color: #fff;
+  display: inline-block; background: var(--accent-btn); color: #fff;
   border: none; border-radius: 10px; padding: 10px 20px;
   font-size: 0.95rem; font-family: inherit; cursor: pointer;
   transition: all .15s; font-weight: 600;
@@ -447,7 +450,7 @@ main { max-width: 860px; margin: 0 auto; padding: 24px 16px 80px; }
   background: var(--panel2); border: 1px solid var(--border2); color: var(--muted);
   border-radius: 999px; padding: 4px 12px; font-size: 0.8rem; font-family: inherit; cursor: pointer;
 }
-.rate-quick button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.rate-quick button.active { background: var(--accent-btn); border-color: var(--accent-btn); color: #fff; }
 
 /* 新手引導步驟指示點 */
 .onb-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border2); transition: all .25s ease; display: inline-block; }

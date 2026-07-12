@@ -18,8 +18,9 @@ function defaultState() {
     onboarded: false          // 是否已完成（或略過）新手引導
   };
 }
-const APP_VERSION = "1.0.2";
+const APP_VERSION = "1.0.3";
 const CHANGELOG = [
+  { v: "1.0.3", d: "2026-07-12", notes: "驗收稽核：修復考試日期／同步代碼欄位的 XSS 漏洞、深色主題按鈕文字對比度不足、補上頁面 H1 標題" },
   { v: "1.0.2", d: "2026-07-12", notes: "驗收稽核：修復自訂題庫匯入可能讓雲端同步靜默失敗的資料安全性問題" },
   { v: "1.0.1", d: "2026-07-11", notes: "修復雲端同步在練過聽力 Part 3/4 後會靜默失敗的問題" },
   { v: "1.0.0", d: "2026-07-11", notes: "新手引導、全域錯誤處理、版本資訊上線；商業級強化收尾完成" },
@@ -200,7 +201,9 @@ function shuffle(arr) {
   return a;
 }
 function esc(s) {
-  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  // 也跳脫雙引號：本函式的輸出有時會被接在雙引號屬性裡（如 value="${esc(...)}"），
+  // 若來源字串含 " 且不跳脫，攻擊者可跳出屬性注入新屬性（如 onfocus=...）造成 XSS。
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 function $(sel) { return document.querySelector(sel); }
 
@@ -436,7 +439,7 @@ renderers.home = function () {
     <div class="card">
       <h3>🎯 考試日期與預估分數</h3>
       <div class="item-row">
-        <div>考試日期：<input type="date" id="exam-date" value="${examDate()}"
+        <div>考試日期：<input type="date" id="exam-date" value="${esc(examDate())}"
           style="background:var(--panel2);color:var(--text);border:1px solid var(--border2);border-radius:8px;padding:6px 10px;font-family:inherit"></div>
         <div>${est.ready ? `目前實力粗估：<b style="color:var(--accent)">L ${est.L} + R ${est.R} = ${est.L + est.R}</b>` : `<span class="muted">累積更多作答後將顯示預估分數</span>`}</div>
       </div>
