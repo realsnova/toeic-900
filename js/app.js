@@ -1,5 +1,9 @@
 /* ============ 狀態管理 ============ */
 const STORE_KEY = "toeic900";
+// 這兩個常數必須宣告在 `let S = load()` 之前：load() 會呼叫 migrateWb()，
+// const 在初始化前存取會踩到暫時性死區（TDZ）而整個 App 白屏。
+const WB_TYPES = ["p5", "p6", "p7", "l2", "l34"];
+const WB_MASTER_N = 2; // 錯題要連續答對幾次（且跨天）才算掌握、移出錯題本
 
 function defaultState() {
   return {
@@ -10,16 +14,21 @@ function defaultState() {
     lcat: {},                 // 聽力類別（Part 2 / Part 3/4）-> {r, w}
     racc: { r: 0, w: 0 },     // 閱讀總作答（估分用）
     daily: {},                // date -> {v, p5, p6, p7, l2, l34, newV}
-    wb: { p5: {}, p6: {}, p7: {}, l2: {}, l34: {} }, // 錯題本
+    // 錯題本：key -> {n:連續答對次數, last:'YYYY-MM-DD' 最後一次計入的日期}
+    // n 一定要寫成數字（即使是 0）：Firebase 會把 null 值當成刪除，若整個物件只有 null 欄位
+    // 就會變成空物件而被 RTDB 整個節點刪掉，剛答錯的題目會在同步後人間蒸發。
+    wb: { p5: {}, p6: {}, p7: {}, l2: {}, l34: {} },
     p6done: {}, p7done: {}, l34done: {},
+    p5seen: {}, l2seen: {}, // Part 5 / 聽力 Part 2 出過的題（索引），支撐不重複出題輪替
     mocks: [],                // 模擬考歷史 [{date, mode, L, R, parts, secs}]
     mockSeen: {},             // 模考出過的題（各類別索引），支撐不重複組卷
     targetScore: null,        // 新手引導設定的目標分數
     onboarded: false          // 是否已完成（或略過）新手引導
   };
 }
-const APP_VERSION = "1.0.3";
+const APP_VERSION = "1.1.0";
 const CHANGELOG = [
+  { v: "1.1.0", d: "2026-08-09", notes: "學習演算法強化：錯題要連續答對 2 次（跨天）才移除、Part 5 依弱項類別加權出題、Part 5／聽力 Part 2 不重複輪替出題、單字每日複習量上限" },
   { v: "1.0.3", d: "2026-07-12", notes: "驗收稽核：修復考試日期／同步代碼欄位的 XSS 漏洞、深色主題按鈕文字對比度不足、補上頁面 H1 標題" },
   { v: "1.0.2", d: "2026-07-12", notes: "驗收稽核：修復自訂題庫匯入可能讓雲端同步靜默失敗的資料安全性問題" },
   { v: "1.0.1", d: "2026-07-11", notes: "修復雲端同步在練過聽力 Part 3/4 後會靜默失敗的問題" },
@@ -40,6 +49,9 @@ function load() {
       Object.assign(d, parsed);
       // 舊版資料補齊新欄位
       d.wb = Object.assign({ p5: {}, p6: {}, p7: {}, l2: {}, l34: {} }, parsed.wb || {});
+      migrateWb(d);
+      d.p5seen = parsed.p5seen || {};
+      d.l2seen = parsed.l2seen || {};
       d.lcat = parsed.lcat || {};
       d.racc = parsed.racc || { r: 0, w: 0 };
       d.l34done = parsed.l34done || {};
@@ -226,6 +238,12 @@ function newPerDay() {
   const base = (typeof Settings !== "undefined" ? Settings.get("newPerDay") : 10) || 10;
   return phase().name === "衝刺期" ? Math.max(1, Math.round(base / 2)) : base;
 }
+// 到期複習卡的每日上限。請假幾天回來會累積上百張到期卡，一次全端出來只會讓人直接放棄；
+// 截掉的部分因為 due 日期已過，明天本來就會再出現，不需要另外記錄。
+function reviewPerDay() {
+  const v = typeof Settings !== "undefined" ? Number(Settings.get("revPerDay")) : 60;
+  return Number.isFinite(v) && v > 0 ? Math.round(v) : 60;
+}
 // 各階段每日菜單（label, done 判斷, 跳轉分頁, 預估時間）
 function todayPlan() {
   const d = daily(), ph = phase().name, due = dueCount(), wrongs = wrongCount();
@@ -388,13 +406,52 @@ function updateNavBadges() {
 }
 function dueCount() {
   const t = todayStr();
-  const dueOld = Object.values(S.vocab).filter(c => c.due <= t).length;
+  // 到期卡要套用每日上限，否則徽章顯示 200 但實際佇列只給 60，數字對不起來
+  const dueOld = Math.min(Object.values(S.vocab).filter(c => c.due <= t).length, reviewPerDay());
   const newLeft = Math.max(0, newPerDay() - daily().newV);
   const unseen = VOCAB.filter(v => !S.vocab[v.w]).length;
   return dueOld + Math.min(newLeft, unseen);
 }
 function wrongCount() {
-  return ["p5", "p6", "p7", "l2", "l34"].reduce((n, k) => n + Object.keys(S.wb[k]).length, 0);
+  return WB_TYPES.reduce((n, k) => n + Object.keys(S.wb[k] || {}).length, 0);
+}
+
+/* ---- 錯題本的「掌握」判定 ----
+   一次答對就移除是不夠的：Part 5/6/7 與 Part 3/4 是四選一（25% 猜中率），聽力 Part 2 是
+   三選一（33%），而且剛看完詳解就重做時，答對往往是「認得這題」而不是真的學會。
+   改成要連續答對 2 次、且第 2 次必須是不同天才移除，逼出至少一次隔天的間隔回想。 */
+// 舊版錯題本的值是 true，新版是 {n, last}。所有讀取端一律先過這裡，
+// 因為雲端同步的 pullOnStartup 會直接覆寫 S 而不經過 load()，舊格式仍可能從雲端流進來。
+function wbNorm(v) {
+  if (!v || v === true) return { n: 0, last: null };
+  return {
+    n: typeof v.n === "number" && v.n > 0 ? v.n : 0,
+    last: typeof v.last === "string" && v.last ? v.last : null
+  };
+}
+// 還要再答對幾次才會被移除（給 UI 顯示用，讓使用者知道為什麼答對了題目還在）
+function wbRemain(v) { return Math.max(1, WB_MASTER_N - wbNorm(v).n); }
+// 把整份狀態的錯題本轉成新格式；load() 與雲端 pull 後都要呼叫
+function migrateWb(d) {
+  if (!d.wb) d.wb = {};
+  WB_TYPES.forEach(t => {
+    const bag = d.wb[t] && typeof d.wb[t] === "object" ? d.wb[t] : {};
+    Object.keys(bag).forEach(k => { bag[k] = wbNorm(bag[k]); });
+    d.wb[t] = bag;
+  });
+}
+// 所有錯題本的寫入都走這裡，避免五個題型各寫一套邏輯而漏改
+function wbMark(type, key, correct) {
+  const bag = S.wb[type];
+  if (!bag) return;
+  if (!correct) { bag[key] = { n: 0, last: null }; return; } // 答錯就把連對次數歸零，題目留在錯題本
+  if (bag[key] === undefined) return; // 本來就不在錯題本裡，答對不需要記任何東西
+  const e = wbNorm(bag[key]);
+  const t = todayStr();
+  // 同一天內重複答對不累計：否則在錯題本頁連點兩次「重新挑戰」就能清掉，等於沒有間隔複習
+  if (e.last !== t) { e.n++; e.last = t; }
+  if (e.n >= WB_MASTER_N) delete bag[key];
+  else bag[key] = e;
 }
 
 /* ============ 首頁 ============ */
@@ -473,13 +530,19 @@ function scoreEstimate() {
 }
 
 /* ============ 單字卡（SRS 間隔重複）============ */
-let vq = null; // 本次複習佇列
+let vq = null;         // 本次複習佇列
+let vqDeferred = 0;    // 因為超過每日上限而被留到明天的到期卡數（完成畫面要告知使用者）
 function buildVocabQueue() {
   const t = todayStr();
-  const dueCards = VOCAB.filter(v => S.vocab[v.w] && S.vocab[v.w].due <= t);
+  const dueAll = VOCAB.filter(v => S.vocab[v.w] && S.vocab[v.w].due <= t);
+  const cap = reviewPerDay();
+  const dueCards = shuffle(dueAll).slice(0, cap);
+  vqDeferred = dueAll.length - dueCards.length;
   const newLeft = Math.max(0, newPerDay() - daily().newV);
   const newCards = VOCAB.filter(v => !S.vocab[v.w]).slice(0, newLeft);
-  return shuffle(dueCards.concat(newCards));
+  // 到期卡排在新卡前面：記憶曲線上「快忘掉的舊字」比「沒看過的新字」急，
+  // 中途離開時也該優先把複習做完（原本是全部混在一起洗牌）。
+  return shuffle(dueCards).concat(shuffle(newCards));
 }
 renderers.vocab = function () {
   vq = buildVocabQueue();
@@ -495,6 +558,7 @@ function nextCard() {
         <div style="font-size:3rem">🎉</div>
         <h2>今日單字複習完成！</h2>
         <p class="muted">已學習 ${learned} / ${VOCAB.length} 個單字。明天會依記憶曲線自動安排複習。</p>
+        ${vqDeferred > 0 ? `<p class="muted">📌 今天還有 ${vqDeferred} 張到期卡明天繼續（每日複習上限 ${reviewPerDay()} 張，可在「我的 → 設定」調整）。</p>` : ""}
         <br><button class="btn" id="v-more">加碼再學 5 個新單字</button>
       </div>`;
     const moreBtn = $("#v-more");
@@ -726,9 +790,10 @@ function l2Audio(item, order) {
     order.map((oi, pos) => [{ t: "ABCD"[pos] + ".", s: "N", pause: 150 }, { t: item.opts[oi], s: "N", pause: 500 }]).flat());
 }
 function startL2() {
-  const wrongIds = shuffle(Object.keys(S.wb.l2).map(Number));
-  const rest = shuffle(PART2.map((_, i) => i).filter(i => !S.wb.l2[i]));
-  l2s = { ids: wrongIds.concat(rest).slice(0, 10), at: 0, right: 0 };
+  // Part 2 沒有類別統計，所以只做「已出過」輪替，不做弱項加權
+  const ids = drawRound("l2seen", PART2.length, ROUND_N, Object.keys(S.wb.l2).map(Number), null);
+  save(); // l2seen 已更新
+  l2s = { ids, at: 0, right: 0 };
   l2Next();
 }
 function l2Next() {
@@ -789,7 +854,7 @@ function l2Next() {
           ${order.map((oi, p) => `<b>(${"ABC"[p]})</b> ${esc(item.opts[oi])}`).join("<br>")}<br><br>${esc(item.exp)}
         </div>`;
       trackListening("Part 2", correct);
-      if (correct) delete S.wb.l2[id]; else S.wb.l2[id] = true;
+      wbMark("l2", id, correct);
       daily().l2++;
       if (correct) s.right++;
       save();
@@ -845,8 +910,8 @@ function startL34(si) {
     renderMCQ($("#l34-q"), q, { progress: `第 ${state.at + 1} / ${set.qs.length} 題` }, (correct) => {
       const key = `${si}-${state.at}`;
       trackListening("Part 3-4", correct);
-      if (correct) { state.right++; delete S.wb.l34[key]; }
-      else S.wb.l34[key] = true;
+      if (correct) state.right++;
+      wbMark("l34", key, correct);
       save();
       $("#l34-nav").innerHTML = `<button class="btn" id="l34-nextbtn">${state.at + 1 >= set.qs.length ? "看結果與逐字稿" : "下一題"} →</button>`;
       $("#l34-nextbtn").addEventListener("click", () => { state.at++; render(); });
@@ -882,10 +947,63 @@ function catBars() {
       <span class="val">${pct}%（${s.r}/${total}）</span></div>`;
   }).join("");
 }
+const ROUND_N = 10;          // 每輪題數
+const WEAK_ACC = 0.85;       // 正確率低於此值算弱項（900+ 的 Part 5 目標線）
+const WEAK_MIN_SAMPLE = 5;   // 至少答過幾題才納入弱項判斷，避免第一題就答錯被誤判成弱項
+const WEAK_SHARE = 0.5;      // 非錯題名額中保留給弱項的比例（10 題約 4–6 題）
+
+// 依 S.cat 找出「正確率不足且樣本夠」的類別。統計頁與模考報告早就在算弱項了，
+// 但出題端一直沒查 item.cat，等於診斷出弱項卻不餵對應的題。
+function weakCats() {
+  const set = new Set();
+  Object.entries(S.cat || {}).forEach(([c, s]) => {
+    const total = (s.r || 0) + (s.w || 0);
+    if (total >= WEAK_MIN_SAMPLE && s.r / total < WEAK_ACC) set.add(c);
+  });
+  return set;
+}
+
+// 抽一輪題：錯題優先，其餘從「沒出過的」裡面抽；沒出過的不足一輪就重置該類 seen 重新輪替
+// （照抄 Mock.draw 的作法）。isWeak 可選，用來把一部分名額留給弱項類別。
+// 回傳的陣列長度最多 n，題庫比 n 小時就自然變短，不會卡住也不會湊不出題。
+function drawRound(seenKey, poolSize, n, wrongIds, isWeak) {
+  if (!S[seenKey] || typeof S[seenKey] !== "object") S[seenKey] = {};
+  // 錯題優先，且不受 seen 影響——錯題本的題目本來就該重複出現直到掌握
+  const ids = shuffle(wrongIds.filter(i => Number.isInteger(i) && i >= 0 && i < poolSize)).slice(0, n);
+  const taken = new Set(ids);
+  let need = n - ids.length;
+  if (need > 0) {
+    let fresh = [];
+    for (let i = 0; i < poolSize; i++) if (!S[seenKey][i] && !taken.has(i)) fresh.push(i);
+    if (fresh.length < need) {
+      S[seenKey] = {}; // 題庫輪替一圈，重置後重新洗牌
+      fresh = [];
+      for (let i = 0; i < poolSize; i++) if (!taken.has(i)) fresh.push(i);
+    }
+    // 弱項配額只在「真的有弱項資料」時才生效；沒有弱項時 weak 為空，行為等同原本的純隨機
+    const weak = isWeak ? shuffle(fresh.filter(isWeak)) : [];
+    const quota = Math.min(need, Math.round(need * WEAK_SHARE), weak.length);
+    const picked = weak.slice(0, quota);
+    const pickedSet = new Set(picked);
+    // 補滿剩餘名額時要「先非弱項、剩下再拿弱項」。若直接從整個 fresh 補，弱項題本身也在
+    // fresh 裡會被重複抽中——實測 10 題會塞進 6–8 題弱項，整輪都在練同一類反而失衡。
+    // 末端仍接上剩餘的弱項題當後備，確保題庫偏斜時依然湊得滿一輪。
+    const isW = i => !!(isWeak && isWeak(i));
+    const rest = fresh.filter(i => !pickedSet.has(i));
+    shuffle(rest.filter(i => !isW(i))).concat(shuffle(rest.filter(isW)))
+      .forEach(i => { if (picked.length < need) { picked.push(i); pickedSet.add(i); } });
+    picked.forEach(i => { ids.push(i); taken.add(i); });
+  }
+  ids.forEach(i => { S[seenKey][i] = true; });
+  return shuffle(ids);
+}
 function startP5() {
-  const wrongIds = Object.keys(S.wb.p5).map(Number);
-  const rest = shuffle(PART5.map((_, i) => i).filter(i => !wrongIds.includes(i)));
-  p5session = { ids: shuffle(wrongIds).concat(rest).slice(0, 10), at: 0, right: 0, t0: Date.now() };
+  const weak = weakCats();
+  const ids = drawRound("p5seen", PART5.length, ROUND_N,
+    Object.keys(S.wb.p5).map(Number),
+    weak.size ? (i => weak.has(PART5[i].cat)) : null);
+  save(); // p5seen 已更新
+  p5session = { ids, at: 0, right: 0, t0: Date.now() };
   p5Next();
 }
 function p5Next() {
@@ -912,8 +1030,8 @@ function p5Next() {
   box.innerHTML = `<div class="card" id="p5-q"></div><div id="p5-nav" style="text-align:right"></div>`;
   renderMCQ($("#p5-q"), item, { progress: `第 ${s.at + 1} / ${s.ids.length} 題`, cat: item.cat }, (correct) => {
     if (!S.cat[item.cat]) S.cat[item.cat] = { r: 0, w: 0 };
-    if (correct) { S.cat[item.cat].r++; s.right++; delete S.wb.p5[id]; }
-    else { S.cat[item.cat].w++; S.wb.p5[id] = true; }
+    if (correct) { S.cat[item.cat].r++; s.right++; } else S.cat[item.cat].w++;
+    wbMark("p5", id, correct);
     trackReading(correct);
     daily().p5++;
     save();
@@ -971,8 +1089,8 @@ function startP6(pi) {
     renderMCQ($("#p6-q"), { q: `空格 [${state.at + 1}] 應填入：`, opts: blank.opts, ans: blank.ans, exp: blank.exp },
       { progress: `空格 ${state.at + 1} / ${p.blanks.length}` }, (correct) => {
         const key = `${pi}-${state.at}`;
-        if (correct) { state.right++; delete S.wb.p6[key]; }
-        else S.wb.p6[key] = true;
+        if (correct) state.right++;
+        wbMark("p6", key, correct);
         trackReading(correct);
         save();
         $("#p6-nav").innerHTML = `<button class="btn" id="p6-nextbtn">繼續 →</button>`;
@@ -1046,8 +1164,8 @@ function startP7(si) {
     const q = set.qs[state.at];
     renderMCQ($("#p7-q"), q, { progress: `第 ${state.at + 1} / ${set.qs.length} 題` }, (correct) => {
       const key = `${si}-${state.at}`;
-      if (correct) { state.right++; delete S.wb.p7[key]; }
-      else S.wb.p7[key] = true;
+      if (correct) state.right++;
+      wbMark("p7", key, correct);
       trackReading(correct);
       save();
       $("#p7-nav").innerHTML = `<button class="btn" id="p7-nextbtn">下一題 →</button>`;
@@ -1060,33 +1178,40 @@ function startP7(si) {
 /* ============ 錯題本 ============ */
 renderers.wrong = function () {
   const entries = [];
-  Object.keys(S.wb.p5).forEach(id => entries.push({ type: "p5", key: id, label: `Part 5 · ${PART5[id].cat}`, text: PART5[id].q }));
+  // st(type, key)：錯題的掌握進度，讓列表能說明「為什麼答對了還在這裡」
+  const st = (type, key) => {
+    const e = wbNorm(S.wb[type][key]);
+    return { remain: Math.max(1, WB_MASTER_N - e.n), todayDone: e.last === todayStr() };
+  };
+  Object.keys(S.wb.p5).forEach(id => entries.push({ type: "p5", key: id, label: `Part 5 · ${PART5[id].cat}`, text: PART5[id].q, ...st("p5", id) }));
   Object.keys(S.wb.p6).forEach(key => {
     const [pi, bi] = key.split("-").map(Number);
-    entries.push({ type: "p6", key, label: `Part 6 · ${PART6[pi].title}`, text: `空格 [${bi + 1}]` });
+    entries.push({ type: "p6", key, label: `Part 6 · ${PART6[pi].title}`, text: `空格 [${bi + 1}]`, ...st("p6", key) });
   });
   Object.keys(S.wb.p7).forEach(key => {
     const [si, qi] = key.split("-").map(Number);
-    entries.push({ type: "p7", key, label: `Part 7 · ${PART7[si].title}`, text: PART7[si].qs[qi].q });
+    entries.push({ type: "p7", key, label: `Part 7 · ${PART7[si].title}`, text: PART7[si].qs[qi].q, ...st("p7", key) });
   });
-  Object.keys(S.wb.l2).forEach(id => entries.push({ type: "l2", key: id, label: `聽力 Part 2`, text: "應答問題（重新聆聽作答）" }));
+  Object.keys(S.wb.l2).forEach(id => entries.push({ type: "l2", key: id, label: `聽力 Part 2`, text: "應答問題（重新聆聽作答）", ...st("l2", id) }));
   Object.keys(S.wb.l34).forEach(key => {
     const [si, qi] = key.split("-").map(Number);
-    entries.push({ type: "l34", key, label: `聽力 · ${PART34[si].title}`, text: PART34[si].qs[qi].q });
+    entries.push({ type: "l34", key, label: `聽力 · ${PART34[si].title}`, text: PART34[si].qs[qi].q, ...st("l34", key) });
   });
   const box = $("#tab-wrong");
   if (!entries.length) {
     box.innerHTML = `<div class="card result-banner"><div style="font-size:3rem">✨</div>
-      <h2>錯題本是空的</h2><p class="muted">答錯的題目會自動收錄到這裡，重新答對即可移除。</p>
+      <h2>錯題本是空的</h2><p class="muted">答錯的題目會自動收錄到這裡，連續答對 ${WB_MASTER_N} 次（需分在不同天）即可移除。</p>
       <br><button class="btn" id="wrong-empty-go">去練習</button></div>`;
     $("#wrong-empty-go").addEventListener("click", () => switchTab("practice"));
     return;
   }
   box.innerHTML = `
     <div class="card"><h2>📕 錯題本（${entries.length} 題）</h2>
-    <p class="muted">重新作答並答對即可從錯題本移除。${phase().name === "衝刺期" ? "衝刺期目標：每天清零！" : ""}</p></div>
+    <p class="muted">要連續答對 ${WB_MASTER_N} 次、且分在不同天，才會從錯題本移除——四選一有 25% 猜中率，
+    剛看完詳解就答對通常只是記得答案，隔天還答得出來才算真的學會。${phase().name === "衝刺期" ? "衝刺期目標：每天清零！" : ""}</p></div>
     ${entries.map((e, i) => `
-      <div class="item-row"><div style="flex:1"><span class="pill">${esc(e.label)}</span><br>
+      <div class="item-row"><div style="flex:1"><span class="pill">${esc(e.label)}</span>
+        <span class="pill">再答對 ${e.remain} 次移除</span>${e.todayDone ? `<span class="pill">今天已計，明天再來</span>` : ""}<br>
         <span class="muted">${esc(e.text.slice(0, 80))}${e.text.length > 80 ? "…" : ""}</span></div>
         <button class="btn small" data-retry="${i}">重新挑戰</button></div>`).join("")}
     <div id="wrong-quiz"></div>`;
@@ -1099,11 +1224,20 @@ function retryWrong(entry) {
   box.innerHTML = `<div class="card" id="wq-inner"></div>`;
   box.scrollIntoView({ behavior: "smooth" });
   const finish = (correct) => {
-    if (correct) delete S.wb[entry.type][entry.key];
+    // 先記下答題前的狀態，才能分辨「這次答對有沒有計入」——同一天內重複答對是不加次數的，
+    // 不講清楚使用者會以為答對了卻沒反應。
+    const before = wbNorm(S.wb[entry.type][entry.key]);
+    wbMark(entry.type, entry.key, correct);
+    const after = S.wb[entry.type][entry.key];
     d.wr = (d.wr || 0) + 1;
     save();
+    let msg;
+    if (!correct) msg = "還沒完全掌握，連對次數已歸零，題目保留在錯題本。";
+    else if (after === undefined) msg = `✅ 連續答對 ${WB_MASTER_N} 次（跨天），已從錯題本移除！`;
+    else if (before.last === todayStr()) msg = "✅ 答對了！但今天已經計過一次，明天再答對一次才能移除。";
+    else msg = `✅ 答對了！再答對 ${wbRemain(after)} 次（需不同天）即可移除。`;
     $("#wq-nav").innerHTML = `
-      <p class="muted" style="text-align:left">${correct ? "✅ 已從錯題本移除！" : "還沒完全掌握，題目保留在錯題本。"}</p>
+      <p class="muted" style="text-align:left">${msg}</p>
       <button class="btn" id="wq-back">返回錯題本</button>`;
     $("#wq-back").addEventListener("click", renderers.wrong);
   };

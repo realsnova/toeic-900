@@ -49,6 +49,9 @@ const Sync = {
       const localNow = S.updatedAt || 0;
       if (remoteTime > base && localNow === base) {
         S = Object.assign(defaultState(), remote.records);
+        // 這條路徑不經過 load()，所以要自己補一次錯題本格式遷移，
+        // 否則從舊版裝置（值還是 true）同步下來的錯題本會缺少 {n,last} 而無法累計掌握次數。
+        migrateWb(S);
         localStorage.setItem(STORE_KEY, JSON.stringify(S));
         if (remote.bank) saveBank(Object.assign(emptyBank(), remote.bank));
         Sync.lastSynced = new Date();

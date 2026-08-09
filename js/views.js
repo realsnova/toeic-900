@@ -31,7 +31,7 @@ renderers.me = function () {
   const cards = [
     { id: "stats", icon: "📊", title: "統計", sub: "預估分數、學習熱圖、弱項分析" },
     { id: "bank", icon: "📦", title: "題庫 / 備份", sub: "擴增題庫、匯出備份、雲端同步" },
-    { id: "settings", icon: "⚙️", title: "設定", sub: "主題、聽力語速與腔調、每日新字量" }
+    { id: "settings", icon: "⚙️", title: "設定", sub: "主題、聽力語速與腔調、每日單字量" }
   ];
   $("#tab-me").innerHTML = `
     <div class="card"><h2>👤 我的</h2>${S.targetScore ? `<p class="muted">目標分數 ${S.targetScore} 分</p>` : ""}</div>
@@ -107,12 +107,18 @@ renderers.settings = function () {
         <p class="muted" style="margin-top:8px">混合腔調：每一題 Part 2、每一組 Part 3/4 會隨機從裝置可用腔調中挑一個播放，更接近正式考試混用美/英/澳等腔調的情況。作答後會顯示這次用的是哪個腔調。</p>`}
     </div>
     <div class="card">
-      <h2>📅 每日新字量</h2>
+      <h2>📅 每日單字量</h2>
       <div class="item-row">
-        <div>基礎期/強化期預設 10 個，衝刺期自動減半</div>
+        <div>新單字：基礎期/強化期預設 10 個，衝刺期自動減半</div>
         <input type="number" id="set-newperday" min="1" max="30" value="${Settings.get("newPerDay")}"
           style="width:64px;background:var(--panel2);color:var(--text);border:1px solid var(--border2);border-radius:8px;padding:8px;font-family:inherit">
       </div>
+      <div class="item-row">
+        <div>到期複習卡上限（預設 60 張）</div>
+        <input type="number" id="set-revperday" min="10" max="500" value="${Settings.get("revPerDay")}"
+          style="width:64px;background:var(--panel2);color:var(--text);border:1px solid var(--border2);border-radius:8px;padding:8px;font-family:inherit">
+      </div>
+      <p class="muted">請假幾天後到期卡會一次累積上百張，設上限才做得完。超出的部分會自動留到明天，不會遺失。</p>
     </div>`;
   $("#tab-settings").querySelectorAll("[data-theme]").forEach(b =>
     b.addEventListener("click", () => { Theme.set(b.dataset.theme); renderers.settings(); }));
@@ -131,5 +137,12 @@ renderers.settings = function () {
     Settings.set("newPerDay", v);
     e.target.value = v;
     UI.toast("每日新字量已更新為 " + v + " 個", "ok");
+  });
+  $("#set-revperday").addEventListener("change", (e) => {
+    const v = Math.max(10, Math.min(500, Number(e.target.value) || 60));
+    Settings.set("revPerDay", v);
+    e.target.value = v;
+    UI.toast("每日複習上限已更新為 " + v + " 張", "ok");
+    updateNavBadges(); // 徽章的到期數會套用上限，改完要立刻反映
   });
 };

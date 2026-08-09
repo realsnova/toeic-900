@@ -306,14 +306,14 @@ const Mock = {
         correct = s.lAnswers[i] === it.ansPos;
         q = { q: it.ref.q, opts: it.ref.opts, ans: it.ref.ans, exp: it.ref.exp };
         chosen = s.lAnswers[i] === null ? null : it.ref.opts[it.order[s.lAnswers[i]]];
-        if (correct) delete S.wb.l2[it.id]; else S.wb.l2[it.id] = true;
+        wbMark("l2", it.id, !!correct);
         trackListening("Part 2", !!correct);
       } else {
         correct = s.lAnswers[i] === it.q.ans;
         q = it.q;
         chosen = s.lAnswers[i] === null ? null : it.q.opts[s.lAnswers[i]];
         const key = `${it.si}-${it.qi}`;
-        if (correct) delete S.wb.l34[key]; else S.wb.l34[key] = true;
+        wbMark("l34", key, !!correct);
         trackListening("Part 3-4", !!correct);
       }
       bump(it.part, correct);
@@ -326,9 +326,9 @@ const Mock = {
       rT++;
       const correct = s.rAnswers[i] === it.q.ans;
       const chosen = s.rAnswers[i] === null ? null : it.q.opts[s.rAnswers[i]];
-      if (it.type === "p5") { if (correct) delete S.wb.p5[it.id]; else S.wb.p5[it.id] = true; if (!S.cat[it.q.cat]) S.cat[it.q.cat] = { r: 0, w: 0 }; correct ? S.cat[it.q.cat].r++ : S.cat[it.q.cat].w++; }
-      if (it.type === "p6") { const k = `${it.pi}-${it.bi}`; if (correct) delete S.wb.p6[k]; else S.wb.p6[k] = true; }
-      if (it.type === "p7") { const k = `${it.si}-${it.qi}`; if (correct) delete S.wb.p7[k]; else S.wb.p7[k] = true; }
+      if (it.type === "p5") { wbMark("p5", it.id, !!correct); if (!S.cat[it.q.cat]) S.cat[it.q.cat] = { r: 0, w: 0 }; correct ? S.cat[it.q.cat].r++ : S.cat[it.q.cat].w++; }
+      if (it.type === "p6") { wbMark("p6", `${it.pi}-${it.bi}`, !!correct); }
+      if (it.type === "p7") { wbMark("p7", `${it.si}-${it.qi}`, !!correct); }
       trackReading(!!correct);
       bump(it.part, correct);
       if (correct) rR++;

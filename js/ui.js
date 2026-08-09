@@ -4,7 +4,8 @@ const THEME_KEY = "toeic900_theme";
 const SETTINGS_KEY = "toeic900_settings";
 
 const Settings = {
-  data: { ttsRate: 0.92, ttsVoice: "", newPerDay: 10, accent: "auto" }, // accent: auto | mixed | en-US 等指定腔調
+  // revPerDay：每日到期複習卡上限（新字量另計）
+  data: { ttsRate: 0.92, ttsVoice: "", newPerDay: 10, revPerDay: 60, accent: "auto" }, // accent: auto | mixed | en-US 等指定腔調
   load() {
     try { Object.assign(Settings.data, JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}")); } catch (e) { /* 壞資料用預設 */ }
   },
