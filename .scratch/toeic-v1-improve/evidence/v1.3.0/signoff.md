@@ -41,3 +41,11 @@
 
 - [ ] 接受上列 BLOCKED 項目，由使用者在上線前後執行
 - [ ] 核准把 `claude/toeic-v1-improve` 合併到 `master` 並推送（正式站更新）
+
+## 部署紀錄（2026-10-07）
+
+- 使用者核准：「上線吧 我會先測試看看」
+- `git push origin claude/toeic-v1-improve:master`：`0c67c88..ca93985`（fast-forward）
+- GitHub Pages 建置：`built`，commit `ca93985`
+- L8 上線後檢查（正式站，唯讀）：`APP_VERSION` 1.3.0、全部資源 `?v=17`、主控台沒有錯誤、首頁顯示「練習答對率」且無「預估分數」、DOMContentLoaded 1.7 秒
+- 待使用者完成：manual-checklist.md 的 A（Firebase 規則）與 B（手機聲音）
