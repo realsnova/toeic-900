@@ -17,9 +17,15 @@ const Sync = {
     } catch (e) { console.warn("Firebase 初始化失敗", e); }
   },
   genCode() {
-    const chars = "abcdefghjkmnpqrstuvwxyz23456789"; // 去除易混淆字元
+    // 同步代碼等於讀寫權，必須用密碼學安全的亂數（一般偽亂數的輸出可被推測）
+    const chars = "abcdefghjkmnpqrstuvwxyz23456789"; // 去除易混淆字元（31 個）
+    const limit = 256 - (256 % chars.length); // 拒絕取樣，避免取餘數造成前幾個字元機率偏高
     let s = "";
-    for (let i = 0; i < 10; i++) s += chars[Math.floor(Math.random() * chars.length)];
+    while (s.length < 10) {
+      const buf = new Uint8Array(16);
+      crypto.getRandomValues(buf);
+      for (const b of buf) if (b < limit && s.length < 10) s += chars[b % chars.length];
+    }
     return s.match(/.{1,5}/g).join("-"); // 例如 ab3de-f7gh9
   },
   setCode(code) {

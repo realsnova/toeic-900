@@ -29,7 +29,7 @@ renderers.practice = function () {
 /* ============ 「我的」Hub：統計/題庫備份/設定 的入口 ============ */
 renderers.me = function () {
   const cards = [
-    { id: "stats", icon: "📊", title: "統計", sub: "預估分數、學習熱圖、弱項分析" },
+    { id: "stats", icon: "📊", title: "統計", sub: "練習答對率、學習熱圖、弱項分析" },
     { id: "bank", icon: "📦", title: "題庫 / 備份", sub: "擴增題庫、匯出備份、雲端同步" },
     { id: "settings", icon: "⚙️", title: "設定", sub: "主題、聽力語速與腔調、每日單字量" }
   ];

@@ -103,11 +103,29 @@ const Mock = {
       secLeft: READING_SECONDS,
       readTimer: null,
       t0: Date.now(),
+      audioFail: new Set(), // 語音沒有播放的聽力題索引：不計分（見 submit）
       finished: false, cancelled: false
     };
     save(); // mockSeen 已更新
     if (mode === "read") Mock.startReading();
-    else Mock.runListening();
+    else Mock.readyListening();
+  },
+
+  // 聽力節要由使用者點「開始播放」才開始：iOS 只允許在點擊當下直接觸發語音，
+  // 開始前的確認視窗是非同步的，不能直接接著播放。
+  readyListening() {
+    const s = Mock.s;
+    Mock.box().innerHTML = `
+      <div class="card" style="text-align:center">
+        <h2>🎧 聽力節</h2>
+        <p class="muted">共 ${s.paper.listening.length} 題，語音會自動連續播放、不可暫停或回放。</p>
+        ${ttsNoteHTML()}
+        <button class="btn" id="mock-play">▶ 開始播放</button>
+      </div>`;
+    $("#mock-play").addEventListener("click", () => {
+      s.t0 = Date.now();
+      Mock.runListening(); // 第一段語音在這次點擊內同步送出
+    });
   },
 
   box() { return $("#tab-mock"); },
@@ -119,15 +137,19 @@ const Mock = {
     for (let i = 0; i < items.length; i++) {
       if (!Mock.s || s.cancelled) return;
       const it = items[i];
+      const onSilent = () => showSilentHelp(null);
       if (it.type === "l34" && it.audioLead) {
         Mock.renderListenItem(i, true);
-        if (TTS.ok) await TTS.seq(l34Audio(it.set));
+        const { played } = await TTS.seq(l34Audio(it.set), { onSilent });
         if (!Mock.s || s.cancelled) return;
+        // 對話沒有播放，同一組的三題都無從作答
+        if (!played) items.forEach((x, j) => { if (x.type === "l34" && x.set === it.set) s.audioFail.add(j); });
       }
       Mock.renderListenItem(i, false);
-      if (it.type === "l2" && TTS.ok) {
-        await TTS.seq(l2Audio(it.ref, it.order));
+      if (it.type === "l2") {
+        const { played } = await TTS.seq(l2Audio(it.ref, it.order), { onSilent });
         if (!Mock.s || s.cancelled) return;
+        if (!played) s.audioFail.add(i);
       }
       // 作答窗：P2 五秒、P3/4 每題八秒；作答後可提前進下一題
       await Mock.answerWindow(i, it.type === "l2" ? 5 : 8);
@@ -165,6 +187,7 @@ const Mock = {
           <span class="muted">第 ${i + 1} / ${total} 題 · 已答 ${answered}</span>
         </div>
         ${body}
+        ${ttsNoteHTML()}
         <div id="mock-window" class="mock-window"></div>
       </div>`;
     if (!playingLead) {
@@ -299,7 +322,9 @@ const Mock = {
     };
     // 聽力
     let lR = 0, lT = 0;
+    const lSkip = s.audioFail.size;
     s.paper.listening.forEach((it, i) => {
+      if (s.audioFail.has(i)) return; // 沒聽到題目，不算對也不算錯，不進錯題本也不進累計答對率
       lT++;
       let correct, q, chosen;
       if (it.type === "l2") {
@@ -335,17 +360,16 @@ const Mock = {
       else wrongs.push({ part: it.part, q: it.q.q, opts: it.q.opts, ans: it.q.ans, exp: it.q.exp, chosen });
     });
 
-    const curve = acc => Math.min(495, Math.max(5, Math.round(acc * 505 / 5) * 5));
-    const L = lT ? curve(lR / lT) : null;
-    const R = rT ? curve(rR / rT) : null;
+    // 只存原始答對數，不換算 TOEIC 分數（題目沒有校準，換算出來的數字沒有根據）
     const secs = Math.round((Date.now() - s.t0) / 1000);
+    hideSilentHelp();
 
     if (!S.mocks) S.mocks = [];
-    S.mocks.push({ date: todayStr(), mode: s.mode, L, R, lR, lT, rR, rT, parts, secs });
+    S.mocks.push({ date: todayStr(), mode: s.mode, lR, lT, rR, rT, lSkip, parts, secs });
     const d = daily(); d.mockDone = (d.mockDone || 0) + 1;
     save();
     updateNavBadges();
-    Mock.renderReport({ L, R, lR, lT, rR, rT, parts, wrongs, secs, mode: s.mode });
+    Mock.renderReport({ lR, lT, rR, rT, lSkip, parts, wrongs, secs, mode: s.mode });
     Mock.s = null;
   },
 
@@ -359,13 +383,19 @@ const Mock = {
     // 弱項 Top 3
     const weak = partOrder.filter(p => r.parts[p]).map(p => ({ p, acc: r.parts[p].r / r.parts[p].t }))
       .sort((a, b) => a.acc - b.acc).slice(0, 3);
-    const total = (r.L || 0) + (r.R || 0);
+    const pct = (a, b) => b ? Math.round(a / b * 100) : null;
+    const sec = (name, a, b) => `<div class="mock-sec"><div class="score">${pct(a, b)}%</div><div class="muted">${name}答對 ${a} / ${b} 題</div></div>`;
+    const hasL = r.mode !== "read", hasR = r.mode !== "listen";
+    const graded = r.lT + r.rT > 0; // 全部題目都因語音沒播放而不計分時，不可顯示「全對」
     Mock.box().innerHTML = `
       <div class="card result-banner">
-        <p class="muted">${r.mode === "full" ? "完整模考" : r.mode === "listen" ? "聽力節" : "閱讀節"} · 用時 ${Math.floor(r.secs / 60)} 分 ${r.secs % 60} 秒</p>
-        <div class="score">${r.mode === "full" ? total : (r.L ?? r.R)}</div>
-        <p>${r.L !== null ? `聽力 L ${r.L}（${r.lR}/${r.lT}）` : ""}${r.L !== null && r.R !== null ? " ＋ " : ""}${r.R !== null ? `閱讀 R ${r.R}（${r.rR}/${r.rT}）` : ""}</p>
-        <p class="muted">預估分數以正確率換算，僅供追蹤趨勢</p>
+        <p class="muted">${Mock.modeName(r.mode)} · 用時 ${Math.floor(r.secs / 60)} 分 ${r.secs % 60} 秒</p>
+        <div class="mock-secs">
+          ${hasL ? (r.lT ? sec("聽力", r.lR, r.lT) : `<div class="mock-sec"><div class="score">—</div><div class="muted">聽力沒有可計分的題目</div></div>`) : ""}
+          ${hasR ? sec("閱讀", r.rR, r.rT) : ""}
+        </div>
+        ${r.lSkip ? `<p class="muted">有 ${r.lSkip} 題聽力因為語音沒有播放，不列入計分。</p>` : ""}
+        <p class="muted">這是本份練習卷的答對率，不是 TOEIC 分數。</p>
       </div>
       <div class="card"><h2>📊 各 Part 正確率</h2>${bars}</div>
       <div class="card"><h2>🎯 弱項優先加強</h2>
@@ -376,45 +406,66 @@ const Mock = {
           <details class="mock-wrong">
             <summary><span class="pill">${esc(w.part)}</span> ${esc(w.q.slice(0, 60))}${w.q.length > 60 ? "…" : ""}</summary>
             <div class="explain">你的答案：${w.chosen === null ? "未作答" : esc(w.chosen)}<br>正解：${esc(w.opts[w.ans])}<br>${esc(w.exp)}</div>
-          </details>`).join("") : `<p class="muted">全對！🏆</p>`}
+          </details>`).join("") : `<p class="muted">${graded ? "全對！🏆" : "沒有可計分的題目。"}</p>`}
       </div>
       <div style="text-align:center"><button class="btn" id="mock-back">返回模擬考首頁</button></div>`;
-    const scoreVal = r.mode === "full" ? total : (r.L ?? r.R);
-    Anim.numberReveal(Mock.box().querySelector(".score"), scoreVal);
-    if (r.wrongs.length === 0) setTimeout(() => Anim.confetti(), 350);
+    if (graded && r.wrongs.length === 0) setTimeout(() => Anim.confetti(), 350);
     Mock.box().querySelectorAll("[data-weak]").forEach(b =>
       b.addEventListener("click", () => goTo(b.dataset.weak)));
     $("#mock-back").addEventListener("click", () => renderers.mock());
   },
 
+  modeName(mode) { return mode === "full" ? "雙節模考（短版）" : mode === "listen" ? "聽力節" : "閱讀節"; },
+
+  // 有原始題數的紀錄才能換算答對率、畫進趨勢圖；更早的版本只存了換算分數，保留但不比較
+  hasCounts(m) {
+    return ["lR", "lT", "rR", "rT"].every(k => Number.isFinite(m[k])) && m.lT + m.rT > 0;
+  },
+
+  // 歷次答對率趨勢：縱軸固定 0–100%，聽力、閱讀各一條線，不依最高最低值放大差距
+  trendSVG(list) {
+    const w = 320, h = 150, left = 34, right = 10, top = 14, bottom = 24;
+    const x = i => left + (list.length === 1 ? 0 : i * (w - left - right) / (list.length - 1));
+    const y = v => top + (100 - v) * (h - top - bottom) / 100;
+    const point = (i, a, b) => { const v = Math.round(a / b * 100); return [x(i), y(v), v]; };
+    const series = [
+      { name: "聽力", color: "var(--accent)", pts: list.map((m, i) => m.lT ? point(i, m.lR, m.lT) : null).filter(Boolean) },
+      { name: "閱讀", color: "var(--good)", pts: list.map((m, i) => m.rT ? point(i, m.rR, m.rT) : null).filter(Boolean) }
+    ];
+    const grid = [0, 50, 100].map(v => `<line x1="${left}" y1="${y(v)}" x2="${w - right}" y2="${y(v)}" stroke="var(--border)"/>
+      <text x="${left - 4}" y="${y(v) + 3}" text-anchor="end" font-size="10" fill="var(--muted)">${v}%</text>`).join("");
+    const lines = series.map(sr => sr.pts.length ? `
+      ${sr.pts.length > 1 ? `<polyline points="${sr.pts.map(p => `${p[0]},${p[1]}`).join(" ")}" fill="none" stroke="${sr.color}" stroke-width="2.5" stroke-linecap="round"/>` : ""}
+      ${sr.pts.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="${sr.color}"><title>${sr.name} ${p[2]}%</title></circle>`).join("")}` : "").join("");
+    const legend = series.filter(sr => sr.pts.length).map(sr => `<span style="color:${sr.color}">● ${sr.name}</span>`).join("　");
+    return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;max-width:440px" role="img"
+        aria-label="最近 ${list.length} 次模擬考的聽力與閱讀答對率，縱軸固定為百分之零到一百">${grid}${lines}</svg>
+      <p class="muted" style="font-size:.85rem">${legend}　（縱軸固定 0–100%）</p>`;
+  },
+
   /* ---------- 模擬考首頁（選單＋歷史趨勢） ---------- */
   menu() {
     const mocks = S.mocks || [];
-    const fulls = mocks.filter(m => m.mode === "full");
-    const best = fulls.length ? Math.max(...fulls.map(m => (m.L || 0) + (m.R || 0))) : null;
-    // 歷次（完整模考）折線圖
-    let chart = "";
-    if (fulls.length >= 2) {
-      const w = 320, h = 120, pad = 20;
-      const scores = fulls.map(m => (m.L || 0) + (m.R || 0));
-      const min = Math.min(...scores), max = Math.max(...scores);
-      const x = i => pad + i * (w - 2 * pad) / (fulls.length - 1);
-      const y = v => h - pad - (max === min ? 0.5 : (v - min) / (max - min)) * (h - 2 * pad);
-      const pts = scores.map((v, i) => `${x(i)},${y(v)}`).join(" ");
-      chart = `
-        <svg viewBox="0 0 ${w} ${h}" style="width:100%;max-width:420px" role="img" aria-label="歷次模考分數趨勢">
-          <polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round"/>
-          ${scores.map((v, i) => `<circle cx="${x(i)}" cy="${y(v)}" r="4" fill="var(--accent)"/><text x="${x(i)}" y="${y(v) - 8}" text-anchor="middle" font-size="10" fill="var(--muted)">${v}</text>`).join("")}
-        </svg>`;
-    }
+    const comparable = mocks.filter(Mock.hasCounts).slice(-12);
+    const chart = comparable.length >= 2 ? Mock.trendSVG(comparable) : "";
+    const pct = (a, b) => Math.round(a / b * 100);
+    const resultText = m => {
+      if (!Mock.hasCounts(m)) {
+        const counted = ["lR", "lT", "rR", "rT"].every(k => Number.isFinite(m[k]));
+        return `<span class="muted">${counted ? "沒有可計分的題目" : "舊版紀錄，無法比較"}</span>`;
+      }
+      const l = m.lT ? `聽力 ${pct(m.lR, m.lT)}%（${m.lR}/${m.lT}）` : "";
+      const r = m.rT ? `閱讀 ${pct(m.rR, m.rT)}%（${m.rR}/${m.rT}）` : "";
+      return [l, r].filter(Boolean).join(" · ");
+    };
     Mock.box().innerHTML = `
       <div class="card">
         <h2>🚀 模擬考</h2>
-        <p class="muted">仿真 TOEIC 節奏：聽力節自動連播不可回放；閱讀節限時 22 分鐘，可旗標與跳題；作答中不顯示對錯，交卷後產出成績報告，錯題自動進錯題本。</p>
+        <p class="muted">短版練習卷，練習 TOEIC 的作答節奏：聽力節自動連播不可回放；閱讀節限時 22 分鐘，可旗標與跳題；作答中不顯示對錯，交卷後顯示聽力、閱讀與各 Part 的答對率，錯題自動進錯題本。題數少於正式考試的 200 題，不能換算 TOEIC 分數。</p>
       </div>
       <div class="hub-card" data-mock="full">
         <div class="hub-icon">📋</div>
-        <div class="hub-text"><div class="hub-title">完整模考</div><div class="hub-sub muted">聽力節（19 題）＋閱讀節（約 27 題）· 約 35 分鐘</div></div>
+        <div class="hub-text"><div class="hub-title">雙節模考（短版）</div><div class="hub-sub muted">聽力節（19 題）＋閱讀節（約 27 題）· 約 35 分鐘</div></div>
         <div class="hub-arrow">›</div>
       </div>
       <div class="hub-card" data-mock="listen">
@@ -430,19 +481,22 @@ const Mock = {
       ${!mocks.length ? `<p class="muted" style="text-align:center;margin-top:8px">完成第一次模擬考後，這裡會顯示成績報告與歷史趨勢。</p>` : ""}
       ${mocks.length ? `
       <div class="card">
-        <h2>📈 歷史成績${best ? ` <span class="muted">· 最佳 ${best}</span>` : ""}</h2>
+        <h2>📈 歷次答對率</h2>
         ${chart}
         ${mocks.slice(-8).reverse().map(m => `
-          <div class="item-row"><div><b>${m.date}</b> <span class="pill">${m.mode === "full" ? "完整" : m.mode === "listen" ? "聽力節" : "閱讀節"}</span></div>
-          <div>${m.L !== null && m.L !== undefined ? `L ${m.L}` : ""} ${m.R !== null && m.R !== undefined ? `R ${m.R}` : ""} ${m.mode === "full" ? `= <b>${(m.L || 0) + (m.R || 0)}</b>` : ""}</div></div>`).join("")}
+          <div class="item-row"><div><b>${esc(m.date)}</b> <span class="pill">${Mock.modeName(m.mode)}</span></div>
+          <div>${resultText(m)}</div></div>`).join("")}
       </div>` : ""}`;
     Mock.box().querySelectorAll("[data-mock]").forEach(el =>
-      el.addEventListener("click", async () => {
+      el.addEventListener("click", () => {
         const mode = el.dataset.mock;
+        if (mode === "read") ask(mode); else withVoices(() => ask(mode));
+      }));
+    const ask = async mode => {
         const ok = await UI.confirm(
           mode === "read" ? "閱讀節限時 22 分鐘，時間到自動交卷。準備好就開始！" : "聽力節將自動連續播放、不可暫停或回放（仿真考試）。建議戴上耳機，準備好就開始！",
           { title: "開始模擬考", okText: "開始" });
         if (ok) Mock.start(mode);
-      }));
+    };
   }
 };

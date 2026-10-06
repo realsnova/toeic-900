@@ -462,3 +462,21 @@ main { max-width: 860px; margin: 0 auto; padding: 24px 16px 80px; }
 .changelog-entry:last-child { border-bottom: none; }
 .changelog-entry .v { font-weight: 700; color: var(--accent); }
 .changelog-entry .d { color: var(--muted); font-size: 0.78rem; margin-left: 6px; }
+
+/* 聽力：合成語音標示、沒聽到聲音的提示（v1.3） */
+.tts-note { font-size: 0.8rem; margin: 6px 0; }
+.tts-help {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: 24px; z-index: 900;
+  width: min(520px, calc(100% - 32px));
+  display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center;
+  background: var(--panel3); color: var(--text); border: 1px solid var(--warn);
+  border-radius: var(--radius); box-shadow: var(--shadow-2); padding: 12px 14px; font-size: 0.9rem;
+}
+.tts-help[hidden] { display: none; }
+.tts-help-actions { display: flex; gap: 8px; margin-left: auto; }
+@media (max-width: 768px) {
+  .tts-help { bottom: calc(96px + env(safe-area-inset-bottom)); } /* 底部導覽列約 85px 高 */
+}
+/* 模擬考報告：聽力、閱讀分開呈現 */
+.mock-secs { display: flex; justify-content: center; gap: 32px; flex-wrap: wrap; margin: 8px 0; }
+.mock-sec .score { line-height: 1.2; }

@@ -12,22 +12,23 @@ function defaultState() {
     vocab: {},                // word -> {i:間隔天數, e:難易係數, due:'YYYY-MM-DD', n:複習次數}
     cat: {},                  // Part5 類別 -> {r, w}
     lcat: {},                 // 聽力類別（Part 2 / Part 3/4）-> {r, w}
-    racc: { r: 0, w: 0 },     // 閱讀總作答（估分用）
-    daily: {},                // date -> {v, p5, p6, p7, l2, l34, newV}
+    racc: { r: 0, w: 0 },     // 閱讀累計作答（練習答對率用；錯題本重考不計入）
+    daily: {},                // date -> {v, p5, p6, p7, l2, l34, newV, wr:錯題本重考題數, mockDone:完成的模考次數}
     // 錯題本：key -> {n:連續答對次數, last:'YYYY-MM-DD' 最後一次計入的日期}
     // n 一定要寫成數字（即使是 0）：Firebase 會把 null 值當成刪除，若整個物件只有 null 欄位
     // 就會變成空物件而被 RTDB 整個節點刪掉，剛答錯的題目會在同步後人間蒸發。
     wb: { p5: {}, p6: {}, p7: {}, l2: {}, l34: {} },
     p6done: {}, p7done: {}, l34done: {},
     p5seen: {}, l2seen: {}, // Part 5 / 聽力 Part 2 出過的題（索引），支撐不重複出題輪替
-    mocks: [],                // 模擬考歷史 [{date, mode, L, R, parts, secs}]
+    mocks: [],                // 模擬考歷史 [{date, mode, lR, lT, rR, rT, parts, secs}]（v1.1 以前另有換算分數 L/R，保留不用）
     mockSeen: {},             // 模考出過的題（各類別索引），支撐不重複組卷
     targetScore: null,        // 新手引導設定的目標分數
     onboarded: false          // 是否已完成（或略過）新手引導
   };
 }
-const APP_VERSION = "1.1.0";
+const APP_VERSION = "1.3.0";
 const CHANGELOG = [
+  { v: "1.3.0", d: "2026-10-06", notes: "改顯示練習答對率（不再換算未校準的 TOEIC 分數，錯題本重考不計入）；只做錯題本或模考的日子也算連續學習；模考報告分開顯示聽力與閱讀、趨勢圖固定 0–100%；裝置沒有英文語音時先說明、語音沒播放時提示且模考不會卡住；同步代碼改用安全亂數" },
   { v: "1.1.0", d: "2026-08-09", notes: "學習演算法強化：錯題要連續答對 2 次（跨天）才移除、Part 5 依弱項類別加權出題、Part 5／聽力 Part 2 不重複輪替出題、單字每日複習量上限" },
   { v: "1.0.3", d: "2026-07-12", notes: "驗收稽核：修復考試日期／同步代碼欄位的 XSS 漏洞、深色主題按鈕文字對比度不足、補上頁面 H1 標題" },
   { v: "1.0.2", d: "2026-07-12", notes: "驗收稽核：修復自訂題庫匯入可能讓雲端同步靜默失敗的資料安全性問題" },
@@ -200,10 +201,15 @@ function daily() {
   const t = todayStr();
   if (!S.daily[t]) S.daily[t] = {};
   const d = S.daily[t];
-  ["v", "p5", "p6", "p7", "l2", "l34", "newV"].forEach(k => { if (typeof d[k] !== "number") d[k] = 0; });
+  ["v", "p5", "p6", "p7", "l2", "l34", "newV", "wr", "mockDone"].forEach(k => { if (typeof d[k] !== "number") d[k] = 0; });
   return d;
 }
-function dayTotal(d) { return d ? (d.v || 0) + (d.p5 || 0) + (d.p6 || 0) + (d.p7 || 0) + (d.l2 || 0) + (d.l34 || 0) : 0; }
+// 一天內所有學習活動的總量，連續天數與熱圖都用它判斷「這天有沒有學習」。
+// 只做錯題本重考或只完成模擬考的日子也要算，否則認真複習的那天會被當成休息日、連續天數歸零。
+function dayTotal(d) {
+  if (!d) return 0;
+  return ["v", "p5", "p6", "p7", "l2", "l34", "wr", "mockDone"].reduce((sum, k) => sum + (Number(d[k]) || 0), 0);
+}
 function shuffle(arr) {
   const a = arr.slice();
   for (let i = a.length - 1; i > 0; i--) {
@@ -269,18 +275,37 @@ function todayPlan() {
 }
 
 /* ============ 語音合成（聽力播放）============ */
+// 聽力完全依賴裝置內建的語音合成。三個要防的情況：
+// 1. 裝置沒有英文語音（Windows 常見）：用中文語音念英文比沒聲音更糟，開始前要先說明。
+// 2. 語音被瀏覽器擋下或引擎沒反應（iOS 自動播放限制、語音故障）：end/error 永遠不來，
+//    模擬考聽力節會卡死，所以每段語音都要有逾時。
+// 3. 播放中按重播：舊的播放迴圈必須停下，不能和新的交錯念。
+const TTS_VOICE_WAIT_MS = 2000;   // 開頁後最多等這麼久讓語音清單載入，之後才判定「沒有英文語音」
+const TTS_START_TIMEOUT_MS = 3000; // 第一段語音呼叫後這麼久還沒開始，就提示「沒有聽到聲音？」
 const TTS = {
   ok: "speechSynthesis" in window,
   voices: [],
+  settled: false,     // 語音清單是否已經有定論（載入完成或等候逾時）
+  forceTry: false,    // 沒有英文語音時，使用者仍選擇嘗試播放（本次開啟期間有效）
+  gen: 0,             // 播放世代：每次 seq/stop 都遞增，舊的播放迴圈看到世代不同就停止
+  playing: false,
   currentLang: "en-US", // 這一組播放（一題 Part2 / 一組 Part3-4）目前用的腔調
   init() {
-    if (!TTS.ok) return;
+    if (!TTS.ok) { TTS.settled = true; return; }
     const pick = () => {
       TTS.voices = speechSynthesis.getVoices().filter(v => v.lang.startsWith("en"));
       if (typeof Accents !== "undefined") Accents.scan();
+      if (TTS.voices.length) TTS.settled = true;
     };
     pick();
-    speechSynthesis.onvoiceschanged = pick;
+    speechSynthesis.onvoiceschanged = () => { pick(); TTS.settled = true; };
+    setTimeout(() => { TTS.settled = true; }, TTS_VOICE_WAIT_MS);
+  },
+  // loading：清單還在載入；ready：有英文語音；none：確定沒有英文語音（或瀏覽器不支援語音合成）
+  voiceState() {
+    if (!TTS.ok) return "none";
+    if (TTS.voices.length) return "ready";
+    return TTS.settled ? "none" : "loading";
   },
   // 依「聽力腔調」設定，為即將播放的這一組音檔決定要用哪個腔調
   // auto=裝置預設；mixed=每組隨機挑一個可用腔調（仿真考試混腔）；否則固定使用指定腔調
@@ -301,35 +326,106 @@ const TTS = {
     if (speaker === "M") return pool.find(v => /male|david|guy|mark/i.test(v.name)) || pool[pool.length - 1];
     return pool[0];
   },
-  speak(text, speaker = "N", rate) {
+  rate(rate) {
+    return rate || (typeof Settings !== "undefined" ? Settings.get("ttsRate") : 0.92) || 0.92;
+  },
+  // 一段語音最多等多久：正常語速約每字 0.4 秒，取 0.6 秒留餘裕，再加 3 秒緩衝，最少 4 秒
+  timeoutMs(text, rate) {
+    const words = String(text).trim().split(/\s+/).filter(Boolean).length;
+    return (Math.max(4, words * 0.6 / TTS.rate(rate)) + 3) * 1000;
+  },
+  // 回傳 Promise<{started}>：started 表示瀏覽器真的開始念了。end、error、逾時三者先到者結束等待
+  speak(text, speaker = "N", rate, onStart) {
     return new Promise(res => {
+      let started = false, finished = false;
+      const finish = () => { if (finished) return; finished = true; clearTimeout(timer); res({ started }); };
+      const timer = setTimeout(finish, TTS.timeoutMs(text, rate));
       const u = new SpeechSynthesisUtterance(text);
       const v = TTS.voiceFor(speaker);
       if (v) u.voice = v;
       u.lang = TTS.currentLang;
-      u.rate = rate || (typeof Settings !== "undefined" ? Settings.get("ttsRate") : 0.92) || 0.92;
+      u.rate = TTS.rate(rate);
       // 同一語音時用音高區分男女
       if (speaker === "W") u.pitch = 1.15;
       if (speaker === "M") u.pitch = 0.9;
-      u.onend = res; u.onerror = res;
+      u.onstart = () => { started = true; if (onStart) onStart(); };
+      u.onend = finish; u.onerror = finish;
       speechSynthesis.speak(u);
     });
   },
-  async seq(parts) {
-    if (!TTS.ok) return;
+  // 依序播放一組語音。第一段語音在呼叫當下同步送出（iOS 要求語音由使用者點擊直接觸發），
+  // 所以呼叫端必須在 click 處理函式裡直接呼叫，中間不可先 await。
+  // opts.onSilent：第一段語音 3 秒內沒有開始時呼叫（顯示「沒有聽到聲音？」）
+  // 回傳 Promise<{played}>：played 表示至少有一段語音真的開始播放
+  async seq(parts, opts = {}) {
+    if (!TTS.ok) { if (opts.onSilent) opts.onSilent(); return { played: false }; }
     TTS.stop();
+    const gen = TTS.gen;
     TTS.currentLang = TTS.chooseLang(); // 整組（一題或一組對話）用同一個腔調，同步且在第一個 await 之前完成
     TTS.playing = true;
+    let played = false, warned = false;
+    // 沒有聲音的提示只出現一次：3 秒內沒開始，或整組播完都沒有開始（例如瀏覽器立刻回報 not-allowed）
+    const warnSilent = () => {
+      if (!played && !warned && gen === TTS.gen && opts.onSilent) { warned = true; opts.onSilent(); }
+    };
+    const silentTimer = setTimeout(warnSilent, TTS_START_TIMEOUT_MS);
     for (const p of parts) {
-      if (!TTS.playing) break;
-      await TTS.speak(p.t, p.s, p.rate);
-      await new Promise(r => setTimeout(r, p.pause == null ? 350 : p.pause));
+      if (gen !== TTS.gen) break;
+      const r = await TTS.speak(p.t, p.s, p.rate, () => { played = true; });
+      if (r.started) played = true;
+      if (gen !== TTS.gen) break;
+      await new Promise(rs => setTimeout(rs, p.pause == null ? 350 : p.pause));
     }
-    TTS.playing = false;
+    clearTimeout(silentTimer);
+    warnSilent();
+    if (gen === TTS.gen) TTS.playing = false;
+    return { played };
   },
-  stop() { if (TTS.ok) { TTS.playing = false; speechSynthesis.cancel(); } }
+  stop() { TTS.gen++; TTS.playing = false; if (TTS.ok) speechSynthesis.cancel(); }
 };
 TTS.init();
+
+// 聽力入口共用的開始前檢查：有英文語音（或清單還在載入）就同步直接開始，保留點擊手勢；
+// 確定沒有英文語音時先說明，使用者選擇仍要嘗試才開始。
+function withVoices(start) {
+  if (TTS.voiceState() !== "none" || TTS.forceTry) { start(); return; }
+  UI.confirm(
+    `這台裝置沒有英文語音，聽力題可能沒有聲音，或由其他語言的語音念出英文。<br><br>
+     建議改用手機（iPhone、Android 通常內建英文語音），或在電腦安裝英文語音包：
+     <a href="https://github.com/realsnova/toeic-900#windows-安裝英式澳式語音包" target="_blank" rel="noopener">安裝步驟</a>。`,
+    { title: "找不到英文語音", okText: "仍要嘗試播放", cancelText: "先不要" }
+  ).then(ok => { if (ok) { TTS.forceTry = true; start(); } });
+}
+// 聽力畫面的固定標示：讓使用者知道這不是正式考試的真人錄音
+function ttsNoteHTML() {
+  return `<p class="muted tts-note">語音：裝置合成，非真人錄音</p>`;
+}
+// 第一段語音沒有開始時的提示。replay 為 null 表示不能重播（模擬考）
+function showSilentHelp(replay) {
+  let el = document.getElementById("tts-help");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "tts-help";
+    el.className = "tts-help";
+    el.setAttribute("role", "status");
+    document.body.appendChild(el);
+  }
+  el.innerHTML = `
+    <b>沒有聽到聲音？</b>
+    <span class="muted">${replay ? "請確認音量，再按重播。" : "這題的語音沒有播放，不會計分。"}到「我的 → 設定」可以查看裝置的英文語音。</span>
+    <span class="tts-help-actions">
+      ${replay ? `<button class="btn small" data-act="replay">重播</button>` : ""}
+      <button class="btn small secondary" data-act="close">關閉</button>
+    </span>`;
+  el.hidden = false;
+  el.onclick = e => {
+    const act = e.target.closest("[data-act]");
+    if (!act) return;
+    el.hidden = true;
+    if (act.dataset.act === "replay" && replay) replay();
+  };
+}
+function hideSilentHelp() { const el = document.getElementById("tts-help"); if (el) el.hidden = true; }
 
 /* ============ 分頁切換 ============ */
 // 頂層導覽（nav 按鈕、底部導覽列都對應這 5 個）
@@ -355,6 +451,7 @@ const TAB_TITLES = { vocab: "單字卡", listen: "聽力", p5: "Part 5 文法", 
 function showTab(name) {
   if (activeTimer) { clearInterval(activeTimer); activeTimer = null; }
   TTS.stop();
+  hideSilentHelp();
   tabs.forEach(t => document.getElementById("tab-" + t).classList.toggle("active", t === name));
   const sub = document.getElementById("subheader");
   if (sub) {
@@ -470,7 +567,7 @@ renderers.home = function () {
   const dl = daysLeft();
   const plan = todayPlan();
   const doneCount = plan.filter(p => p.done).length;
-  const est = scoreEstimate();
+  const acc = practiceAccuracy();
   $("#tab-home").innerHTML = `
     <div class="hero">
       <div class="stat-tile"><div class="num">${dl >= 0 ? dl : 0}</div><div class="lbl">距離考試（天）</div></div>
@@ -494,13 +591,13 @@ renderers.home = function () {
       ${doneCount === plan.length ? `<p style="text-align:center;margin-top:12px">🎉 今日任務全數完成！</p>` : ""}
     </div>
     <div class="card">
-      <h3>🎯 考試日期與預估分數</h3>
+      <h3>🎯 考試日期與練習答對率</h3>
       <div class="item-row">
         <div>考試日期：<input type="date" id="exam-date" value="${esc(examDate())}"
           style="background:var(--panel2);color:var(--text);border:1px solid var(--border2);border-radius:8px;padding:6px 10px;font-family:inherit"></div>
-        <div>${est.ready ? `目前實力粗估：<b style="color:var(--accent)">L ${est.L} + R ${est.R} = ${est.L + est.R}</b>` : `<span class="muted">累積更多作答後將顯示預估分數</span>`}</div>
+        <div>聽力 ${accuracyText(acc.L)} · 閱讀 ${accuracyText(acc.R)}</div>
       </div>
-      <p class="muted">計畫的三個階段（基礎→強化→衝刺）會依考試日期自動切換，改日期即重新規劃。</p>
+      <p class="muted">答對率只反映本工具內的練習（不含錯題本重考），不是 TOEIC 分數。計畫的三個階段（基礎→強化→衝刺）會依考試日期自動切換，改日期即重新規劃。</p>
     </div>
     <div class="card">
       <h3>💡 ${ph.name}重點</h3>
@@ -519,14 +616,24 @@ function phaseTips() {
   if (p === "強化期") return "把重心移到 Part 3/4（聽力配分最重）與 Part 7 多篇整合題。聽力先看題目再聽音檔、邊聽邊作答；閱讀練習「題目定位法」。錯題本每天清 5 題，別讓它累積。";
   return "考前兩週：不再學新內容，專注限時訓練與錯題清零。Part 5/6 全部 20 秒內作答，Part 7 每篇控制在建議時間內。考前一天只複習錯題本與單字，保持狀態。";
 }
-// 粗估分數（樣本量足夠才顯示）
-function scoreEstimate() {
+// 累計練習答對率。刻意不換算成 TOEIC 分數：本工具的題目沒有經過等化／校準，
+// 把答對率套進 5–495 的曲線只會產生看起來精確、其實沒有根據的數字。
+// 錯題本重考不計入（見 trackListening／trackReading 的呼叫處），聽力和閱讀的口徑才一致。
+const ACC_MIN = { L: 15, R: 20 }; // 樣本少於這個數時答對率波動太大，不顯示百分比
+function practiceAccuracy() {
+  const stat = (r, w, min) => {
+    const total = r + w;
+    return { right: r, total, min, ready: total >= min, need: Math.max(0, min - total),
+      pct: total ? Math.round(r / total * 100) : null };
+  };
   let lr = 0, lw = 0;
-  Object.values(S.lcat).forEach(s => { lr += s.r; lw += s.w; });
-  const rTotal = S.racc.r + S.racc.w, lTotal = lr + lw;
-  if (rTotal < 20 || lTotal < 15) return { ready: false };
-  const curve = acc => Math.min(495, Math.max(5, Math.round(acc * 505 / 5) * 5));
-  return { ready: true, L: curve(lr / lTotal), R: curve(S.racc.r / rTotal) };
+  Object.values(S.lcat || {}).forEach(s => { lr += Number(s.r) || 0; lw += Number(s.w) || 0; });
+  const racc = S.racc || {};
+  return { L: stat(lr, lw, ACC_MIN.L), R: stat(Number(racc.r) || 0, Number(racc.w) || 0, ACC_MIN.R) };
+}
+function accuracyText(a) {
+  return a.ready ? `<b style="color:var(--accent)">${a.pct}%</b>（${a.right}/${a.total}）`
+    : `<span class="muted">再答 ${a.need} 題後顯示</span>`;
 }
 
 /* ============ 單字卡（SRS 間隔重複）============ */
@@ -548,7 +655,19 @@ renderers.vocab = function () {
   vq = buildVocabQueue();
   nextCard();
 };
-function speakWord(w) { if (TTS.ok) TTS.seq([{ t: w, s: "N", rate: 0.85 }]); }
+let vocabVoiceNoticed = false;
+// 單字發音不擋流程：沒有英文語音時只提示一次，不用其他語言的語音念英文
+function vocabSpeak(parts) {
+  if (TTS.voiceState() === "none" && !TTS.forceTry) {
+    if (!vocabVoiceNoticed) {
+      vocabVoiceNoticed = true;
+      UI.toast("這台裝置沒有英文語音，無法播放發音。可到「我的 → 設定」查看說明。", "err", 4500);
+    }
+    return;
+  }
+  TTS.seq(parts);
+}
+function speakWord(w) { vocabSpeak([{ t: w, s: "N", rate: 0.85 }]); }
 function nextCard() {
   const box = $("#tab-vocab");
   if (!vq.length) {
@@ -602,7 +721,7 @@ function revealCard(card) {
   $("#fc").classList.add("flipped");
   $("#spk2").addEventListener("click", (e) => {
     e.stopPropagation();
-    if (TTS.ok) TTS.seq([{ t: card.w, s: "N", rate: 0.85, pause: 250 }, { t: card.ex, s: "N" }]);
+    vocabSpeak([{ t: card.w, s: "N", rate: 0.85, pause: 250 }, { t: card.ex, s: "N" }]);
   });
   const info = S.vocab[card.w];
   const e = info ? info.e : 2.5, i = info ? info.i : 0;
@@ -764,6 +883,7 @@ renderers.listen = function () {
   const l2acc = S.lcat["Part 2"] ? Math.round(S.lcat["Part 2"].r / (S.lcat["Part 2"].r + S.lcat["Part 2"].w) * 100) + "%" : "—";
   box.innerHTML = `
     <div class="card">
+      ${ttsNoteHTML()}
       <h2>🎧 Part 2 應答問題</h2>
       <p class="muted">聽問句與三個回應（不顯示文字），選出最合適的回應。專攻間接回應與同字陷阱。歷史正確率：${l2acc}</p>
       <br><button class="btn" id="l2-start">開始 10 題</button>
@@ -778,9 +898,9 @@ renderers.listen = function () {
         <div>${best !== undefined ? `<span class="pill ok">最佳 ${best}/${s.qs.length}</span>` : `<span class="pill">未完成</span>`}
         <button class="btn small" data-l34="${i}">開始</button></div></div>`;
     }).join("")}`;
-  $("#l2-start").addEventListener("click", startL2);
+  $("#l2-start").addEventListener("click", () => withVoices(startL2));
   box.querySelectorAll("[data-l34]").forEach(b =>
-    b.addEventListener("click", () => startL34(Number(b.dataset.l34))));
+    b.addEventListener("click", () => withVoices(() => startL34(Number(b.dataset.l34)))));
 };
 
 /* ---- Part 2 ---- */
@@ -802,12 +922,12 @@ function l2Next() {
     box.innerHTML = `
       <div class="card result-banner">
         <div class="score">${s.right} / ${s.ids.length}</div>
-        <p class="muted">${s.right === s.ids.length ? "全對！聽力反應很到位 🏆" : "答錯的題目已加入錯題本。"}</p>
+        <p class="muted">${s.right === s.ids.length ? "本輪全對！之後用新題再確認一次 🏆" : "答錯的題目已加入錯題本。"}</p>
         <br><button class="btn" id="l2-again">再來 10 題</button>
         <button class="btn secondary" id="l2-back">返回</button>
       </div>`;
     Anim.scoreReveal(box.querySelector(".score"), s.right, s.ids.length);
-    $("#l2-again").addEventListener("click", startL2);
+    $("#l2-again").addEventListener("click", () => withVoices(startL2));
     $("#l2-back").addEventListener("click", renderers.listen);
     updateNavBadges();
     return;
@@ -822,8 +942,9 @@ function l2Next() {
         ${waveHTML()}
         <p class="muted">聆聽問句與 (A)(B)(C) 三個回應</p>
         <div id="l2-accent" style="margin-bottom:8px"></div>
-        <button class="btn ghost small" id="l2-replay">↻ 重播</button>
+        <button class="btn ghost small" id="l2-replay">▶ 重播</button>
         ${rateQuickHTML()}
+        ${ttsNoteHTML()}
       </div>
       <div class="rating-row" id="l2-abc">
         ${order.map((_, pos) => `<button style="background:var(--panel2);border:1px solid var(--border2)" data-pos="${pos}">${"ABC"[pos]}</button>`).join("")}
@@ -831,7 +952,8 @@ function l2Next() {
       <div class="feedback"></div>
       <div id="l2-nav" style="text-align:right;margin-top:10px"></div>
     </div>`;
-  const play = () => { TTS.seq(l2Audio(item, order)); $("#l2-accent").innerHTML = accentTag(); };
+  // 這個函式由「開始」或「下一題」的點擊直接呼叫，第一段語音因此在點擊手勢內送出
+  const play = () => { hideSilentHelp(); TTS.seq(l2Audio(item, order), { onSilent: () => showSilentHelp(play) }); $("#l2-accent").innerHTML = accentTag(); };
   play();
   $("#l2-replay").addEventListener("click", play);
   wireRateQuick(box, play);
@@ -899,10 +1021,11 @@ function startL34(si) {
         ${waveHTML()}
         <div id="l34-accent" style="margin:4px 0 8px;text-align:center"></div>
         ${rateQuickHTML()}
+        ${ttsNoteHTML()}
         <div id="l34-q"></div>
         <div id="l34-nav" style="text-align:right"></div>
       </div>`;
-    const playL34 = () => { TTS.seq(l34Audio(set)); $("#l34-accent").innerHTML = accentTag(); };
+    const playL34 = () => { hideSilentHelp(); TTS.seq(l34Audio(set), { onSilent: () => showSilentHelp(playL34) }); $("#l34-accent").innerHTML = accentTag(); };
     if (state.at === 0) playL34();
     $("#l34-replay").addEventListener("click", playL34);
     wireRateQuick(box, playL34);
@@ -1014,7 +1137,7 @@ function p5Next() {
       <div class="card result-banner">
         <div class="score">${s.right} / ${s.ids.length}</div>
         <p>用時 ${Math.floor(secs / 60)} 分 ${secs % 60} 秒（平均 ${Math.round(secs / s.ids.length)} 秒/題，目標 ≤20 秒）</p>
-        <p class="muted">${s.right === s.ids.length ? "全對！900+ 的水準！🏆" : "答錯的題目已加入錯題本，記得複習。"}</p>
+        <p class="muted">${s.right === s.ids.length ? "本輪全對！之後用新題再確認一次 🏆" : "答錯的題目已加入錯題本，記得複習。"}</p>
         <br><button class="btn" id="p5-again">再來 10 題</button>
         <button class="btn secondary" id="p5-back">返回</button>
       </div>`;
@@ -1153,7 +1276,7 @@ function startP7(si) {
         <div class="card result-banner">
           <div class="score">${state.right} / ${set.qs.length}</div>
           <p>用時 ${Math.floor(used / 60)} 分 ${used % 60} 秒（建議 ${Math.round(set.time / 60)} 分鐘）</p>
-          <p class="muted">${state.right === set.qs.length ? "全對！閱讀力已達高分水準 🏆" : "答錯的題目已加入錯題本。"}</p>
+          <p class="muted">${state.right === set.qs.length ? "本篇全對！換一篇新文章再確認一次 🏆" : "答錯的題目已加入錯題本。"}</p>
           <br><button class="btn" id="p7-back">返回列表</button>
         </div>`;
       Anim.scoreReveal(box.querySelector(".score"), state.right, set.qs.length);
@@ -1216,7 +1339,11 @@ renderers.wrong = function () {
         <button class="btn small" data-retry="${i}">重新挑戰</button></div>`).join("")}
     <div id="wrong-quiz"></div>`;
   box.querySelectorAll("[data-retry]").forEach(b =>
-    b.addEventListener("click", () => retryWrong(entries[Number(b.dataset.retry)])));
+    b.addEventListener("click", () => {
+      const entry = entries[Number(b.dataset.retry)];
+      if (entry.type === "l2" || entry.type === "l34") withVoices(() => retryWrong(entry));
+      else retryWrong(entry);
+    }));
 };
 function retryWrong(entry) {
   const d = daily();
@@ -1248,12 +1375,12 @@ function retryWrong(entry) {
     const inner = $("#wq-inner");
     inner.innerHTML = `
       <div style="text-align:center;padding:12px"><div style="font-size:2rem">🔊</div>
-        <button class="btn ghost small" id="wq-replay">↻ 重播</button></div>
+        <button class="btn ghost small" id="wq-replay">▶ 重播</button>${ttsNoteHTML()}</div>
       <div class="rating-row" id="wq-abc">
         ${order.map((_, pos) => `<button style="background:var(--panel2);border:1px solid var(--border2)" data-pos="${pos}">${"ABC"[pos]}</button>`).join("")}
       </div>
       <div class="feedback"></div><div id="wq-nav" style="text-align:right;margin-top:10px"></div>`;
-    const play = () => TTS.seq(l2Audio(item, order));
+    const play = () => { hideSilentHelp(); TTS.seq(l2Audio(item, order), { onSilent: () => showSilentHelp(play) }); };
     play();
     $("#wq-replay").addEventListener("click", play);
     inner.querySelectorAll("#wq-abc button").forEach(btn => {
@@ -1270,7 +1397,7 @@ function retryWrong(entry) {
         inner.querySelector(".feedback").innerHTML = `<div class="explain">
           <b>${correct ? "✅ 答對了！" : "❌ 答錯了"}</b> 正解：(${"ABC"[ansPos]})<br>
           <b>Q:</b> ${esc(item.q)}<br>${order.map((oi, p) => `<b>(${"ABC"[p]})</b> ${esc(item.opts[oi])}`).join("<br>")}<br><br>${esc(item.exp)}</div>`;
-        trackListening("Part 2", correct);
+        // 錯題本重考不呼叫 trackListening：重考的是做過的題，計入會墊高答對率（閱讀也不計，口徑一致）
         finish(correct);
       });
     });
@@ -1289,7 +1416,7 @@ function retryWrong(entry) {
     const [si, qi] = entry.key.split("-").map(Number);
     item = PART34[si].qs[qi];
     audio = PART34[si];
-    passageHtml = `<div style="text-align:center;padding:8px"><button class="btn ghost small" id="wq-replay">🔊 播放音檔</button></div>`;
+    passageHtml = `<div style="text-align:center;padding:8px"><button class="btn ghost small" id="wq-replay">▶ 重播音檔</button>${ttsNoteHTML()}</div>`;
   } else {
     const [si, qi] = entry.key.split("-").map(Number);
     item = PART7[si].qs[qi];
@@ -1298,11 +1425,11 @@ function retryWrong(entry) {
   const inner = $("#wq-inner");
   inner.innerHTML = `${passageHtml}<div id="wq-q"></div><div id="wq-nav" style="text-align:right"></div>`;
   if (audio) {
-    TTS.seq(l34Audio(audio));
-    $("#wq-replay").addEventListener("click", () => TTS.seq(l34Audio(audio)));
+    const playAudio = () => { hideSilentHelp(); TTS.seq(l34Audio(audio), { onSilent: () => showSilentHelp(playAudio) }); };
+    playAudio();
+    $("#wq-replay").addEventListener("click", playAudio);
   }
   renderMCQ($("#wq-q"), item, meta, (correct) => {
-    if (entry.type === "l34") trackListening("Part 3-4", correct);
     finish(correct);
   });
 }
@@ -1484,9 +1611,9 @@ renderers.stats = function () {
   const mastered = cards.filter(c => c.i >= 21).length;
   const learning = cards.length - mastered;
   const unseen = VOCAB.length - cards.length;
-  const est = scoreEstimate();
-  const rTotal = S.racc.r + S.racc.w;
-  const rAcc = rTotal ? Math.round(S.racc.r / rTotal * 100) : 0;
+  const acc = practiceAccuracy();
+  const accTile = (a, name) => `<div class="stat-tile"><div class="num">${a.ready ? `${a.pct}%` : "—"}</div>
+    <div class="lbl">${name}答對率 · ${a.ready ? `${a.right}/${a.total} 題` : `再答 ${a.need} 題後顯示`}</div></div>`;
 
   // 近 14 天活動熱圖
   const heat = [];
@@ -1506,11 +1633,11 @@ renderers.stats = function () {
   $("#tab-stats").innerHTML = `
     <div class="hero">
       <div class="stat-tile"><div class="num">🔥 ${streak()}</div><div class="lbl">連續學習天數</div></div>
-      <div class="stat-tile"><div class="num">${est.ready ? est.L + est.R : "—"}</div><div class="lbl">預估總分（L${est.ready ? est.L : "?"} + R${est.ready ? est.R : "?"}）</div></div>
-      <div class="stat-tile"><div class="num">${rAcc}%</div><div class="lbl">閱讀正確率</div></div>
+      ${accTile(acc.L, "聽力")}
+      ${accTile(acc.R, "閱讀")}
       <div class="stat-tile"><div class="num">${mastered}</div><div class="lbl">已精通單字</div></div>
     </div>
-    ${est.ready ? `<div class="card"><p class="muted">⚠️ 預估分數以練習正確率粗略換算，僅供追蹤趨勢；實測含時間壓力與體力因素，通常略低。</p></div>` : ""}
+    <div class="card"><p class="muted">答對率是本工具內一般練習與模擬考的累計結果（不含錯題本重考），不是 TOEIC 分數；要評估考試程度，請用完整、計時的正式模擬試題。</p></div>
     <div class="card">
       <h2>📅 近 14 天學習熱圖</h2>
       <div class="heat">${heat.join("")}</div>
