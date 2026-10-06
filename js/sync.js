@@ -28,6 +28,11 @@ const Sync = {
     }
     return s.match(/.{1,5}/g).join("-"); // 例如 ab3de-f7gh9
   },
+  // 和 firebase/database.rules.json 相同的格式條件：4–64 字，小寫英數字，可用單一連字號分段
+  validCode(code) {
+    return typeof code === "string" && code.length >= 4 && code.length <= 64 && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(code);
+  },
+  lastError: null, // "read" | "write" | null：同步失敗時顯示在題庫/備份頁
   setCode(code) {
     Sync.code = code.trim().toLowerCase();
     localStorage.setItem(SYNC_CODE_KEY, Sync.code);
@@ -61,10 +66,12 @@ const Sync = {
         localStorage.setItem(STORE_KEY, JSON.stringify(S));
         if (remote.bank) saveBank(Object.assign(emptyBank(), remote.bank));
         Sync.lastSynced = new Date();
+        Sync.lastError = null;
         return true;
       }
       Sync.lastSynced = new Date();
-    } catch (e) { console.warn("雲端同步讀取失敗", e); }
+      Sync.lastError = null;
+    } catch (e) { console.warn("雲端同步讀取失敗", e); Sync.lastError = "read"; }
     return false;
   },
   // 每次 save() 後 debounce 推送到雲端
@@ -79,6 +86,7 @@ const Sync = {
     try {
       await ref.set({ records: S, bank: loadBank(), updatedAt: S.updatedAt || Date.now() });
       Sync.lastSynced = new Date();
-    } catch (e) { console.warn("雲端同步寫入失敗", e); }
+      Sync.lastError = null;
+    } catch (e) { console.warn("雲端同步寫入失敗", e); Sync.lastError = "write"; }
   }
 };

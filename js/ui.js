@@ -83,7 +83,8 @@ const UI = {
     setTimeout(() => { el.classList.remove("show"); setTimeout(() => el.remove(), 300); }, ms);
   },
   // 確認對話框，取代 confirm（回傳 Promise<boolean>）
-  confirm(msg, { title = "確認", okText = "確定", cancelText = "取消", danger = false } = {}) {
+  // onOk：在按下確定的點擊處理函式內同步執行（需要使用者手勢的動作，例如開始播放語音，要放在這裡）
+  confirm(msg, { title = "確認", okText = "確定", cancelText = "取消", danger = false, onOk = null } = {}) {
     return new Promise(res => {
       const wrap = document.createElement("div");
       wrap.className = "modal-backdrop";
@@ -100,7 +101,10 @@ const UI = {
       wrap.addEventListener("click", e => {
         if (e.target === wrap) { done(false); return; }
         const act = e.target.closest("[data-act]");
-        if (act) done(act.dataset.act === "ok");
+        if (!act) return;
+        const ok = act.dataset.act === "ok";
+        if (ok && onOk) onOk();
+        done(ok);
       });
       document.body.appendChild(wrap);
       requestAnimationFrame(() => wrap.classList.add("open"));

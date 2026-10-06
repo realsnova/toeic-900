@@ -145,9 +145,10 @@ test("T-AUD-01-6 選擇仍要嘗試播放後就開始", async () => {
   const speech = fakeSpeech({ voices: [] });
   const app = loadApp({ speech });
   speech.loadVoices([]);
-  app.run(`globalThis.__started = 0; UI.confirm = () => Promise.resolve(true); withVoices(() => { __started++; });`);
-  await wait(0);
-  assert.equal(app.run("__started"), 1);
+  // 模擬使用者按下「仍要嘗試播放」：UI.confirm 在點擊處理函式內同步呼叫 onOk
+  app.run(`globalThis.__started = 0; UI.confirm = (msg, opts) => { opts.onOk(); return Promise.resolve(true); };
+    withVoices(() => { __started++; });`);
+  assert.equal(app.run("__started"), 1, "必須在點擊當下同步開始，不能等 Promise（review P3-4）");
   assert.equal(app.run("TTS.forceTry"), true);
 });
 
@@ -184,7 +185,7 @@ test("T-AUD-03-1/3 語音一直沒反應：逾時結束等待並提示沒有聲�
   app.run(`TTS.timeoutMs = () => 30; globalThis.__silent = 0; globalThis.__res = null;
     TTS.seq([{ t: "a", pause: 0 }, { t: "b", pause: 0 }], { onSilent: () => __silent++ }).then(r => { __res = r; });`);
   await wait(200);
-  assert.deepEqual(JSON.parse(JSON.stringify(app.run("__res"))), { played: false }, "必須結束等待");
+  assert.deepEqual(JSON.parse(JSON.stringify(app.run("__res"))), { played: false, aborted: false }, "必須結束等待");
   assert.equal(speech.spoken.length, 2);
   assert.equal(app.run("__silent"), 1, "整組都沒播放要提示一次");
   await wait(3100);
@@ -270,4 +271,86 @@ test("T-AUD-03-4b 所有聽力題都沒播放時，報告不可顯示全對", ()
   const html = app.run("__html");
   assert.equal(html.includes("全對"), false);
   assert.match(html, /沒有可計分的題目/);
+});
+
+test("T-MET-04-3 雙節模考報告分開顯示聽力與閱讀，沒有合併總分", () => {
+  const app = loadApp();
+  app.run(`globalThis.__html = "";
+    Mock.box = () => ({ set innerHTML(v) { __html = v; }, get innerHTML() { return __html; }, querySelector: () => null, querySelectorAll: () => [] });
+    globalThis.$ = () => ({ addEventListener() {} });
+    Mock.renderReport({ mode: "full", lR: 16, lT: 19, rR: 22, rT: 27, lSkip: 0, secs: 2100,
+      parts: { "Part 2": { r: 8, t: 10 }, "Part 5": { r: 12, t: 15 } },
+      wrongs: [{ part: "Part 5", q: "q", opts: ["a", "b"], ans: 0, exp: "e", chosen: "b" }] });`);
+  const html = app.run("__html");
+  assert.match(html, /聽力答對 16 \/ 19 題/);
+  assert.match(html, /閱讀答對 22 \/ 27 題/);
+  assert.match(html, /84%/); assert.match(html, /81%/);
+  assert.equal(/83%|總分|總答對/.test(html), false, "不可合併成總分");
+  assert.match(html, /不是 TOEIC 分數/);
+});
+
+/* ---------- 獨立審查發現的回歸測試（evidence/v1.3.0/review.md） ---------- */
+test("review P2-1 模考進行中再點「模擬考」不會中斷聽力或重畫選單", () => {
+  const app = loadApp({ speech: fakeSpeech({ voices: EN }) });
+  app.run(`Mock.start("listen"); globalThis.__menu = 0; globalThis.__stops = 0;
+    const realMenu = Mock.menu; Mock.menu = () => { __menu++; };
+    const realStop = TTS.stop; TTS.stop = () => { __stops++; };
+    switchTab("mock");`);
+  assert.equal(app.run("__menu"), 0);
+  assert.equal(app.run("__stops"), 0);
+  assert.notEqual(app.run("Mock.s"), null);
+});
+
+test("review P2-1 被停止的播放回報 aborted，不算成沒有播放", async () => {
+  const app = loadApp({ speech: fakeSpeech({ voices: EN, mode: "silent" }) });
+  app.run(`TTS.timeoutMs = () => 30; globalThis.__res = null;
+    TTS.seq([{ t: "a", pause: 0 }]).then(r => { __res = r; }); TTS.stop();`);
+  await wait(100);
+  assert.equal(app.run("__res.aborted"), true);
+});
+
+test("review P2-1 舊的聽力迴圈不可接手新的模考", () => {
+  const src = readSource("js/mock.js");
+  assert.match(src, /Mock\.s !== s \|\| s\.cancelled/);
+});
+
+test("review P2-2 同步代碼格式檢查與規則一致", () => {
+  const app = loadApp();
+  for (const ok of ["ab3de-f7gh9", "abcd", "my-code-2026"]) assert.equal(app.run(`Sync.validCode(${JSON.stringify(ok)})`), true, ok);
+  for (const bad of ["abc", "dean-", "my--code", "-abcd", "AB3DE", "a_b", "x".repeat(65)]) {
+    assert.equal(app.run(`Sync.validCode(${JSON.stringify(bad)})`), false, bad);
+  }
+  const rules = JSON.parse(readSource("firebase/database.rules.json"));
+  const re = new RegExp(rules.rules.sync.$code[".read"].match(/matches\(\/(.*?)\/\)/)[1]);
+  for (const c of ["ab3de-f7gh9", "abcd", "my--code", "dean-", "a_b"]) {
+    const byRule = c.length >= 4 && c.length <= 64 && re.test(c);
+    assert.equal(app.run(`Sync.validCode(${JSON.stringify(c)})`), byRule, `程式與規則對 ${c} 的判斷不一致`);
+  }
+});
+
+test("review P2-3 voiceschanged 沒觸發時，判定前會再讀一次語音清單", async () => {
+  const speech = fakeSpeech({ voices: [] });
+  const app = loadApp({ speech });
+  await wait(2100);
+  speech.voices = [voice("en-US")]; // 清單有了，但沒有觸發 voiceschanged
+  assert.equal(app.run("TTS.voiceState()"), "ready");
+});
+
+test("review P3-3 出卡自動發音時沒有英文語音不跳提示，按發音鈕才提示", () => {
+  const speech = fakeSpeech({ voices: [] });
+  const app = loadApp({ speech });
+  speech.loadVoices([]);
+  app.run(`globalThis.__toasts = 0; UI.toast = () => { __toasts++; }; speakWord("word", false);`);
+  assert.equal(app.run("__toasts"), 0);
+  app.run(`speakWord("word");`);
+  assert.equal(app.run("__toasts"), 1);
+});
+
+test("review P3-6 送出語音時拋錯也會結束等待", async () => {
+  const speech = fakeSpeech({ voices: EN });
+  speech.speak = () => { throw new Error("boom"); };
+  const app = loadApp({ speech });
+  app.run(`globalThis.__res = null; TTS.seq([{ t: "a", pause: 0 }]).then(r => { __res = r; }, () => { __res = "rejected"; });`);
+  await wait(50);
+  assert.equal(app.run("__res.played"), false);
 });

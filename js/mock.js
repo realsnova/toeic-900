@@ -138,18 +138,19 @@ const Mock = {
       if (!Mock.s || s.cancelled) return;
       const it = items[i];
       const onSilent = () => showSilentHelp(null);
+      hideSilentHelp(); // 上一題的提示不可留到這一題
       if (it.type === "l34" && it.audioLead) {
         Mock.renderListenItem(i, true);
-        const { played } = await TTS.seq(l34Audio(it.set), { onSilent });
-        if (!Mock.s || s.cancelled) return;
+        const { played, aborted } = await TTS.seq(l34Audio(it.set), { onSilent });
+        if (Mock.s !== s || s.cancelled) return;
         // 對話沒有播放，同一組的三題都無從作答
-        if (!played) items.forEach((x, j) => { if (x.type === "l34" && x.set === it.set) s.audioFail.add(j); });
+        if (!played && !aborted) items.forEach((x, j) => { if (x.type === "l34" && x.set === it.set) s.audioFail.add(j); });
       }
       Mock.renderListenItem(i, false);
       if (it.type === "l2") {
-        const { played } = await TTS.seq(l2Audio(it.ref, it.order), { onSilent });
-        if (!Mock.s || s.cancelled) return;
-        if (!played) s.audioFail.add(i);
+        const { played, aborted } = await TTS.seq(l2Audio(it.ref, it.order), { onSilent });
+        if (Mock.s !== s || s.cancelled) return;
+        if (!played && !aborted) s.audioFail.add(i);
       }
       // 作答窗：P2 五秒、P3/4 每題八秒；作答後可提前進下一題
       await Mock.answerWindow(i, it.type === "l2" ? 5 : 8);
@@ -415,7 +416,7 @@ const Mock = {
     $("#mock-back").addEventListener("click", () => renderers.mock());
   },
 
-  modeName(mode) { return mode === "full" ? "雙節模考（短版）" : mode === "listen" ? "聽力節" : "閱讀節"; },
+  modeName(mode) { return { full: "雙節模考（短版）", listen: "聽力節", read: "閱讀節" }[mode] || "模擬考"; },
 
   // 有原始題數的紀錄才能換算答對率、畫進趨勢圖；更早的版本只存了換算分數，保留但不比較
   hasCounts(m) {

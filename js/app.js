@@ -28,7 +28,7 @@ function defaultState() {
 }
 const APP_VERSION = "1.3.0";
 const CHANGELOG = [
-  { v: "1.3.0", d: "2026-10-06", notes: "改顯示練習答對率（不再換算未校準的 TOEIC 分數，錯題本重考不計入）；只做錯題本或模考的日子也算連續學習；模考報告分開顯示聽力與閱讀、趨勢圖固定 0–100%；裝置沒有英文語音時先說明、語音沒播放時提示且模考不會卡住；同步代碼改用安全亂數" },
+  { v: "1.3.0", d: "2026-10-06", notes: "改顯示練習答對率（不再換算未校準的 TOEIC 分數，錯題本重考不計入）；只做錯題本或模考的日子也算連續學習；模考報告分開顯示聽力與閱讀、趨勢圖固定 0–100%；裝置沒有英文語音時先說明、語音沒播放時提示且模考不會卡住；同步代碼改用安全亂數並檢查格式；修正 Part 7 做完最後一題會跳出錯誤提示" },
   { v: "1.1.0", d: "2026-08-09", notes: "學習演算法強化：錯題要連續答對 2 次（跨天）才移除、Part 5 依弱項類別加權出題、Part 5／聽力 Part 2 不重複輪替出題、單字每日複習量上限" },
   { v: "1.0.3", d: "2026-07-12", notes: "驗收稽核：修復考試日期／同步代碼欄位的 XSS 漏洞、深色主題按鈕文字對比度不足、補上頁面 H1 標題" },
   { v: "1.0.2", d: "2026-07-12", notes: "驗收稽核：修復自訂題庫匯入可能讓雲端同步靜默失敗的資料安全性問題" },
@@ -304,6 +304,10 @@ const TTS = {
   // loading：清單還在載入；ready：有英文語音；none：確定沒有英文語音（或瀏覽器不支援語音合成）
   voiceState() {
     if (!TTS.ok) return "none";
+    if (!TTS.voices.length) { // 有些瀏覽器不觸發 voiceschanged：判定前再讀一次清單
+      TTS.voices = speechSynthesis.getVoices().filter(v => v.lang.startsWith("en"));
+      if (TTS.voices.length && typeof Accents !== "undefined") Accents.scan();
+    }
     if (TTS.voices.length) return "ready";
     return TTS.settled ? "none" : "loading";
   },
@@ -340,17 +344,19 @@ const TTS = {
       let started = false, finished = false;
       const finish = () => { if (finished) return; finished = true; clearTimeout(timer); res({ started }); };
       const timer = setTimeout(finish, TTS.timeoutMs(text, rate));
-      const u = new SpeechSynthesisUtterance(text);
-      const v = TTS.voiceFor(speaker);
-      if (v) u.voice = v;
-      u.lang = TTS.currentLang;
-      u.rate = TTS.rate(rate);
-      // 同一語音時用音高區分男女
-      if (speaker === "W") u.pitch = 1.15;
-      if (speaker === "M") u.pitch = 0.9;
-      u.onstart = () => { started = true; if (onStart) onStart(); };
-      u.onend = finish; u.onerror = finish;
-      speechSynthesis.speak(u);
+      try {
+        const u = new SpeechSynthesisUtterance(text);
+        const v = TTS.voiceFor(speaker);
+        if (v) u.voice = v;
+        u.lang = TTS.currentLang;
+        u.rate = TTS.rate(rate);
+        // 同一語音時用音高區分男女
+        if (speaker === "W") u.pitch = 1.15;
+        if (speaker === "M") u.pitch = 0.9;
+        u.onstart = () => { started = true; if (onStart) onStart(); };
+        u.onend = finish; u.onerror = finish;
+        speechSynthesis.speak(u);
+      } catch (e) { finish(); }
     });
   },
   // 依序播放一組語音。第一段語音在呼叫當下同步送出（iOS 要求語音由使用者點擊直接觸發），
@@ -371,15 +377,16 @@ const TTS = {
     const silentTimer = setTimeout(warnSilent, TTS_START_TIMEOUT_MS);
     for (const p of parts) {
       if (gen !== TTS.gen) break;
-      const r = await TTS.speak(p.t, p.s, p.rate, () => { played = true; });
+      const r = await TTS.speak(p.t, p.s, p.rate, () => { played = true; if (warned) hideSilentHelp(); });
       if (r.started) played = true;
       if (gen !== TTS.gen) break;
       await new Promise(rs => setTimeout(rs, p.pause == null ? 350 : p.pause));
     }
     clearTimeout(silentTimer);
     warnSilent();
-    if (gen === TTS.gen) TTS.playing = false;
-    return { played };
+    const aborted = gen !== TTS.gen; // 被重播、切頁或交卷停止，不代表語音有問題
+    if (!aborted) TTS.playing = false;
+    return { played, aborted };
   },
   stop() { TTS.gen++; TTS.playing = false; if (TTS.ok) speechSynthesis.cancel(); }
 };
@@ -393,8 +400,12 @@ function withVoices(start) {
     `這台裝置沒有英文語音，聽力題可能沒有聲音，或由其他語言的語音念出英文。<br><br>
      建議改用手機（iPhone、Android 通常內建英文語音），或在電腦安裝英文語音包：
      <a href="https://github.com/realsnova/toeic-900#windows-安裝英式澳式語音包" target="_blank" rel="noopener">安裝步驟</a>。`,
-    { title: "找不到英文語音", okText: "仍要嘗試播放", cancelText: "先不要" }
-  ).then(ok => { if (ok) { TTS.forceTry = true; start(); } });
+    {
+      title: "找不到英文語音", okText: "仍要嘗試播放", cancelText: "先不要",
+      // 在按鈕點擊的處理函式內同步開始播放，不等 Promise（iOS 只認點擊當下送出的語音）
+      onOk: () => { TTS.forceTry = true; start(); }
+    }
+  );
 }
 // 聽力畫面的固定標示：讓使用者知道這不是正式考試的真人錄音
 function ttsNoteHTML() {
@@ -412,9 +423,10 @@ function showSilentHelp(replay) {
   }
   el.innerHTML = `
     <b>沒有聽到聲音？</b>
-    <span class="muted">${replay ? "請確認音量，再按重播。" : "這題的語音沒有播放，不會計分。"}到「我的 → 設定」可以查看裝置的英文語音。</span>
+    <span class="muted">${replay ? "請確認音量，再按重播。" : "語音還沒開始播放；如果這題一直沒有聲音，不會列入計分。"}</span>
     <span class="tts-help-actions">
       ${replay ? `<button class="btn small" data-act="replay">重播</button>` : ""}
+      <a class="btn small secondary" href="https://github.com/realsnova/toeic-900#windows-安裝英式澳式語音包" target="_blank" rel="noopener">說明</a>
       <button class="btn small secondary" data-act="close">關閉</button>
     </span>`;
   el.hidden = false;
@@ -469,7 +481,8 @@ function showTab(name) {
 }
 // 給 nav / 底部導覽列用：切到頂層 5 區之一
 function switchTab(name) {
-  if (name !== "mock" && typeof Mock !== "undefined" && Mock.inProgress()) {
+  if (typeof Mock !== "undefined" && Mock.inProgress()) {
+    if (name === "mock") return; // 已經在考試畫面：重畫選單會打斷聽力並讓本題被當成沒有播放
     Mock.confirmLeave(() => switchTab(name));
     return;
   }
@@ -657,9 +670,9 @@ renderers.vocab = function () {
 };
 let vocabVoiceNoticed = false;
 // 單字發音不擋流程：沒有英文語音時只提示一次，不用其他語言的語音念英文
-function vocabSpeak(parts) {
+function vocabSpeak(parts, byUser = true) {
   if (TTS.voiceState() === "none" && !TTS.forceTry) {
-    if (!vocabVoiceNoticed) {
+    if (byUser && !vocabVoiceNoticed) {
       vocabVoiceNoticed = true;
       UI.toast("這台裝置沒有英文語音，無法播放發音。可到「我的 → 設定」查看說明。", "err", 4500);
     }
@@ -667,7 +680,7 @@ function vocabSpeak(parts) {
   }
   TTS.seq(parts);
 }
-function speakWord(w) { vocabSpeak([{ t: w, s: "N", rate: 0.85 }]); }
+function speakWord(w, byUser = true) { vocabSpeak([{ t: w, s: "N", rate: 0.85 }], byUser); }
 function nextCard() {
   const box = $("#tab-vocab");
   if (!vq.length) {
@@ -707,7 +720,7 @@ function nextCard() {
       <div class="swipe-hint right">✅ 記得</div>
     </div>
     <div id="rating"></div>`;
-  speakWord(card.w);
+  speakWord(card.w, false); // 出卡時自動發音；沒有英文語音時安靜略過，不跳提示
   $("#spk").addEventListener("click", (e) => { e.stopPropagation(); speakWord(card.w); });
   $("#fc").addEventListener("click", (e) => { if (e.target.id !== "spk") revealCard(card); });
 }
@@ -880,12 +893,14 @@ renderers.listen = function () {
     box.innerHTML = `<div class="card"><h2>🎧 聽力訓練</h2><p class="muted">此瀏覽器不支援語音合成（speechSynthesis），請改用 Edge 或 Chrome。</p></div>`;
     return;
   }
-  const l2acc = S.lcat["Part 2"] ? Math.round(S.lcat["Part 2"].r / (S.lcat["Part 2"].r + S.lcat["Part 2"].w) * 100) + "%" : "—";
+  const p2 = S.lcat["Part 2"] || { r: 0, w: 0 }, p2t = (p2.r || 0) + (p2.w || 0);
+  const l2acc = accuracyText({ right: p2.r || 0, total: p2t, ready: p2t >= ACC_MIN.L, need: Math.max(0, ACC_MIN.L - p2t),
+    pct: p2t ? Math.round((p2.r || 0) / p2t * 100) : null });
   box.innerHTML = `
     <div class="card">
       ${ttsNoteHTML()}
       <h2>🎧 Part 2 應答問題</h2>
-      <p class="muted">聽問句與三個回應（不顯示文字），選出最合適的回應。專攻間接回應與同字陷阱。歷史正確率：${l2acc}</p>
+      <p class="muted">聽問句與三個回應（不顯示文字），選出最合適的回應。專攻間接回應與同字陷阱。Part 2 答對率：${l2acc}</p>
       <br><button class="btn" id="l2-start">開始 10 題</button>
     </div>
     <div class="card">
@@ -1015,7 +1030,7 @@ function startL34(si) {
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
           <h2>${esc(set.type)} · ${esc(set.title)}</h2>
-          <button class="btn ghost small" id="l34-replay">↻ 重播音檔</button>
+          <button class="btn ghost small" id="l34-replay">▶ 重播音檔</button>
         </div>
         <p class="muted">先讀題目，音檔播放中即可作答。</p>
         ${waveHTML()}
@@ -1292,7 +1307,8 @@ function startP7(si) {
       trackReading(correct);
       save();
       $("#p7-nav").innerHTML = `<button class="btn" id="p7-nextbtn">下一題 →</button>`;
-      $("#p7-nextbtn").addEventListener("click", () => { state.at++; renderQ(); $("#p7-nav").innerHTML = ""; });
+      // 先清掉按鈕再換題：最後一題時 renderQ() 會換成結算畫面，#p7-nav 就不存在了
+      $("#p7-nextbtn").addEventListener("click", () => { $("#p7-nav").innerHTML = ""; state.at++; renderQ(); });
     });
   }
   renderQ();
@@ -1512,6 +1528,8 @@ renderers.bank = function () {
           目前同步代碼：<b>${Sync.code ? esc(Sync.code) : "尚未設定"}</b>
           ${Sync.lastSynced ? `上次同步：${Sync.lastSynced.toLocaleTimeString("zh-TW")}` : Sync.code ? "尚未完成過同步" : ""}
           ${!navigator.onLine ? `<br><span style="color:var(--warn)">⚠️ 目前離線，紀錄先存本機，恢復網路後會自動同步</span>` : ""}
+          ${Sync.code && !Sync.validCode(Sync.code) ? `<br><span style="color:var(--warn)">⚠️ 這組代碼的格式無法通過新的雲端安全規則，同步會失敗。請按「產生新代碼」換一組，再到其他裝置套用新代碼。</span>` : ""}
+          ${Sync.lastError ? `<br><span style="color:var(--warn)">⚠️ 上次同步失敗（${Sync.lastError === "read" ? "讀取" : "寫入"}），請確認網路後按「立即同步」。</span>` : ""}
         </p>
         <p class="muted">在第一台裝置按「產生新代碼」，然後把代碼抄到第二台裝置的輸入框按「套用」——兩台裝置從此自動同步（存檔後約 1.5 秒推送雲端，開啟頁面時自動抓取最新進度）。</p><br>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -1565,8 +1583,12 @@ renderers.bank = function () {
   });
   if (Sync.ready) {
     $("#sync-apply").addEventListener("click", async () => {
-      const v = $("#sync-code-input").value.trim();
+      const v = $("#sync-code-input").value.trim().toLowerCase();
       if (!v) return;
+      if (!Sync.validCode(v)) {
+        $("#sync-status").textContent = "代碼格式不正確：需為 4–64 個英文小寫或數字，可用單一連字號分段（例如 ab3de-f7gh9）。";
+        return;
+      }
       Sync.setCode(v);
       $("#sync-status").textContent = "同步中…";
       const changed = await Sync.pullOnStartup();
