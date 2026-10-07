@@ -1,0 +1,27 @@
+id,severity,type,finding,suggested_fix
+P5-194,P1,答案標錯,"題目 The two firms have a ______ relationship built on trust. 標記正解是 mutually（副詞），正確應為 mutual（形容詞修飾 relationship）。解析本身寫的是 mutual，資料的 ans 欄位標錯。使用者選對會被判錯",ans 由 0 改為 1
+P5-065,P2,兩個答案都對＋解析錯誤,"may not disclose confidential information, ______ during or after their employment：either 與 whether 都通順（either during or after 是常見寫法）。解析稱 either…or 只用於肯定選擇，此說法不正確","把 either 換成明確錯誤的選項（例如 whereas），並改寫解析"
+P5-068,P2,兩個答案都對＋解析推理錯誤,"review ______ expenditures exceed the weekly budget：whether 與 what（＝which expenditures）都合文法、語意通順。解析稱 what 需在子句作成分，但 what 在此可作限定詞","把 what 換成 because 或 although 等明確錯誤選項"
+P5-069,P2,兩個答案都對＋解析依據不足,"Only after the fire inspection ______ permitted to reopen：was the owner 與 is the owner 都合文法；句中沒有過去時間線索，解析卻說整句為過去語境","題幹補上過去時間線索（如 last week's fire inspection），或把 is the owner 換成錯誤語序的選項"
+P5-178,P2,兩個答案都對,"The contract must be signed by ______ parties：both 與 all 都正確，all parties 是合約常用語；題目沒說只有兩方","題幹改為 The contract between the two companies…，或把 all 換成 every"
+P6-06-1,P2,兩個答案都對,"we would like to invite you ______ an interview：標記 for，但 to 也正確（invite you to an interview 同樣常用）","把選項 to 換成 at 或 of"
+L2-033,P2,兩個答案都對,"Haven't the new brochures been printed yet? 標記 They'll be ready this afternoon.，但 Yes, on glossy paper. 也是合理回答（已經印了，用亮面紙）",把該干擾選項改為與問題無關或明顯矛盾的回應
+L2-057,P2,兩個答案都對,"Shouldn't we notify the clients about the price change? 標記 A notice is already being drafted.，但 Yes, they're valued clients. 也是合理的同意＋理由",把該干擾選項改為答非所問的回應
+L2-全部,P2,出題偏差（TOEIC 規格）,"60 題中有 56 題的正解是唯一最長的選項（隨機約 20 題）。考生不用聽懂也能靠長度猜對，Part 2 正確率與模考聽力成績因此偏高","重寫干擾選項讓三個選項長度接近，並讓部分正解成為最短選項"
+P5-143,P3,可議答案,"replace the defective units ______ charge：標記 free of；with no charge 雖不如 free of charge 標準，但口語也有人用",把 with no 換成明確錯誤的選項
+P5-026,P3,解析不精確,"解析稱 While 為連接詞須接子句，但 While arriving 是合文法的省略結構；While 錯在語意，不在文法",改寫解析
+P5-109/P5-110/P5-120/P5-173/P5-193,P3,類別標錯,"不定詞／目的用法題被標成「連接詞」「分詞」「關係詞」。類別會影響弱項加權與統計頁",把類別改為正確分類（建議新增「不定詞」類別或歸入既有最接近的類別）
+P5-032~P5-107,P3,近似重複,兩題幾乎相同（The company's profits have grown ______ since…，正解 substantially／significantly）,改寫其中一題
+P5-001~P5-174,P3,近似重複,兩題都考 be consistent with,改寫其中一題
+P5-075~P5-200,P3,近似重複,兩題都考 within + 天數,改寫其中一題
+P5-071~200,P3,難度標示不符,"第 71–200 題有 61 題是四個選項同字根的詞性題，題幹平均 10 字（前 70 題 13 字），多數為 TOEIC 500–700 分程度，與題庫標示的 900+ 難度不符",在題目資料中標示實際難度；之後新題依難度分級
+P6-03,P3,TOEIC 規格,這一篇沒有句子插入題（正式 Part 6 每篇都有一題）,把第 4 格改為句子插入題
+P6-全部,P3,TOEIC 規格,"句子插入題的三個干擾句都明顯離題（例如訂單延誤信中的 Thank you for your job application.），一眼就能排除；正式考試的干擾句通常同主題、但位置或邏輯不對",重寫干擾句
+P7-11,P3,文件不自然,"確認信內文寫 2 nights... please note this reservation is for 3 nights.，像是編寫時留下的半成品，真實文件不會這樣寫",改為只寫 2 nights 的錯誤版本（讓題目成立），或改題目設計
+V-303,P3,翻譯不精確,rebate 譯為「回扣、退款」；中文「回扣」常指不當佣金（kickback），容易誤導,改為「退款、折讓」
+V-351,P3,翻譯不精確,validate your parking ticket 譯為「核銷」；這裡是停車券蓋章認證（享免費或折抵），不是核銷,改為「蓋章認證」
+V-544,P3,翻譯不精確,A consignment of goods arrived at the port. 中的 consignment 是「一批貨」，譯成「寄售貨物」不正確,改為「一批貨物」，詞義補上「一批貨」
+V-064,P3,例句不自然,Cancellations made within 24 hours will forfeit the deposit. 主詞是 cancellations，但喪失訂金的是人,改為 Guests who cancel within 24 hours will forfeit the deposit.
+V-141/V-445,P3,重複,endeavor 與 endeavour 是同一字的美式與英式拼法，佔兩個單字名額,移除 V-445 或改為其他單字
+V-392,P3,不符 TOEIC 情境,expel 例句是學生被開除，TOEIC 為職場情境且此字少見,換成職場常用字
+V-396,P3,詞性可議,prospering 標為形容詞；一般用 prosperous,改為 prosperous
