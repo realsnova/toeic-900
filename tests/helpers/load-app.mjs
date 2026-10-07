@@ -12,7 +12,8 @@ const SCRIPTS = [
 ];
 
 // 假 fetch（AI 解析測試用）：記錄每次請求，依 mode 回應。不會連到真實網路。
-// mode：ok（回傳 reply 文字）、401、429、500、400credit、timeout（等到被 abort）、network、empty、html（非 JSON）
+// mode：ok（回傳 reply 文字）、401、429、500、400credit、timeout（等到被 abort）、network、empty、html（非 JSON）、
+// refusal、thinkonly（只有思考就達上限）、cutoff（文字被長度上限截斷）
 export function fakeFetch({ mode = "ok", reply = "KEY_OK\n【你選的為什麼不對】測試" } = {}) {
   const calls = [];
   const f = async (url, opts = {}) => {
@@ -30,8 +31,13 @@ export function fakeFetch({ mode = "ok", reply = "KEY_OK\n【你選的為什麼�
     if (m === "429") return json(429, { type: "error", error: { type: "rate_limit_error", message: "rate limited" } });
     if (m === "500") return json(500, { type: "error", error: { type: "api_error", message: "oops" } });
     if (m === "400credit") return json(400, { type: "error", error: { type: "invalid_request_error", message: "Your credit balance is too low" } });
-    if (m === "empty") return json(200, { content: [] });
-    return json(200, { content: [{ type: "text", text: f.reply }] });
+    if (m === "empty") return json(200, { content: [], stop_reason: "end_turn" });
+    if (m === "refusal") return json(200, { content: [], stop_reason: "refusal" });
+    // 只有思考內容就用完 max_tokens
+    if (m === "thinkonly") return json(200, { content: [{ type: "thinking", thinking: "..." }], stop_reason: "max_tokens" });
+    // 文字寫到一半被截斷
+    if (m === "cutoff") return json(200, { content: [{ type: "text", text: f.reply }], stop_reason: "max_tokens" });
+    return json(200, { content: [{ type: "thinking", thinking: "..." }, { type: "text", text: f.reply }], stop_reason: "end_turn" });
   };
   f.calls = calls; f.mode = mode; f.reply = reply;
   return f;

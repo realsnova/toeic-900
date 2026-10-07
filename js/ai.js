@@ -12,6 +12,11 @@ const AI_MODELS = [
   { id: "claude-sonnet-5-5", label: "Claude Sonnet 5.5（較準確、費用較高）" }
 ];
 const AI_TIMEOUT_MS = 20000;
+// 輸出上限要留餘裕：部分模型會先「思考」，思考也算在 max_tokens 內；只依實際用量計費
+const AI_MAX_TOKENS = 2000;
+const AI_TEST_MAX_TOKENS = 64;
+// 改了 AI_SYSTEM 就把這個數字加 1，舊的快取解析會自動失效
+const AI_PROMPT_V = 1;
 const AI_CACHE_MAX = 300;
 const AI_FLAGS_MAX = 200;
 const AI_VERDICTS = ["KEY_OK", "ALSO_CORRECT", "KEY_WRONG"];
@@ -49,15 +54,18 @@ const AI = {
     const d = { key: "", model: AI_MODELS[0].id };
     try { return Object.assign(d, JSON.parse(localStorage.getItem(AI_KEY) || "{}")); } catch (e) { return d; }
   },
-  saveCfg(c) { localStorage.setItem(AI_KEY, JSON.stringify({ key: c.key || "", model: c.model })); },
+  // 回傳是否成功（儲存空間已滿或瀏覽器封鎖儲存時會失敗）
+  saveCfg(c) {
+    try { localStorage.setItem(AI_KEY, JSON.stringify({ key: c.key || "", model: c.model })); return true; } catch (e) { return false; }
+  },
   enabled() { return !!AI.cfg().key; },
   // 回傳錯誤訊息；null 代表接受
   setKey(raw) {
     const key = String(raw || "").trim();
     if (!key) return "請貼上 API 金鑰。";
     if (/\s/.test(key) || key.length < 20 || key.length > 300) return "金鑰格式不對：應該是一長串沒有空白的文字（通常以 sk-ant- 開頭）。";
-    const c = AI.cfg(); c.key = key; AI.saveCfg(c);
-    return null;
+    const c = AI.cfg(); c.key = key;
+    return AI.saveCfg(c) ? null : "無法儲存金鑰：瀏覽器的儲存空間已滿或被封鎖。";
   },
   clearKey() { const c = AI.cfg(); c.key = ""; AI.saveCfg(c); },
   setModel(id) { if (AI_MODELS.some(m => m.id === id)) { const c = AI.cfg(); c.model = id; AI.saveCfg(c); } },
@@ -89,7 +97,7 @@ const AI = {
   },
   cacheKey(ctx, model) {
     const content = [ctx.q, ctx.context, ctx.exp, ctx.ans, ...ctx.opts].join("\u0001");
-    return `${ctx.type}:${ctx.key}:${ctx.chosen}:${model}:${AI.hash(content)}`;
+    return `${ctx.type}:${ctx.key}:${ctx.chosen}:${model}:p${AI_PROMPT_V}:${AI.hash(content)}`;
   },
 
   /* ---- 回應解析（AI-03）---- */
@@ -123,12 +131,17 @@ const AI = {
         signal: ctrl ? ctrl.signal : undefined
       });
     } catch (e) {
-      throw new AIError(e && e.name === "AbortError" ? "timeout" : "network");
-    } finally {
       clearTimeout(timer);
+      throw new AIError(e && e.name === "AbortError" ? "timeout" : "network");
     }
     let data = null;
-    try { data = await res.json(); } catch (e) { /* 非 JSON 回應，下面依狀態碼處理 */ }
+    try {
+      data = await res.json(); // 逾時計時涵蓋到讀完回應內容為止
+    } catch (e) {
+      if (e && e.name === "AbortError") { clearTimeout(timer); throw new AIError("timeout"); }
+      /* 非 JSON 回應，下面依狀態碼處理 */
+    }
+    clearTimeout(timer);
     if (!res.ok) {
       const apiMsg = AI.scrub(String((data && data.error && data.error.message) || ""), key);
       if (res.status === 401) throw new AIError("auth");
@@ -141,8 +154,11 @@ const AI = {
     }
     const text = data && Array.isArray(data.content)
       ? data.content.filter(c => c && c.type === "text").map(c => c.text).join("").trim() : "";
-    if (!text) throw new AIError("empty");
-    return { text, model };
+    const stop = (data && data.stop_reason) || "";
+    if (stop === "refusal") throw new AIError("refusal");
+    if (!text) throw new AIError(stop === "max_tokens" ? "truncated" : "empty");
+    // 只有正常結束才算完整；被長度上限截斷的回應不快取、不記錄判定
+    return { text, model, complete: stop === "end_turn" || stop === "stop_sequence" };
   },
   // 錯誤訊息中如果意外帶到金鑰就遮掉（INV-10）
   scrub(s, key) { return key ? String(s).split(key).join("***") : String(s); },
@@ -160,6 +176,8 @@ const AI = {
       model: "找不到所選的模型，請到設定頁換一個模型。",
       server: "AI 服務暫時忙碌，請稍後重試。",
       empty: "AI 沒有回傳內容，請重試。",
+      truncated: "AI 的回應超過長度上限而沒有內容，請重試或換一個模型。",
+      refusal: "AI 拒絕回答這一題。",
       bad: "AI 服務拒絕了這次請求。"
     };
     const base = msgs[code] || "AI 解析失敗，請重試。";
@@ -171,20 +189,27 @@ const AI = {
     const { model } = AI.cfg();
     const ck = AI.cacheKey(ctx, model);
     const cache = AI.read(AI_CACHE_KEY, {});
-    if (cache[ck]) return { verdict: cache[ck].v, body: cache[ck].b, model: cache[ck].m, cached: true };
-    const { text } = await AI.call(AI_SYSTEM, AI.prompt(ctx), 900);
+    const flagged = v => v === "ALSO_CORRECT" || v === "KEY_WRONG";
+    if (cache[ck]) {
+      const c = cache[ck];
+      // 使用者可能清除過疑似問題清單；畫面會說「已記錄」，所以這裡要再記一次（同一題只保留一筆）
+      if (flagged(c.v)) AI.flag(ctx, c.v, c.b, c.m);
+      return { verdict: c.v, body: c.b, model: c.m, cached: true, complete: true };
+    }
+    const { text, complete } = await AI.call(AI_SYSTEM, AI.prompt(ctx), AI_MAX_TOKENS);
     const { verdict, body } = AI.parse(text);
+    if (!complete) return { verdict: null, body, model, cached: false, complete: false };
     cache[ck] = { v: verdict, b: body, m: model, t: Date.now() };
     const keys = Object.keys(cache);
     if (keys.length > AI_CACHE_MAX) {
       keys.sort((a, b) => cache[a].t - cache[b].t).slice(0, keys.length - AI_CACHE_MAX).forEach(k => delete cache[k]);
     }
     AI.write(AI_CACHE_KEY, cache);
-    if (verdict === "ALSO_CORRECT" || verdict === "KEY_WRONG") AI.flag(ctx, verdict, body, model);
-    return { verdict, body, model, cached: false };
+    if (flagged(verdict)) AI.flag(ctx, verdict, body, model);
+    return { verdict, body, model, cached: false, complete: true };
   },
   async test() {
-    await AI.call("Reply with the single word OK.", "ping", 5);
+    await AI.call("Reply with the single word OK.", "ping", AI_TEST_MAX_TOKENS);
     return "連線成功，金鑰可以使用。";
   },
 
@@ -232,6 +257,7 @@ function wireAIBox(root, ctx) {
       out.innerHTML = `
         ${warn ? `<div class="ai-warn">⚠️ ${warn}AI 的判斷不一定正確，這題已記錄到「設定 → AI 解析」的疑似問題清單，作答紀錄不受影響。</div>` : ""}
         <div class="ai-text">${esc(res.body || "（AI 沒有提供說明）")}</div>
+        ${res.complete ? "" : `<p class="ai-err">回應超過長度上限，內容可能不完整（沒有存到本機，也沒有記錄判定）。</p>`}
         <p class="ai-foot muted">由 ${esc(AI.modelLabel(res.model))} 產生，可能有誤；以題庫解析為準。${res.cached ? "（已存在本機，未再次呼叫）" : ""}</p>`;
     }).catch(err => {
       if (!out.isConnected) return;

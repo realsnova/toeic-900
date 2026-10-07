@@ -266,3 +266,54 @@ test("T-AI-06-1 版本一致：APP_VERSION、CHANGELOG、?v= 與 ai.js 已載入
   assert.ok(/js\/ai\.js\?v=\d+/.test(html));
   assert.ok(html.indexOf("js/ai.js") < html.indexOf("js/app.js"));
 });
+
+/* ---------- 獨立審查（review-131）後補的案例 ---------- */
+test("review-131 P2-1 回應含思考區塊時只取文字；只有思考就達上限時給明確訊息；測試連線的上限足夠", async () => {
+  const ok = appWithKey();
+  const r = plain(await ok.run(`AI.explain(${P5_CTX})`));
+  assert.match(r.body, /測試/);
+  assert.ok(ok.fetch.calls[0].body.max_tokens >= 1500, "解析的輸出上限要留給思考");
+  await ok.run("AI.test()");
+  assert.ok(ok.fetch.calls[1].body.max_tokens >= 32, "測試連線的上限太小，思考型模型會沒有文字");
+  const think = appWithKey({ mode: "thinkonly" });
+  assert.match(await think.run(`AI.explain(${P5_CTX}).then(() => "", e => AI.errMsg(e))`), /長度上限/);
+  const refuse = appWithKey({ mode: "refusal" });
+  assert.match(await refuse.run(`AI.explain(${P5_CTX}).then(() => "", e => AI.errMsg(e))`), /拒絕/);
+});
+
+test("review-131 P2-2 被截斷的回應照樣顯示，但標示不完整、不快取、不記錄判定", async () => {
+  const app = appWithKey({ mode: "cutoff", reply: "KEY_WRONG\n寫到一半" });
+  const r = plain(await app.run(`AI.explain(${P5_CTX})`));
+  assert.equal(r.complete, false);
+  assert.equal(r.verdict, null);
+  assert.match(r.body, /寫到一半/);
+  assert.equal(app.run("AI.flags().length"), 0);
+  assert.equal(app.store.get("toeic900_ai_cache") || "{}", "{}");
+  app.fetch.mode = "ok";
+  await app.run(`AI.explain(${P5_CTX})`);
+  assert.equal(app.fetch.calls.length, 2, "截斷的回應不可擋住重試");
+});
+
+test("review-131 P3-1 清除疑似清單後，快取命中的 KEY_WRONG 會重新記錄", async () => {
+  const app = appWithKey({ reply: "KEY_WRONG\n答案錯了" });
+  await app.run(`AI.explain(${P5_CTX})`);
+  app.run("AI.clearFlags()");
+  const r = plain(await app.run(`AI.explain(${P5_CTX})`));
+  assert.equal(r.cached, true);
+  assert.equal(app.run("AI.flags().length"), 1);
+  assert.equal(app.fetch.calls.length, 1);
+});
+
+test("review-131 P3-2 回應內容讀取卡住也會逾時", async () => {
+  const app = appWithKey();
+  app.run(`AI.timeoutMs = 30; fetch = async (u, o) => ({ ok: true, status: 200,
+    json: () => new Promise((_, rej) => o.signal.addEventListener("abort", () => { const e = new Error("a"); e.name = "AbortError"; rej(e); })) })`);
+  assert.match(await app.run(`AI.explain(${P5_CTX}).then(() => "", e => AI.errMsg(e))`), /逾時/);
+});
+
+test("review-131 P3-3 快取鍵包含提示版本；P3-4 儲存失敗時回報而不是拋錯", () => {
+  const app = loadApp();
+  assert.match(app.run(`AI.cacheKey(${P5_CTX}, "m")`), /:p\d+:/);
+  app.run(`localStorage.setItem = () => { throw new Error("QuotaExceededError"); }`);
+  assert.match(app.run(`AI.setKey(${JSON.stringify(KEY)})`), /無法儲存/);
+});
