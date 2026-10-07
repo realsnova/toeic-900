@@ -31,7 +31,7 @@ renderers.me = function () {
   const cards = [
     { id: "stats", icon: "📊", title: "統計", sub: "練習答對率、學習熱圖、弱項分析" },
     { id: "bank", icon: "📦", title: "題庫 / 備份", sub: "擴增題庫、匯出備份、雲端同步" },
-    { id: "settings", icon: "⚙️", title: "設定", sub: "主題、聽力語速與腔調、每日單字量" }
+    { id: "settings", icon: "⚙️", title: "設定", sub: "主題、聽力語速與腔調、每日單字量、AI 解析" }
   ];
   $("#tab-me").innerHTML = `
     <div class="card"><h2>👤 我的</h2>${S.targetScore ? `<p class="muted">目標分數 ${S.targetScore} 分</p>` : ""}</div>
@@ -119,7 +119,9 @@ renderers.settings = function () {
           style="width:64px;background:var(--panel2);color:var(--text);border:1px solid var(--border2);border-radius:8px;padding:8px;font-family:inherit">
       </div>
       <p class="muted">請假幾天後到期卡會一次累積上百張，設上限才做得完。超出的部分會自動留到明天，不會遺失。</p>
-    </div>`;
+    </div>
+    ${aiSettingsHTML()}`;
+  wireAISettings($("#tab-settings"), renderers.settings);
   $("#tab-settings").querySelectorAll("[data-theme]").forEach(b =>
     b.addEventListener("click", () => { Theme.set(b.dataset.theme); renderers.settings(); }));
   $("#set-rate").addEventListener("input", (e) => {

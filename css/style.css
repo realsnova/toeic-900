@@ -480,3 +480,16 @@ main { max-width: 860px; margin: 0 auto; padding: 24px 16px 80px; }
 /* 模擬考報告：聽力、閱讀分開呈現 */
 .mock-secs { display: flex; justify-content: center; gap: 32px; flex-wrap: wrap; margin: 8px 0; }
 .mock-sec .score { line-height: 1.2; }
+
+/* AI 錯題解析（v1.3.1 試用） */
+.ai-box { margin: -4px 0 12px; }
+.ai-out:empty { display: none; }
+.ai-out { margin-top: 8px; padding: 12px 16px; border-radius: 0 10px 10px 0; border-left: 3px solid var(--accent2); background: rgba(139, 92, 246, 0.08); font-size: 0.93rem; }
+.ai-text { white-space: pre-wrap; }
+.ai-warn { border: 1px solid var(--warn); border-radius: var(--radius-sm); padding: 8px 10px; margin-bottom: 10px; font-size: 0.88rem; }
+.ai-foot { font-size: 0.78rem; margin: 8px 0 0; }
+.ai-loading { margin: 0; }
+.ai-err { color: var(--bad); margin: 0; }
+.ai-ok { color: var(--good); }
+.ai-notes { font-size: 0.82rem; margin: 10px 0 0 18px; padding: 0; }
+.ai-notes li { margin: 4px 0; }

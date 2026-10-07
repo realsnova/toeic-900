@@ -8,8 +8,34 @@ import { webcrypto } from "node:crypto";
 const ROOT = path.resolve(import.meta.dirname, "..", "..");
 const SCRIPTS = [
   "js/ui.js", "js/data/vocab.js", "js/data/part5.js", "js/data/part6.js", "js/data/part7.js",
-  "js/data/listening.js", "js/firebase-config.js", "js/sync.js", "js/app.js", "js/mock.js", "js/views.js"
+  "js/data/listening.js", "js/firebase-config.js", "js/sync.js", "js/ai.js", "js/app.js", "js/mock.js", "js/views.js"
 ];
+
+// 假 fetch（AI 解析測試用）：記錄每次請求，依 mode 回應。不會連到真實網路。
+// mode：ok（回傳 reply 文字）、401、429、500、400credit、timeout（等到被 abort）、network、empty、html（非 JSON）
+export function fakeFetch({ mode = "ok", reply = "KEY_OK\n【你選的為什麼不對】測試" } = {}) {
+  const calls = [];
+  const f = async (url, opts = {}) => {
+    calls.push({ url, headers: opts.headers, body: JSON.parse(opts.body) });
+    const m = f.mode;
+    if (m === "network") throw new TypeError("Failed to fetch");
+    if (m === "timeout") {
+      return new Promise((_, reject) => opts.signal.addEventListener("abort", () => {
+        const e = new Error("aborted"); e.name = "AbortError"; reject(e);
+      }));
+    }
+    const json = (status, data) => ({ ok: status >= 200 && status < 300, status, json: async () => data });
+    if (m === "html") return { ok: false, status: 502, json: async () => { throw new SyntaxError("bad json"); } };
+    if (m === "401") return json(401, { type: "error", error: { type: "authentication_error", message: "invalid x-api-key" } });
+    if (m === "429") return json(429, { type: "error", error: { type: "rate_limit_error", message: "rate limited" } });
+    if (m === "500") return json(500, { type: "error", error: { type: "api_error", message: "oops" } });
+    if (m === "400credit") return json(400, { type: "error", error: { type: "invalid_request_error", message: "Your credit balance is too low" } });
+    if (m === "empty") return json(200, { content: [] });
+    return json(200, { content: [{ type: "text", text: f.reply }] });
+  };
+  f.calls = calls; f.mode = mode; f.reply = reply;
+  return f;
+}
 
 // 什麼都接受的假 DOM 元素：渲染函式只要不拋錯即可，畫面內容由 innerHTML 字串檢查
 function fakeEl() {
@@ -46,8 +72,8 @@ export function fakeSpeech({ voices = [], mode = "normal" } = {}) {
 
 export function voice(lang, name = lang) { return { lang, name }; }
 
-// 載入整個 App。storage：預先放入 localStorage 的內容；speech：fakeSpeech() 的回傳值
-export function loadApp({ storage = {}, speech = fakeSpeech() } = {}) {
+// 載入整個 App。storage：預先放入 localStorage 的內容；speech：fakeSpeech() 的回傳值；fetch：fakeFetch() 的回傳值
+export function loadApp({ storage = {}, speech = fakeSpeech(), fetch = fakeFetch() } = {}) {
   const store = new Map(Object.entries(storage));
   const writes = [];
   const localStorage = {
@@ -67,7 +93,7 @@ export function loadApp({ storage = {}, speech = fakeSpeech() } = {}) {
   const ctx = {
     console, setTimeout, clearTimeout, setInterval, clearInterval, Promise, Date, Math, JSON,
     crypto: webcrypto,
-    localStorage, document, navigator: { clipboard: {} },
+    localStorage, document, navigator: { clipboard: {}, onLine: true }, fetch, AbortController,
     speechSynthesis: speech,
     SpeechSynthesisUtterance: function (text) { this.text = text; },
     requestAnimationFrame: fn => setTimeout(fn, 0),
@@ -83,7 +109,7 @@ export function loadApp({ storage = {}, speech = fakeSpeech() } = {}) {
     vm.runInContext(fs.readFileSync(path.join(ROOT, f), "utf8"), ctx, { filename: f });
   }
   return {
-    ctx, speech, store, writes,
+    ctx, speech, store, writes, fetch,
     run: code => vm.runInContext(code, ctx)
   };
 }

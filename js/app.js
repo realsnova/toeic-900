@@ -26,8 +26,9 @@ function defaultState() {
     onboarded: false          // 是否已完成（或略過）新手引導
   };
 }
-const APP_VERSION = "1.3.0";
+const APP_VERSION = "1.3.1";
 const CHANGELOG = [
+  { v: "1.3.1", d: "2026-10-07", notes: "AI 錯題解析（試用）：在設定頁貼上自己的 Anthropic API 金鑰後，答錯時可以請 AI 說明「我選的為什麼不對」；AI 認為題目可能有兩個正解或答案標錯時會記錄下來，可匯出給人工確認。金鑰只存在這台裝置，不會同步或備份" },
   { v: "1.3.0", d: "2026-10-06", notes: "改顯示練習答對率（不再換算未校準的 TOEIC 分數，錯題本重考不計入）；只做錯題本或模考的日子也算連續學習；模考報告分開顯示聽力與閱讀、趨勢圖固定 0–100%；裝置沒有英文語音時先說明、語音沒播放時提示且模考不會卡住；同步代碼改用安全亂數並檢查格式；修正 Part 7 做完最後一題會跳出錯誤提示" },
   { v: "1.1.0", d: "2026-08-09", notes: "學習演算法強化：錯題要連續答對 2 次（跨天）才移除、Part 5 依弱項類別加權出題、Part 5／聽力 Part 2 不重複輪替出題、單字每日複習量上限" },
   { v: "1.0.3", d: "2026-07-12", notes: "驗收稽核：修復考試日期／同步代碼欄位的 XSS 漏洞、深色主題按鈕文字對比度不足、補上頁面 H1 標題" },
@@ -852,7 +853,9 @@ function renderMCQ(container, item, meta, onDone) {
         <div class="explain">
           ${meta.cat ? `<span class="tag">${esc(meta.cat)}</span><br>` : ""}
           <b>${correct ? "✅ 答對了！" : "❌ 答錯了"}</b> 正解：${esc(item.opts[item.ans])}<br>${esc(item.exp)}
-        </div>`;
+        </div>${meta.ai ? aiOffer(correct) : ""}`;
+      // meta.ai：{type, key, context}，答錯時提供 AI 解析（v1.3.1，只在按下按鈕才呼叫）
+      if (meta.ai && !correct) wireAIBox(container, { ...meta.ai, q: item.q, opts: item.opts, ans: item.ans, exp: item.exp, chosen });
       onDone(correct);
     });
   });
@@ -989,7 +992,8 @@ function l2Next() {
           <b>${correct ? "✅ 答對了！" : "❌ 答錯了"}</b> 正解：(${"ABC"[ansPos]})<br>
           <b>Q:</b> ${esc(item.q)}<br>
           ${order.map((oi, p) => `<b>(${"ABC"[p]})</b> ${esc(item.opts[oi])}`).join("<br>")}<br><br>${esc(item.exp)}
-        </div>`;
+        </div>${aiOffer(correct)}`;
+      if (!correct) wireAIBox(box, { type: "l2", key: id, q: item.q, opts: item.opts, ans: item.ans, exp: item.exp, chosen: order[pos] });
       trackListening("Part 2", correct);
       wbMark("l2", id, correct);
       daily().l2++;
@@ -1045,7 +1049,8 @@ function startL34(si) {
     $("#l34-replay").addEventListener("click", playL34);
     wireRateQuick(box, playL34);
     const q = set.qs[state.at];
-    renderMCQ($("#l34-q"), q, { progress: `第 ${state.at + 1} / ${set.qs.length} 題` }, (correct) => {
+    renderMCQ($("#l34-q"), q, { progress: `第 ${state.at + 1} / ${set.qs.length} 題`,
+      ai: { type: "l34", key: `${si}-${state.at}`, context: aiTranscript(set) } }, (correct) => {
       const key = `${si}-${state.at}`;
       trackListening("Part 3-4", correct);
       if (correct) state.right++;
@@ -1060,6 +1065,14 @@ function startL34(si) {
 function transcript(set) {
   const name = { M: "男", W: "女", N: "" };
   return set.turns.map(t => `${t.s !== "N" ? `（${name[t.s]}）` : ""}${esc(t.t)}`).join("\n\n");
+}
+// 送給 AI 解析的純文字文章與逐字稿（不經 esc，不會顯示在畫面上）
+function aiTranscript(set) {
+  const name = { M: "男", W: "女", N: "旁白" };
+  return set.turns.map(t => `${name[t.s] || t.s}：${t.t}`).join("\n");
+}
+function aiPassages(set) {
+  return set.passages.length > 1 ? set.passages.map((t, i) => `（文章 ${i + 1}）\n${t}`).join("\n\n") : set.passages[0];
 }
 
 /* ============ Part 5 ============ */
@@ -1166,7 +1179,7 @@ function p5Next() {
   const item = PART5[id];
   const box = $("#tab-p5");
   box.innerHTML = `<div class="card" id="p5-q"></div><div id="p5-nav" style="text-align:right"></div>`;
-  renderMCQ($("#p5-q"), item, { progress: `第 ${s.at + 1} / ${s.ids.length} 題`, cat: item.cat }, (correct) => {
+  renderMCQ($("#p5-q"), item, { progress: `第 ${s.at + 1} / ${s.ids.length} 題`, cat: item.cat, ai: { type: "p5", key: id } }, (correct) => {
     if (!S.cat[item.cat]) S.cat[item.cat] = { r: 0, w: 0 };
     if (correct) { S.cat[item.cat].r++; s.right++; } else S.cat[item.cat].w++;
     wbMark("p5", id, correct);
@@ -1225,7 +1238,7 @@ function startP6(pi) {
       </div>`;
     const blank = p.blanks[state.at];
     renderMCQ($("#p6-q"), { q: `空格 [${state.at + 1}] 應填入：`, opts: blank.opts, ans: blank.ans, exp: blank.exp },
-      { progress: `空格 ${state.at + 1} / ${p.blanks.length}` }, (correct) => {
+      { progress: `空格 ${state.at + 1} / ${p.blanks.length}`, ai: { type: "p6", key: `${pi}-${state.at}`, context: p.text } }, (correct) => {
         const key = `${pi}-${state.at}`;
         if (correct) state.right++;
         wbMark("p6", key, correct);
@@ -1300,7 +1313,8 @@ function startP7(si) {
       return;
     }
     const q = set.qs[state.at];
-    renderMCQ($("#p7-q"), q, { progress: `第 ${state.at + 1} / ${set.qs.length} 題` }, (correct) => {
+    renderMCQ($("#p7-q"), q, { progress: `第 ${state.at + 1} / ${set.qs.length} 題`,
+      ai: { type: "p7", key: `${si}-${state.at}`, context: aiPassages(set) } }, (correct) => {
       const key = `${si}-${state.at}`;
       if (correct) state.right++;
       wbMark("p7", key, correct);
@@ -1412,7 +1426,8 @@ function retryWrong(entry) {
         });
         inner.querySelector(".feedback").innerHTML = `<div class="explain">
           <b>${correct ? "✅ 答對了！" : "❌ 答錯了"}</b> 正解：(${"ABC"[ansPos]})<br>
-          <b>Q:</b> ${esc(item.q)}<br>${order.map((oi, p) => `<b>(${"ABC"[p]})</b> ${esc(item.opts[oi])}`).join("<br>")}<br><br>${esc(item.exp)}</div>`;
+          <b>Q:</b> ${esc(item.q)}<br>${order.map((oi, p) => `<b>(${"ABC"[p]})</b> ${esc(item.opts[oi])}`).join("<br>")}<br><br>${esc(item.exp)}</div>${aiOffer(correct)}`;
+        if (!correct) wireAIBox(inner, { type: "l2", key: entry.key, q: item.q, opts: item.opts, ans: item.ans, exp: item.exp, chosen: order[pos] });
         // 錯題本重考不呼叫 trackListening：重考的是做過的題，計入會墊高答對率（閱讀也不計，口徑一致）
         finish(correct);
       });
@@ -1420,6 +1435,7 @@ function retryWrong(entry) {
     return;
   }
   let item, meta = {}, passageHtml = "", audio = null;
+  meta.ai = { type: entry.type, key: entry.key };
   if (entry.type === "p5") {
     item = PART5[entry.key];
     meta.cat = item.cat;
@@ -1428,15 +1444,18 @@ function retryWrong(entry) {
     const blank = PART6[pi].blanks[bi];
     item = { q: `空格 [${bi + 1}] 應填入：`, opts: blank.opts, ans: blank.ans, exp: blank.exp };
     passageHtml = `<div class="passage">${esc(PART6[pi].text)}</div>`;
+    meta.ai.context = PART6[pi].text;
   } else if (entry.type === "l34") {
     const [si, qi] = entry.key.split("-").map(Number);
     item = PART34[si].qs[qi];
     audio = PART34[si];
+    meta.ai.context = aiTranscript(audio);
     passageHtml = `<div style="text-align:center;padding:8px"><button class="btn ghost small" id="wq-replay">▶ 重播音檔</button>${ttsNoteHTML()}</div>`;
   } else {
     const [si, qi] = entry.key.split("-").map(Number);
     item = PART7[si].qs[qi];
     passageHtml = PART7[si].passages.map(t => `<div class="passage">${esc(t)}</div>`).join("");
+    meta.ai.context = aiPassages(PART7[si]);
   }
   const inner = $("#wq-inner");
   inner.innerHTML = `${passageHtml}<div id="wq-q"></div><div id="wq-nav" style="text-align:right"></div>`;
