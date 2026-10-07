@@ -34,7 +34,7 @@ renderers.me = function () {
     { id: "settings", icon: "⚙️", title: "設定", sub: "主題、聽力語速與腔調、每日單字量、AI 解析" }
   ];
   $("#tab-me").innerHTML = `
-    <div class="card"><h2>👤 我的</h2>${S.targetScore ? `<p class="muted">目標分數 ${S.targetScore} 分</p>` : ""}</div>
+    <div class="card"><h2>👤 我的</h2>${S.targetScore ? `<p class="muted">目標分數 ${esc(S.targetScore)} 分</p>` : ""}</div>
     ${cards.map(c => `
       <div class="hub-card" data-go="${c.id}">
         <div class="hub-icon">${c.icon}</div>

@@ -1,9 +1,10 @@
 /* ============ AI 錯題解析（自帶金鑰，試用版 v1.3.1）============ */
 // 規格：.scratch/toeic-v1-improve/spec.md §5.1A（AI-01～AI-05）、INV-10～12。
-// 金鑰存在獨立的 localStorage 鍵，不進 S：所以不會雲端同步、也不會出現在備份檔（INV-10）。
+// 金鑰預設存在 sessionStorage，勾選「記住」才存在獨立的 localStorage 鍵；都不進 S，所以不會雲端同步、也不會出現在備份檔（INV-10）。
 // 只在使用者按下按鈕時才送出請求；沒有金鑰時不發任何 AI 請求（INV-11）。
 // AI 的判定只記錄，不改計分、錯題本或題庫（INV-12）。
 const AI_KEY = "toeic900_ai";
+const AI_SESSION_KEY = "toeic900_ai_key"; // sessionStorage：沒有勾選「記住」時的金鑰
 const AI_CACHE_KEY = "toeic900_ai_cache";
 const AI_FLAGS_KEY = "toeic900_ai_flags";
 const AI_ENDPOINT = "https://api.anthropic.com/v1/messages";
@@ -49,25 +50,40 @@ class AIError extends Error {
 
 const AI = {
   timeoutMs: AI_TIMEOUT_MS, // 測試可以縮短
-  /* ---- 設定（AI-01）---- */
+  /* ---- 設定（AI-01）----
+     金鑰預設只存在 sessionStorage（關掉 App 就清除），使用者勾選「記住」才存進 localStorage。
+     原因（2026-10-07 資安審查 H2）：本 App 和同一個 GitHub 帳號的其他 Pages 網站共用 realsnova.github.io
+     這個網域，那些網站的程式讀得到這裡的 localStorage；sessionStorage 則只屬於這個分頁。 */
   cfg() {
-    const d = { key: "", model: AI_MODELS[0].id };
-    try { return Object.assign(d, JSON.parse(localStorage.getItem(AI_KEY) || "{}")); } catch (e) { return d; }
+    const d = { key: "", model: AI_MODELS[0].id, remember: false };
+    try { Object.assign(d, JSON.parse(localStorage.getItem(AI_KEY) || "{}")); } catch (e) { /* 壞資料用預設 */ }
+    if (!d.remember) {
+      d.key = "";
+      try { d.key = sessionStorage.getItem(AI_SESSION_KEY) || ""; } catch (e) { /* 被封鎖時視為沒有金鑰 */ }
+    }
+    return d;
   },
   // 回傳是否成功（儲存空間已滿或瀏覽器封鎖儲存時會失敗）
   saveCfg(c) {
-    try { localStorage.setItem(AI_KEY, JSON.stringify({ key: c.key || "", model: c.model })); return true; } catch (e) { return false; }
+    try {
+      localStorage.setItem(AI_KEY, JSON.stringify({ key: c.remember ? c.key || "" : "", model: c.model, remember: !!c.remember }));
+      if (c.remember || !c.key) sessionStorage.removeItem(AI_SESSION_KEY);
+      else sessionStorage.setItem(AI_SESSION_KEY, c.key);
+      return true;
+    } catch (e) { return false; }
   },
-  enabled() { return !!AI.cfg().key; },
-  // 回傳錯誤訊息；null 代表接受
-  setKey(raw) {
+  enabled() { return !AI.framed() && !!AI.cfg().key; },
+  // 被別的網站用框架嵌入時不提供 AI 功能，避免被誘導點擊而花費額度（資安審查 L1）
+  framed() { try { return window.top !== window.self; } catch (e) { return true; } },
+  // 回傳錯誤訊息；null 代表接受。remember：是否記在這台裝置（關掉 App 後仍保留）
+  setKey(raw, remember = false) {
     const key = String(raw || "").trim();
     if (!key) return "請貼上 API 金鑰。";
     if (/\s/.test(key) || key.length < 20 || key.length > 300) return "金鑰格式不對：應該是一長串沒有空白的文字（通常以 sk-ant- 開頭）。";
-    const c = AI.cfg(); c.key = key;
+    const c = AI.cfg(); c.key = key; c.remember = !!remember;
     return AI.saveCfg(c) ? null : "無法儲存金鑰：瀏覽器的儲存空間已滿或被封鎖。";
   },
-  clearKey() { const c = AI.cfg(); c.key = ""; AI.saveCfg(c); },
+  clearKey() { const c = AI.cfg(); c.key = ""; c.remember = false; AI.saveCfg(c); },
   setModel(id) { if (AI_MODELS.some(m => m.id === id)) { const c = AI.cfg(); c.model = id; AI.saveCfg(c); } },
   modelLabel(id) { const m = AI_MODELS.find(x => x.id === id); return m ? m.label.replace(/（.*$/, "") : id; },
   // 畫面只顯示末 4 碼
@@ -274,13 +290,15 @@ function aiOffer(correct) { return !correct && AI.enabled() ? aiBoxHTML() : ""; 
 /* ---- 設定頁的「AI 解析（試用）」區塊（AI-01、AI-03）---- */
 function aiSettingsHTML() {
   const c = AI.cfg(), n = AI.flags().length;
+  if (AI.framed()) return `<div class="card" id="ai-card"><h2>🤖 AI 解析（試用）</h2>
+    <p class="muted">這個頁面被嵌在其他網站裡，為了安全不提供 AI 功能。請直接開啟 App 的網址。</p></div>`;
   return `
     <div class="card" id="ai-card">
       <h2>🤖 AI 解析（試用）</h2>
       <p class="muted">答錯時可以按「AI 解析」，請 AI 說明你選的為什麼不對。需要你自己的
         <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Anthropic API 金鑰</a>，費用由金鑰帳戶支付（Haiku 4.5 每則約 0.3 美分）。</p>
       <div class="item-row">
-        <div>API 金鑰：${c.key ? `<b>已設定</b> <span class="muted">（${esc(AI.maskedKey())}）</span>` : `<span class="muted">尚未設定</span>`}</div>
+        <div>API 金鑰：${c.key ? `<b>已設定</b> <span class="muted">（${esc(AI.maskedKey())}，${c.remember ? "記在這台裝置" : "關掉 App 後清除"}）</span>` : `<span class="muted">尚未設定</span>`}</div>
         ${c.key ? `<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small secondary" id="ai-test">測試連線</button><button class="btn small ghost" id="ai-clear">刪除金鑰</button></div>` : ""}
       </div>
       <div class="item-row">
@@ -288,6 +306,8 @@ function aiSettingsHTML() {
           style="flex:1;min-width:0;background:var(--panel2);color:var(--text);border:1px solid var(--border2);border-radius:8px;padding:8px 10px;font-family:inherit">
         <button class="btn small" id="ai-save">儲存</button>
       </div>
+      <label class="ai-remember"><input type="checkbox" id="ai-remember" ${c.remember ? "checked" : ""}>
+        在這台裝置記住金鑰（不用每次重新貼上，但較不安全，見下方說明）</label>
       <div class="item-row">
         <div>模型</div>
         <select id="ai-model" style="background:var(--panel2);color:var(--text);border:1px solid var(--border2);border-radius:8px;padding:8px 10px;font-family:inherit">
@@ -303,7 +323,8 @@ function aiSettingsHTML() {
         </div>
       </div>
       <ul class="muted ai-notes">
-        <li>金鑰只存在這台裝置的瀏覽器，不會雲端同步，也不會放進備份檔；換裝置要重新輸入。</li>
+        <li>預設只在這次開啟期間保存金鑰，關掉 App（或分頁）後就清除，下次要重新貼上。金鑰不會雲端同步，也不會放進備份檔。</li>
+        <li>勾選「記住」會把金鑰長期存在這台裝置。注意：這個 App 和同一個 GitHub 帳號底下的其他網頁（realsnova.github.io）共用儲存空間，那些網頁上的程式讀得到記住的金鑰。</li>
         <li>只有按下「AI 解析」時才會送出：題目、選項、你選的答案和原有解析。不會送出學習紀錄或同步代碼。</li>
         <li>這台裝置上的瀏覽器擴充功能可能讀得到金鑰。建議在 Anthropic 主控台為這把金鑰設定每月用量上限；不用時可以在這裡刪除，並到主控台撤銷。</li>
         <li>AI 的說明可能有誤，以題庫解析為準；AI 的判定不會改變你的作答紀錄。</li>
@@ -311,14 +332,24 @@ function aiSettingsHTML() {
     </div>`;
 }
 function wireAISettings(root, rerender) {
+  if (!root.querySelector("#ai-save")) return; // 被嵌入框架時沒有設定欄位
   const status = root.querySelector("#ai-status");
   const say = (msg, cls) => { status.textContent = msg; status.className = cls || "muted"; };
   root.querySelector("#ai-save").addEventListener("click", () => {
     const input = root.querySelector("#ai-key");
-    const err = AI.setKey(input.value);
+    const remember = root.querySelector("#ai-remember").checked;
+    const err = AI.setKey(input.value, remember);
     input.value = "";
     if (err) { say(err, "ai-err"); return; }
-    UI.toast("API 金鑰已儲存在這台裝置", "ok");
+    UI.toast(remember ? "API 金鑰已記在這台裝置" : "API 金鑰已設定，關掉 App 後會清除", "ok");
+    rerender();
+  });
+  // 已有金鑰時切換「記住」：直接把現有金鑰搬到對應的儲存位置
+  root.querySelector("#ai-remember").addEventListener("change", e => {
+    const c = AI.cfg();
+    if (!c.key) return;
+    c.remember = e.target.checked;
+    if (!AI.saveCfg(c)) { say("無法儲存設定：瀏覽器的儲存空間已滿或被封鎖。", "ai-err"); return; }
     rerender();
   });
   root.querySelector("#ai-model").addEventListener("change", e => {

@@ -28,7 +28,7 @@ function defaultState() {
 }
 const APP_VERSION = "1.3.1";
 const CHANGELOG = [
-  { v: "1.3.1", d: "2026-10-07", notes: "AI 錯題解析（試用）：在設定頁貼上自己的 Anthropic API 金鑰後，答錯時可以請 AI 說明「我選的為什麼不對」；AI 認為題目可能有兩個正解或答案標錯時會記錄下來，可匯出給人工確認。金鑰只存在這台裝置，不會同步或備份" },
+  { v: "1.3.1", d: "2026-10-07", notes: "AI 錯題解析（試用）：在設定頁貼上自己的 Anthropic API 金鑰後，答錯時可以請 AI 說明「我選的為什麼不對」；AI 認為題目可能有兩個正解或答案標錯時會記錄下來，可匯出給人工確認。金鑰預設關掉 App 就清除，不會同步或備份。資安強化：檢查同步與備份資料的格式，修正可能被注入腳本的問題；加入內容安全政策與第三方腳本完整性檢查；自訂同步代碼太短時提醒" },
   { v: "1.3.0", d: "2026-10-06", notes: "改顯示練習答對率（不再換算未校準的 TOEIC 分數，錯題本重考不計入）；只做錯題本或模考的日子也算連續學習；模考報告分開顯示聽力與閱讀、趨勢圖固定 0–100%；裝置沒有英文語音時先說明、語音沒播放時提示且模考不會卡住；同步代碼改用安全亂數並檢查格式；修正 Part 7 做完最後一題會跳出錯誤提示" },
   { v: "1.1.0", d: "2026-08-09", notes: "學習演算法強化：錯題要連續答對 2 次（跨天）才移除、Part 5 依弱項類別加權出題、Part 5／聽力 Part 2 不重複輪替出題、單字每日複習量上限" },
   { v: "1.0.3", d: "2026-07-12", notes: "驗收稽核：修復考試日期／同步代碼欄位的 XSS 漏洞、深色主題按鈕文字對比度不足、補上頁面 H1 標題" },
@@ -65,8 +65,69 @@ function load() {
         d.lcat["Part 3-4"] = { r: cur.r + old.r, w: cur.w + old.w };
         delete d.lcat["Part 3/4"];
       }
+      sanitizeState(d);
     }
   } catch (e) { /* 資料損毀時重置 */ }
+  return d;
+}
+/* 學習紀錄的型別檢查（2026-10-07 資安審查 H1）
+   學習紀錄有三個入口會帶進外部資料：本機 load()、雲端同步拉取、匯入備份檔（匯入後重新整理走 load()）。
+   知道同步代碼的人或一個惡意備份檔，可以把任何字串塞進這些欄位，而有些欄位會直接寫進畫面，
+   形成可以讀走 API 金鑰與同步代碼的 XSS。這裡把每個已知欄位強制成預期的型別，不合格就丟棄或歸零。
+   原則：只收斂型別，不刪除合法的舊版資料（INV-03）。
+   注意：load() 在檔案開頭就被呼叫，這裡用到的常數必須是函式內的區域常數或宣告在 `let S = load()` 之前，
+   否則會踩到暫時性死區，被 load() 的 catch 當成資料損毀而清空所有紀錄。 */
+function sanitizeState(d) {
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  const obj = v => (v && typeof v === "object" ? v : {}); // Firebase 會把數字鍵的物件存成陣列，陣列也接受
+  const cnt = v => { const n = Number(v); return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0; };
+  const num = (v, dflt) => { const n = Number(v); return v !== null && v !== "" && Number.isFinite(n) ? n : dflt; };
+  const date = v => (typeof v === "string" && DATE_RE.test(v) ? v : null);
+  const entries = v => Object.entries(obj(v)).filter(([, x]) => x !== null && x !== undefined);
+  const rw = v => ({ r: cnt(obj(v).r), w: cnt(obj(v).w) });
+
+  d.exam = date(d.exam);
+  d.updatedAt = cnt(d.updatedAt);
+  if (d.lastBackup !== undefined) { const b = date(d.lastBackup); if (b) d.lastBackup = b; else delete d.lastBackup; }
+  const ts = num(d.targetScore, null);
+  d.targetScore = ts === null ? null : Math.min(990, Math.max(10, Math.round(ts)));
+  d.onboarded = d.onboarded === true;
+  d.racc = rw(d.racc);
+  ["cat", "lcat"].forEach(k => { const out = {}; entries(d[k]).forEach(([c, v]) => { out[c] = rw(v); }); d[k] = out; });
+  const daily = {};
+  entries(d.daily).forEach(([day, v]) => {
+    if (!DATE_RE.test(day)) return;
+    const o = {};
+    ["v", "p5", "p6", "p7", "l2", "l34", "newV", "wr", "mockDone"].forEach(f => { if (obj(v)[f] !== undefined) o[f] = cnt(v[f]); });
+    daily[day] = o;
+  });
+  d.daily = daily;
+  const vocab = {};
+  entries(d.vocab).forEach(([w, v]) => {
+    const c = obj(v);
+    vocab[w] = { i: Math.max(0, num(c.i, 0)), e: Math.min(5, Math.max(1.3, num(c.e, 2.5))), due: date(c.due) || todayStr(), n: cnt(c.n) };
+  });
+  d.vocab = vocab;
+  // 錯題本：先做舊格式遷移（true → {n, last}），再確認日期格式；n 一定是數字（INV-09）
+  migrateWb(d);
+  WB_TYPES.forEach(t => Object.keys(d.wb[t]).forEach(k => { const e = d.wb[t][k]; e.last = date(e.last); }));
+  ["p6done", "p7done", "l34done"].forEach(k => { const out = {}; entries(d[k]).forEach(([i, v]) => { out[i] = cnt(v); }); d[k] = out; });
+  const seen = v => { const out = {}; entries(v).forEach(([i, x]) => { if (x === true) out[i] = true; }); return out; };
+  d.p5seen = seen(d.p5seen);
+  d.l2seen = seen(d.l2seen);
+  const ms = {};
+  entries(d.mockSeen).forEach(([kind, v]) => { ms[kind] = seen(v); });
+  d.mockSeen = ms;
+  const PARTS = ["Part 2", "Part 3", "Part 4", "Part 5", "Part 6", "Part 7"];
+  d.mocks = (Array.isArray(d.mocks) ? d.mocks : Object.values(obj(d.mocks))).filter(m => m && typeof m === "object").map(m => {
+    const out = { date: date(m.date) || "", mode: ["full", "listen", "read"].includes(m.mode) ? m.mode : "full" };
+    ["lR", "lT", "rR", "rT", "lSkip", "secs", "L", "R"].forEach(f => { if (Number.isFinite(m[f])) out[f] = cnt(m[f]); });
+    if (m.parts && typeof m.parts === "object") {
+      out.parts = {};
+      PARTS.forEach(p => { if (m.parts[p]) out.parts[p] = { r: cnt(m.parts[p].r), t: cnt(m.parts[p].t) }; });
+    }
+    return out;
+  });
   return d;
 }
 function save() {
@@ -81,7 +142,14 @@ function emptyBank() { return { vocab: [], p5: [], p6: [], p7: [], l2: [], l34: 
 function loadBank() {
   try {
     const raw = localStorage.getItem(BANK_KEY);
-    if (raw) return Object.assign(emptyBank(), JSON.parse(raw));
+    if (raw) {
+      // 自訂題庫也可能來自雲端同步或備份檔，逐題重新驗證格式（2026-10-07 資安審查 H1）
+      const b = Object.assign(emptyBank(), JSON.parse(raw));
+      Object.keys(emptyBank()).forEach(k => {
+        b[k] = (Array.isArray(b[k]) ? b[k] : Object.values(b[k] || {})).filter(it => it && validateItem(k, it));
+      });
+      return b;
+    }
   } catch (e) { /* 損毀時視為空 */ }
   return emptyBank();
 }
@@ -599,7 +667,7 @@ renderers.home = function () {
       ${plan.map(p => `
         <div class="plan-item ${p.done ? "done" : ""}">
           <div><span class="check">${p.done ? "✅" : "⬜"}</span><b>${p.label}</b>
-            <span class="muted"> · ${p.detail} · 約 ${p.est}</span></div>
+            <span class="muted"> · ${esc(p.detail)} · 約 ${p.est}</span></div>
           <button class="btn small ${p.done ? "secondary" : ""}" data-goto="${p.tab}">${p.done ? "再練" : "開始"}</button>
         </div>`).join("")}
       ${doneCount === plan.length ? `<p style="text-align:center;margin-top:12px">🎉 今日任務全數完成！</p>` : ""}
@@ -913,7 +981,7 @@ renderers.listen = function () {
     ${PART34.map((s, i) => {
       const best = S.l34done[i];
       return `<div class="item-row"><div><span class="pill">${esc(s.type)}</span> <b>${esc(s.title)}</b></div>
-        <div>${best !== undefined ? `<span class="pill ok">最佳 ${best}/${s.qs.length}</span>` : `<span class="pill">未完成</span>`}
+        <div>${best !== undefined ? `<span class="pill ok">最佳 ${esc(best)}/${s.qs.length}</span>` : `<span class="pill">未完成</span>`}
         <button class="btn small" data-l34="${i}">開始</button></div></div>`;
     }).join("")}`;
   $("#l2-start").addEventListener("click", () => withVoices(startL2));
@@ -1095,7 +1163,7 @@ function catBars() {
     const total = s.r + s.w, pct = total ? Math.round(s.r / total * 100) : 0;
     return `<div class="bar-row"><span class="lbl">${esc(c)}</span>
       <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
-      <span class="val">${pct}%（${s.r}/${total}）</span></div>`;
+      <span class="val">${pct}%（${esc(s.r)}/${esc(total)}）</span></div>`;
   }).join("");
 }
 const ROUND_N = 10;          // 每輪題數
@@ -1201,7 +1269,7 @@ renderers.p6 = function () {
     ${PART6.map((p, i) => {
       const best = S.p6done[i];
       return `<div class="item-row"><div><b>${esc(p.title)}</b></div>
-        <div>${best !== undefined ? `<span class="pill ok">最佳 ${best}/4</span>` : `<span class="pill">未完成</span>`}
+        <div>${best !== undefined ? `<span class="pill ok">最佳 ${esc(best)}/4</span>` : `<span class="pill">未完成</span>`}
         <button class="btn small" data-p6="${i}">練習</button></div></div>`;
     }).join("")}`;
   $("#tab-p6").querySelectorAll("[data-p6]").forEach(b =>
@@ -1262,7 +1330,7 @@ renderers.p7 = function () {
       const best = S.p7done[i];
       return `<div class="item-row"><div><b>${esc(p.title)}</b><br>
         <span class="muted">${p.qs.length} 題 · 建議 ${Math.round(p.time / 60)} 分鐘</span></div>
-        <div>${best !== undefined ? `<span class="pill ok">最佳 ${best}/${p.qs.length}</span>` : `<span class="pill">未完成</span>`}
+        <div>${best !== undefined ? `<span class="pill ok">最佳 ${esc(best)}/${p.qs.length}</span>` : `<span class="pill">未完成</span>`}
         <button class="btn small" data-p7="${i}">開始</button></div></div>`;
     }).join("")}`;
   $("#tab-p7").querySelectorAll("[data-p7]").forEach(b =>
@@ -1547,6 +1615,7 @@ renderers.bank = function () {
           目前同步代碼：<b>${Sync.code ? esc(Sync.code) : "尚未設定"}</b>
           ${Sync.lastSynced ? `上次同步：${Sync.lastSynced.toLocaleTimeString("zh-TW")}` : Sync.code ? "尚未完成過同步" : ""}
           ${!navigator.onLine ? `<br><span style="color:var(--warn)">⚠️ 目前離線，紀錄先存本機，恢復網路後會自動同步</span>` : ""}
+          ${Sync.code && Sync.validCode(Sync.code) && Sync.weakCode(Sync.code) ? `<br><span style="color:var(--warn)">⚠️ 這組代碼太短，別人有可能猜到並讀取或覆蓋你的紀錄。建議按「產生新代碼」換一組，再到其他裝置套用新代碼。</span>` : ""}
           ${Sync.code && !Sync.validCode(Sync.code) ? `<br><span style="color:var(--warn)">⚠️ 這組代碼的格式無法通過新的雲端安全規則，同步會失敗。請按「產生新代碼」換一組，再到其他裝置套用新代碼。</span>` : ""}
           ${Sync.lastError ? `<br><span style="color:var(--warn)">⚠️ 上次同步失敗（${Sync.lastError === "read" ? "讀取" : "寫入"}），請確認網路後按「立即同步」。</span>` : ""}
         </p>
@@ -1562,7 +1631,7 @@ renderers.bank = function () {
     </div>
     <div class="card">
       <h2>💾 備份與還原</h2>
-      <p class="muted">紀錄每次作答都會即時自動存檔到瀏覽器（localStorage），但清除瀏覽資料或換電腦會遺失——請定期匯出備份檔。上次備份：<b>${S.lastBackup || "從未備份"}</b>${backupDue() ? ' <span style="color:var(--warn)">（建議立即備份）</span>' : ""}</p><br>
+      <p class="muted">紀錄每次作答都會即時自動存檔到瀏覽器（localStorage），但清除瀏覽資料或換電腦會遺失——請定期匯出備份檔。上次備份：<b>${esc(S.lastBackup || "從未備份")}</b>${backupDue() ? ' <span style="color:var(--warn)">（建議立即備份）</span>' : ""}</p><br>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn" id="bk-export">⬇️ 匯出備份檔（學習紀錄＋自訂題庫）</button>
         <label class="btn secondary" style="cursor:pointer">⬆️ 匯入備份檔還原<input type="file" id="bk-import" accept=".json" style="display:none"></label>
@@ -1608,6 +1677,8 @@ renderers.bank = function () {
         $("#sync-status").textContent = "代碼格式不正確：需為 4–64 個英文小寫或數字，可用單一連字號分段（例如 ab3de-f7gh9）。";
         return;
       }
+      // 自訂的短代碼容易被猜到（2026-10-07 資安審查 M3）。為了不讓已在使用的舊代碼無法跨裝置套用，只警告不禁止
+      if (Sync.weakCode(v) && !confirm("這組代碼少於 10 個英數字，別人有可能猜到並讀取或覆蓋你的學習紀錄。\n\n建議改用「產生新代碼」。仍要使用這組代碼嗎？")) return;
       Sync.setCode(v);
       $("#sync-status").textContent = "同步中…";
       const changed = await Sync.pullOnStartup();
@@ -1669,7 +1740,7 @@ renderers.stats = function () {
     const total = s.r + s.w, pct = total ? Math.round(s.r / total * 100) : 0;
     return `<div class="bar-row"><span class="lbl">${esc(lcatLabel[c] || c)}</span>
       <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
-      <span class="val">${pct}%（${s.r}/${total}）</span></div>`;
+      <span class="val">${pct}%（${esc(s.r)}/${esc(total)}）</span></div>`;
   }).join("") || `<p class="muted">尚無聽力作答紀錄</p>`;
   $("#tab-stats").innerHTML = `
     <div class="hero">

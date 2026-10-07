@@ -87,6 +87,12 @@ export function loadApp({ storage = {}, speech = fakeSpeech(), fetch = fakeFetch
     setItem: (k, v) => { writes.push(k); store.set(k, String(v)); },
     removeItem: k => store.delete(k)
   };
+  const session = new Map();
+  const sessionStorage = {
+    getItem: k => (session.has(k) ? session.get(k) : null),
+    setItem: (k, v) => { session.set(k, String(v)); },
+    removeItem: k => session.delete(k)
+  };
   const document = {
     documentElement: { dataset: {} },
     body: fakeEl(),
@@ -99,7 +105,7 @@ export function loadApp({ storage = {}, speech = fakeSpeech(), fetch = fakeFetch
   const ctx = {
     console, setTimeout, clearTimeout, setInterval, clearInterval, Promise, Date, Math, JSON,
     crypto: webcrypto,
-    localStorage, document, navigator: { clipboard: {}, onLine: true }, fetch, AbortController,
+    localStorage, sessionStorage, document, navigator: { clipboard: {}, onLine: true }, fetch, AbortController,
     speechSynthesis: speech,
     SpeechSynthesisUtterance: function (text) { this.text = text; },
     requestAnimationFrame: fn => setTimeout(fn, 0),
@@ -110,12 +116,14 @@ export function loadApp({ storage = {}, speech = fakeSpeech(), fetch = fakeFetch
     history: { pushState() {}, replaceState() {} }
   };
   ctx.window = ctx;
+  ctx.self = ctx;
+  ctx.top = ctx; // 沒有被框架嵌入
   vm.createContext(ctx);
   for (const f of SCRIPTS) {
     vm.runInContext(fs.readFileSync(path.join(ROOT, f), "utf8"), ctx, { filename: f });
   }
   return {
-    ctx, speech, store, writes, fetch,
+    ctx, speech, store, session, writes, fetch,
     run: code => vm.runInContext(code, ctx)
   };
 }

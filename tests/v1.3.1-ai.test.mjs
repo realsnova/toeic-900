@@ -16,11 +16,11 @@ const P5_CTX = `(() => { const it = PART5[0]; return { type: "p5", key: 0, q: it
   chosen: it.opts.findIndex((_, i) => i !== it.ans) }; })()`;
 
 /* ---------- AI-01 金鑰設定 ---------- */
-test("T-AI-01-1 金鑰只存在 toeic900_ai，不在學習紀錄、備份與同步內容中", () => {
+test("T-AI-01-1 金鑰預設只在 sessionStorage；不在 localStorage、學習紀錄、備份與同步內容中", () => {
   const app = appWithKey();
   app.run("save()");
-  assert.ok(app.store.get("toeic900_ai").includes(KEY));
-  assert.equal(app.store.get("toeic900").includes(KEY), false, "學習紀錄 S 不可含金鑰");
+  assert.equal(app.session.get("toeic900_ai_key"), KEY);
+  for (const [k, v] of app.store) assert.equal(v.includes(KEY), false, `localStorage 的 ${k} 不可含金鑰`);
   // exportBackup() 與 Sync.pushNow() 寫出的內容都是 { records: S, bank: loadBank() }
   const payload = app.run("JSON.stringify({ records: S, bank: loadBank() })");
   assert.equal(payload.includes(KEY), false);
@@ -34,6 +34,30 @@ test("T-AI-01-2 刪除金鑰後不再啟用，儲存內容中沒有金鑰", () =
   app.run("AI.clearKey()");
   assert.equal(app.run("AI.enabled()"), false);
   assert.equal(app.store.get("toeic900_ai").includes(KEY), false);
+  assert.equal(app.session.has("toeic900_ai_key"), false);
+});
+
+test("sec-H2 勾選「記住」才把金鑰存進 localStorage；取消勾選會搬回 sessionStorage", () => {
+  const app = loadApp();
+  assert.equal(app.run(`AI.setKey(${JSON.stringify(KEY)}, true)`), null);
+  assert.ok(app.store.get("toeic900_ai").includes(KEY));
+  assert.equal(app.session.has("toeic900_ai_key"), false);
+  assert.equal(app.run("AI.cfg().remember"), true);
+  app.run("const c = AI.cfg(); c.remember = false; AI.saveCfg(c);");
+  assert.equal(app.store.get("toeic900_ai").includes(KEY), false);
+  assert.equal(app.session.get("toeic900_ai_key"), KEY);
+  assert.equal(app.run("AI.enabled()"), true);
+  // 模型設定不受影響、也不含金鑰
+  app.run(`AI.setModel("claude-sonnet-5-5")`);
+  assert.equal(JSON.parse(app.store.get("toeic900_ai")).model, "claude-sonnet-5-5");
+});
+
+test("sec-L1 被其他網站用框架嵌入時不啟用 AI", () => {
+  const app = appWithKey();
+  app.run("top = {}"); // 模擬 window.top !== window.self
+  assert.equal(app.run("AI.enabled()"), false);
+  assert.equal(app.run("aiOffer(false)"), "");
+  assert.match(app.run("aiSettingsHTML()"), /嵌在其他網站/);
 });
 
 test("T-AI-01-2b 金鑰格式檢查：空白、含空白、過短都拒絕；畫面只顯示末 4 碼", () => {

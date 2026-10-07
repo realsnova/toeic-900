@@ -32,6 +32,8 @@ const Sync = {
   validCode(code) {
     return typeof code === "string" && code.length >= 4 && code.length <= 64 && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(code);
   },
+  // 系統產生的代碼有 10 個英數字（約 50 位元）；少於 10 個的自訂代碼可能被猜到
+  weakCode(code) { return String(code).replace(/-/g, "").length < 10; },
   lastError: null, // "read" | "write" | null：同步失敗時顯示在題庫/備份頁
   setCode(code) {
     Sync.code = code.trim().toLowerCase();
@@ -60,9 +62,9 @@ const Sync = {
       const localNow = S.updatedAt || 0;
       if (remoteTime > base && localNow === base) {
         S = Object.assign(defaultState(), remote.records);
-        // 這條路徑不經過 load()，所以要自己補一次錯題本格式遷移，
-        // 否則從舊版裝置（值還是 true）同步下來的錯題本會缺少 {n,last} 而無法累計掌握次數。
-        migrateWb(S);
+        // 這條路徑不經過 load()，所以要自己做一次型別檢查（含錯題本格式遷移）：
+        // 雲端資料任何知道同步代碼的人都能寫入，不檢查就可能把腳本帶進畫面（2026-10-07 資安審查 H1）。
+        sanitizeState(S);
         localStorage.setItem(STORE_KEY, JSON.stringify(S));
         if (remote.bank) saveBank(Object.assign(emptyBank(), remote.bank));
         Sync.lastSynced = new Date();

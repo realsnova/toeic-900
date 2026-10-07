@@ -493,3 +493,5 @@ main { max-width: 860px; margin: 0 auto; padding: 24px 16px 80px; }
 .ai-ok { color: var(--good); }
 .ai-notes { font-size: 0.82rem; margin: 10px 0 0 18px; padding: 0; }
 .ai-notes li { margin: 4px 0; }
+.ai-remember { display: flex; gap: 8px; align-items: flex-start; font-size: 0.88rem; margin: 2px 0 8px; cursor: pointer; }
+.ai-remember input { margin-top: 3px; }
