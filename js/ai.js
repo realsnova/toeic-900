@@ -53,10 +53,17 @@ const AI = {
   /* ---- 設定（AI-01）----
      金鑰預設只存在 sessionStorage（關掉 App 就清除），使用者勾選「記住」才存進 localStorage。
      原因（2026-10-07 資安審查 H2）：本 App 和同一個 GitHub 帳號的其他 Pages 網站共用 realsnova.github.io
-     這個網域，那些網站的程式讀得到這裡的 localStorage；sessionStorage 則只屬於這個分頁。 */
+     這個網域，那些網站的程式讀得到這裡的 localStorage；sessionStorage 只在這個分頁、而且關掉就清除
+     （同一個分頁之後若開啟同網域的其他網頁，那個網頁仍讀得到，所以只是降低風險，不是完全隔離）。 */
   cfg() {
     const d = { key: "", model: AI_MODELS[0].id, remember: false };
-    try { Object.assign(d, JSON.parse(localStorage.getItem(AI_KEY) || "{}")); } catch (e) { /* 壞資料用預設 */ }
+    let stored = {};
+    try { stored = JSON.parse(localStorage.getItem(AI_KEY) || "{}") || {}; } catch (e) { /* 壞資料用預設 */ }
+    Object.assign(d, stored);
+    // 開發期間的舊格式（沒有 remember 欄位）把金鑰存在 localStorage：一律清掉，不再讀取
+    if (stored.key && stored.remember === undefined) {
+      try { localStorage.setItem(AI_KEY, JSON.stringify({ key: "", model: d.model, remember: false })); } catch (e) { /* 寫不進去就算了 */ }
+    }
     if (!d.remember) {
       d.key = "";
       try { d.key = sessionStorage.getItem(AI_SESSION_KEY) || ""; } catch (e) { /* 被封鎖時視為沒有金鑰 */ }
@@ -66,9 +73,15 @@ const AI = {
   // 回傳是否成功（儲存空間已滿或瀏覽器封鎖儲存時會失敗）
   saveCfg(c) {
     try {
-      localStorage.setItem(AI_KEY, JSON.stringify({ key: c.remember ? c.key || "" : "", model: c.model, remember: !!c.remember }));
-      if (c.remember || !c.key) sessionStorage.removeItem(AI_SESSION_KEY);
-      else sessionStorage.setItem(AI_SESSION_KEY, c.key);
+      // 先寫入新位置、再清舊位置：中途失敗時金鑰最多重複存在，不會兩邊都沒有
+      if (c.remember) {
+        localStorage.setItem(AI_KEY, JSON.stringify({ key: c.key || "", model: c.model, remember: true }));
+        sessionStorage.removeItem(AI_SESSION_KEY);
+      } else {
+        if (c.key) sessionStorage.setItem(AI_SESSION_KEY, c.key);
+        else sessionStorage.removeItem(AI_SESSION_KEY);
+        localStorage.setItem(AI_KEY, JSON.stringify({ key: "", model: c.model, remember: false }));
+      }
       return true;
     } catch (e) { return false; }
   },

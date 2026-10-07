@@ -44,7 +44,7 @@ test("sec-H1-1 load() 把惡意紀錄的每個欄位都收斂成安全的型別"
   assert.deepEqual(S.l2seen, {});
   assert.deepEqual(S.mockSeen, { p5: { 1: true } });
   assert.equal(S.mocks.length, 1);
-  assert.deepEqual(S.mocks[0], { date: "", mode: "full", lT: 4, rR: 3, rT: 5, parts: { "Part 2": { r: 0, t: 2 } } });
+  assert.deepEqual(S.mocks[0], { date: "", lT: 4, rR: 3, rT: 5, parts: { "Part 2": { r: 0, t: 2 } } });
   assert.equal(json.includes("onerror"), false, json);
 });
 
@@ -84,7 +84,7 @@ test("sec-H1-3 雲端同步拉取的資料也會經過型別檢查", async () =>
   assert.equal("lastBackup" in S, false);
   assert.equal(S.targetScore, null);
   assert.deepEqual(S.p6done, { 0: 0 });
-  assert.equal(app.store.get("toeic900").includes("onerror=\\\"alert(1)\\\"\",\"exam"), false);
+  assert.equal(app.store.get("toeic900").includes("onerror"), false, "寫回本機的資料不可含 XSS 字串");
 });
 
 test("sec-H1-4 自訂題庫從同步或備份帶進來時逐題驗證，格式不符的丟棄", () => {
@@ -148,4 +148,53 @@ test("sec-M2 第三方腳本都有 SRI 完整性檢查", () => {
     assert.match(tag, /integrity="sha384-[A-Za-z0-9+/=]{64}"/);
     assert.match(tag, /crossorigin="anonymous"/);
   });
+});
+
+/* ---------- 獨立審查（review-sec）後補的案例 ---------- */
+test("review-sec P2 Firebase 存成陣列的錯題本，空位不會變成假的錯題", () => {
+  const app = loadApp({ storage: { toeic900: JSON.stringify({ wb: { p5: [null, null, { n: 1, last: "2026-10-01" }], l2: [null, true] } }) } });
+  assert.deepEqual(plain(app.run("S.wb.p5")), { 2: { n: 1, last: "2026-10-01" } });
+  assert.deepEqual(plain(app.run("S.wb.l2")), { 1: { n: 0, last: null } });
+  assert.equal(app.run("wrongCount()"), 2);
+});
+
+test("review-sec P3-1 錯題本中指向不存在題目的鍵不顯示、不讓頁面出錯，也不刪除紀錄", () => {
+  const app = loadApp({ storage: { toeic900: JSON.stringify({ wb: { p5: { 0: true, 99999: true }, p6: { "0-0": true, "999-9": true }, p7: { "x-y": true }, l34: { "0-99": true } } }) } });
+  assert.deepEqual(plain(app.run(`wbKeys("p5")`)), ["0"]);
+  assert.deepEqual(plain(app.run(`wbKeys("p6")`)), ["0-0"]);
+  assert.deepEqual(plain(app.run(`wbKeys("p7")`)), []);
+  assert.equal(app.run("wrongCount()"), 2);
+  app.run("renderers.wrong()"); // 不可拋錯
+  assert.equal(app.run("Object.keys(S.wb.p5).length"), 2, "紀錄本身保留");
+});
+
+test("review-sec P3-2 沒有 mode 的舊模考紀錄維持沒有 mode", () => {
+  const app = loadApp({ storage: { toeic900: JSON.stringify({ mocks: [{ date: "2026-08-01", L: 400, R: 380 }] }) } });
+  assert.deepEqual(plain(app.run("S.mocks")), [{ date: "2026-08-01", L: 400, R: 380 }]);
+  assert.equal(app.run("Mock.modeName(S.mocks[0].mode)"), "模擬考");
+});
+
+test("review-sec P3-3 開發期間存在 localStorage 的舊格式金鑰會被清掉、不再使用", () => {
+  const app = loadApp({ storage: { toeic900_ai: JSON.stringify({ key: "sk-ant-test-old-format-000000", model: "claude-sonnet-5-5" }) } });
+  assert.equal(app.run("AI.enabled()"), false);
+  assert.equal(app.store.get("toeic900_ai").includes("sk-ant"), false);
+  assert.equal(app.run("AI.cfg().model"), "claude-sonnet-5-5", "模型設定保留");
+});
+
+test("review-sec P3-4 取消「記住」時 sessionStorage 寫入失敗，記住的金鑰不會遺失", () => {
+  const app = loadApp();
+  const key = "sk-ant-test-remember-0000000";
+  app.run(`AI.setKey(${JSON.stringify(key)}, true)`);
+  app.run(`sessionStorage.setItem = () => { throw new Error("blocked"); }`);
+  assert.equal(app.run("(() => { const c = AI.cfg(); c.remember = false; return AI.saveCfg(c); })()"), false);
+  assert.equal(app.run("AI.cfg().key"), key);
+});
+
+test("review-sec P3-7 重複呼叫 mergeBank 不會讓自訂題重複出現", () => {
+  const bank = { p5: [{ q: "A ___ b.", opts: ["a", "b", "c", "d"], ans: 0, cat: "詞性", exp: "x" }] };
+  const app = loadApp({ storage: { toeic900_bank: JSON.stringify(bank) } });
+  const n = app.run("PART5.length");
+  app.run("mergeBank(); mergeBank();");
+  assert.equal(app.run("PART5.length"), n);
+  assert.equal(app.run("BUILTIN.p5"), n - 1);
 });

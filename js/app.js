@@ -51,7 +51,7 @@ function load() {
       Object.assign(d, parsed);
       // 舊版資料補齊新欄位
       d.wb = Object.assign({ p5: {}, p6: {}, p7: {}, l2: {}, l34: {} }, parsed.wb || {});
-      migrateWb(d);
+      // 錯題本的格式遷移（migrateWb）在下方 sanitizeState() 裡做，要先去掉 Firebase 陣列的空位才遷移
       d.p5seen = parsed.p5seen || {};
       d.l2seen = parsed.l2seen || {};
       d.lcat = parsed.lcat || {};
@@ -108,7 +108,11 @@ function sanitizeState(d) {
     vocab[w] = { i: Math.max(0, num(c.i, 0)), e: Math.min(5, Math.max(1.3, num(c.e, 2.5))), due: date(c.due) || todayStr(), n: cnt(c.n) };
   });
   d.vocab = vocab;
-  // 錯題本：先做舊格式遷移（true → {n, last}），再確認日期格式；n 一定是數字（INV-09）
+  // 錯題本：Firebase 可能把數字鍵存成陣列，空位在 JSON 裡會變成 null；先去掉空位（否則會變成假的錯題），
+  // 再做舊格式遷移（true → {n, last}），最後確認日期格式；n 一定是數字（INV-09）
+  if (d.wb && typeof d.wb === "object") {
+    WB_TYPES.forEach(t => { const out = {}; entries(d.wb[t]).forEach(([k, v]) => { if (v) out[k] = v; }); d.wb[t] = out; });
+  }
   migrateWb(d);
   WB_TYPES.forEach(t => Object.keys(d.wb[t]).forEach(k => { const e = d.wb[t][k]; e.last = date(e.last); }));
   ["p6done", "p7done", "l34done"].forEach(k => { const out = {}; entries(d[k]).forEach(([i, v]) => { out[i] = cnt(v); }); d[k] = out; });
@@ -120,7 +124,8 @@ function sanitizeState(d) {
   d.mockSeen = ms;
   const PARTS = ["Part 2", "Part 3", "Part 4", "Part 5", "Part 6", "Part 7"];
   d.mocks = (Array.isArray(d.mocks) ? d.mocks : Object.values(obj(d.mocks))).filter(m => m && typeof m === "object").map(m => {
-    const out = { date: date(m.date) || "", mode: ["full", "listen", "read"].includes(m.mode) ? m.mode : "full" };
+    const out = { date: date(m.date) || "" };
+    if (["full", "listen", "read"].includes(m.mode)) out.mode = m.mode; // 舊紀錄沒有 mode 就維持沒有（顯示為「模擬考」）
     ["lR", "lT", "rR", "rT", "lSkip", "secs", "L", "R"].forEach(f => { if (Number.isFinite(m[f])) out[f] = cnt(m[f]); });
     if (m.parts && typeof m.parts === "object") {
       out.parts = {};
@@ -158,7 +163,11 @@ const BUILTIN = {}; // 內建題數（合併自訂題庫前記錄）
 const BANK_ARRAYS = () => ({ vocab: VOCAB, p5: PART5, p6: PART6, p7: PART7, l2: PART2, l34: PART34 });
 function mergeBank() {
   const arrs = BANK_ARRAYS();
-  Object.keys(arrs).forEach(k => { BUILTIN[k] = arrs[k].length; });
+  // 可能被呼叫多次（開機、套用同步代碼、雲端資料更新後）：先截回內建題數再併入，避免自訂題重複出現
+  Object.keys(arrs).forEach(k => {
+    if (BUILTIN[k] === undefined) BUILTIN[k] = arrs[k].length;
+    else arrs[k].length = BUILTIN[k];
+  });
   const b = loadBank();
   Object.keys(arrs).forEach(k => arrs[k].push(...b[k]));
 }
@@ -592,7 +601,19 @@ function dueCount() {
   return dueOld + Math.min(newLeft, unseen);
 }
 function wrongCount() {
-  return WB_TYPES.reduce((n, k) => n + Object.keys(S.wb[k] || {}).length, 0);
+  return WB_TYPES.reduce((n, k) => n + wbKeys(k).length, 0);
+}
+// 錯題本中「題目還存在」的鍵。題目可能不存在：自訂題被移除後索引對不上，或同步資料中有錯誤的鍵。
+// 不刪除這些紀錄（自訂題之後可能隨同步回來），只是不顯示，避免錯題本頁整個出錯。
+function wbKeys(type) {
+  const pair = k => String(k).split("-").map(Number);
+  const ok = {
+    p5: k => !!PART5[k], l2: k => !!PART2[k],
+    p6: k => { const [a, b] = pair(k); return !!(PART6[a] && PART6[a].blanks[b]); },
+    p7: k => { const [a, b] = pair(k); return !!(PART7[a] && PART7[a].qs[b]); },
+    l34: k => { const [a, b] = pair(k); return !!(PART34[a] && PART34[a].qs[b]); }
+  }[type];
+  return Object.keys((S.wb && S.wb[type]) || {}).filter(k => ok && ok(k));
 }
 
 /* ---- 錯題本的「掌握」判定 ----
@@ -1404,17 +1425,17 @@ renderers.wrong = function () {
     const e = wbNorm(S.wb[type][key]);
     return { remain: Math.max(1, WB_MASTER_N - e.n), todayDone: e.last === todayStr() };
   };
-  Object.keys(S.wb.p5).forEach(id => entries.push({ type: "p5", key: id, label: `Part 5 · ${PART5[id].cat}`, text: PART5[id].q, ...st("p5", id) }));
-  Object.keys(S.wb.p6).forEach(key => {
+  wbKeys("p5").forEach(id => entries.push({ type: "p5", key: id, label: `Part 5 · ${PART5[id].cat}`, text: PART5[id].q, ...st("p5", id) }));
+  wbKeys("p6").forEach(key => {
     const [pi, bi] = key.split("-").map(Number);
     entries.push({ type: "p6", key, label: `Part 6 · ${PART6[pi].title}`, text: `空格 [${bi + 1}]`, ...st("p6", key) });
   });
-  Object.keys(S.wb.p7).forEach(key => {
+  wbKeys("p7").forEach(key => {
     const [si, qi] = key.split("-").map(Number);
     entries.push({ type: "p7", key, label: `Part 7 · ${PART7[si].title}`, text: PART7[si].qs[qi].q, ...st("p7", key) });
   });
-  Object.keys(S.wb.l2).forEach(id => entries.push({ type: "l2", key: id, label: `聽力 Part 2`, text: "應答問題（重新聆聽作答）", ...st("l2", id) }));
-  Object.keys(S.wb.l34).forEach(key => {
+  wbKeys("l2").forEach(id => entries.push({ type: "l2", key: id, label: `聽力 Part 2`, text: "應答問題（重新聆聽作答）", ...st("l2", id) }));
+  wbKeys("l34").forEach(key => {
     const [si, qi] = key.split("-").map(Number);
     entries.push({ type: "l34", key, label: `聽力 · ${PART34[si].title}`, text: PART34[si].qs[qi].q, ...st("l34", key) });
   });
