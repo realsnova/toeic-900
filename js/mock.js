@@ -60,7 +60,7 @@ const Mock = {
     });
     PART7.forEach((set, si) => {
       if (set.form !== id) return;
-      set.qs.forEach((q, qi) => paper.reading.push({ type: "p7", part: "Part 7", si, qi, set, q, order: shuffle(q.opts.map((_, k) => k)) }));
+      set.qs.forEach((q, qi) => paper.reading.push({ type: "p7", part: "Part 7", si, qi, set, q, order: optionOrder(q.opts) }));
     });
     return paper;
   },
@@ -108,7 +108,7 @@ const Mock = {
       Mock.draw("p7", PART7.length, 2).forEach(si => {
         const set = PART7[si];
         set.qs.forEach((q, qi) => {
-          paper.reading.push({ type: "p7", part: "Part 7", si, qi, set, q, order: shuffle(q.opts.map((_, i) => i)) });
+          paper.reading.push({ type: "p7", part: "Part 7", si, qi, set, q, order: optionOrder(q.opts) });
         });
       });
     }
@@ -191,7 +191,7 @@ const Mock = {
     const answered = s.lAnswers.filter(a => a !== null).length;
     let body;
     if (playingLead) {
-      body = `<div class="mock-audio"><div class="wave">🔊</div><p class="muted">正在播放 ${esc(it.part)} 音檔（不可暫停／回放）</p></div>`;
+      body = `<div class="mock-audio"><div class="wave">🔊</div><p class="muted">正在播放 ${esc(it.part)} 音檔（不可暫停／回放）</p></div>${graphicHTML(it.set)}`;
     } else if (it.type === "l2") {
       body = `
         <div class="mock-audio"><div class="wave">🔊</div><p class="muted">聆聽問句與 (A)(B)(C) 三個回應，選出最合適的回應</p></div>
@@ -200,6 +200,7 @@ const Mock = {
         </div>`;
     } else {
       body = `
+        ${graphicHTML(it.set)}
         <div class="q-text">${esc(it.q.q)}</div>
         <div>
           ${it.order.map((oi, pos) => `<button class="opt mock-opt ${s.lAnswers[i] === oi ? "picked" : ""}" data-oi="${oi}">(${"ABCD"[pos]}) ${esc(it.q.opts[oi])}</button>`).join("")}
@@ -499,6 +500,7 @@ const Mock = {
         <h2>🚀 模擬考</h2>
         <p class="muted">短版練習卷，練習 TOEIC 的作答節奏：聽力節自動連播不可回放；閱讀節限時 22 分鐘，可旗標與跳題；作答中不顯示對錯，交卷後顯示聽力、閱讀與各 Part 的答對率，錯題自動進錯題本。題數少於正式考試的 200 題，不能換算 TOEIC 分數。</p>
       </div>
+      ${strategyHTML()}
       <div class="hub-card" data-mock="full">
         <div class="hub-icon">📋</div>
         <div class="hub-text"><div class="hub-title">雙節模考（短版）</div><div class="hub-sub muted">聽力節（19 題）＋閱讀節（約 27 題）· 約 35 分鐘</div></div>

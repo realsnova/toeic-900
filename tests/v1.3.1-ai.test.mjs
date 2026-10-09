@@ -282,7 +282,7 @@ test("T-INV-11 沒有金鑰時不發出任何請求，也不顯示按鈕", async
 /* ---------- AI-06 版本號 ---------- */
 test("T-AI-06-1 版本一致：APP_VERSION、CHANGELOG、?v= 與 ai.js 已載入", () => {
   const app = loadApp();
-  assert.equal(app.run("APP_VERSION"), "1.4.0");
+  assert.match(app.run("APP_VERSION"), /^1\.4\.\d+$/);
   assert.equal(app.run("CHANGELOG[0].v"), app.run("APP_VERSION"));
   const html = readSource("index.html");
   const vs = new Set((html.match(/\?v=\d+/g) || []));

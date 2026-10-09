@@ -488,7 +488,7 @@ We offer a competitive salary, health benefits, paid time off, and opportunities
     ],
     qs: [
       { q: "What is mentioned about Brightway's crews?", opts: ["They work outside normal business hours.", "They specialize in cleaning factories.", "They provide office furniture.", "They are available only on weekends."], ans: 0, exp: "廣告說清潔人員在晚上和週末工作（in the evenings and on weekends），也就是上班時間以外。不是「只有週末」。" },
-      { q: "How can a new customer get a free cleaning?", opts: ["By signing up for a six-month plan", "By referring a friend", "By visiting the Web site", "By paying for a year in advance"], ans: 0, exp: "New customers receive their first cleaning free when they sign up for a six-month plan。" }
+      { q: "How can a new customer get a free cleaning?", opts: ["By signing up for a six-month plan", "By referring a friend", "By visiting the Web site", "By paying for a year in advance"], ans: 0, exp: "新客戶簽六個月方案，第一次清潔免費（New customers receive their first cleaning free when they sign up for a six-month plan）。" }
     ]
   },
   {
@@ -564,7 +564,7 @@ We offer a competitive salary, health benefits, paid time off, and opportunities
     qs: [
       { q: "Why was the letter sent?", opts: ["To inform a patient about a change in doctors", "To remind a patient of an appointment", "To announce the opening of a new clinic", "To request updated medical records"], ans: 0, exp: "信中通知 Bryce 醫師年底退休，病人明年起改由 Ruiz 醫師照顧。" },
       { q: "What is indicated about Dr. Ruiz?", opts: ["She has been working at Pinecrest for a few months.", "She trained under Dr. Bryce.", "She will retire next year.", "She specializes in children's medicine."], ans: 0, exp: "Ruiz 八月加入 Pinecrest，信是十月寫的，所以她已經在這裡工作幾個月了。她的專長是運動醫學，不是兒科。" },
-      { q: "What should Ms. Lund do if she wants to see a different doctor?", opts: ["Telephone the clinic", "Visit the clinic before December 19", "Write a letter to Dr. Bryce", "Fill out a form online"], ans: 0, exp: "If you would prefer to see another doctor… please call our office at 555-0170。" },
+      { q: "What should Ms. Lund do if she wants to see a different doctor?", opts: ["Telephone the clinic", "Visit the clinic before December 19", "Write a letter to Dr. Bryce", "Fill out a form online"], ans: 0, exp: "想看其他醫師的話，請打電話到診所（please call our office at 555-0170）。" },
       { q: "In which of the positions marked [1], [2], [3], and [4] does the following sentence best belong? \"You do not need to take any action.\"", opts: ["[3]", "[1]", "[2]", "[4]"], ans: 0, exp: "前一句說病歷會「自動」轉給 Ruiz 醫師，接著說「您不需要做任何事」最連貫；下一句再說明想換其他醫師時該怎麼做。" }
     ]
   },
@@ -606,7 +606,7 @@ We offer a competitive salary, health benefits, paid time off, and opportunities
     ],
     qs: [
       { q: "What is the purpose of the e-mail?", opts: ["To provide information to presenters", "To invite people to attend a summit", "To announce a change of venue", "To request feedback on a conference"], ans: 0, exp: "信是寫給所有講者，說明議程、報到時間、投影片期限和會議室設備。" },
-      { q: "By when should speakers send their slides?", opts: ["February 27", "February 3", "March 6", "March 1"], ans: 0, exp: "Presentation slides should be sent to me by February 27。" },
+      { q: "By when should speakers send their slides?", opts: ["February 27", "February 3", "March 6", "March 1"], ans: 0, exp: "投影片要在 2 月 27 日前寄給 Petrov（Presentation slides should be sent to me by February 27）。" },
       { q: "What is the latest time Mr. Brandt should arrive?", opts: ["12:30 P.M.", "1:00 P.M.", "9:00 A.M.", "2:00 P.M."], ans: 0, exp: "跨篇題：Brandt 的場次是下午 1:00（第二篇），講者要提前至少 30 分鐘到（第一篇），所以最晚 12:30。" },
       { q: "Who will most likely present without a microphone?", opts: ["Erin Walsh", "Lucas Brandt", "Gregory Hale", "Nadia Petrov"], ans: 0, exp: "跨篇題：Cedar Room 沒有麥克風（第一篇）；議程表上 Erin Walsh 的場次在 Cedar Room（第二篇）。" },
       { q: "What is suggested about the Cedar Room?", opts: ["It is the smallest room at the venue.", "It will be used only in the morning.", "It has the newest equipment.", "It is next to the Main Hall."], ans: 0, exp: "信中說 Cedar Room 沒有麥克風系統，as it is our smallest space（因為它是最小的場地）。下午 2:30 也有場次在這裡。" }
@@ -677,6 +677,219 @@ We offer a competitive salary, health benefits, paid time off, and opportunities
       { q: "What is suggested about customer service staff?", opts: ["They do not work on Mondays during the trial.", "They work eight hours a day.", "They are based at the factory.", "They complete a weekly survey."], ans: 0, exp: "備忘錄說需要週五有人值班的員工（例如客服）改成週二到週五上班，所以試行期間週一不上班。問卷是每月一次。" },
       { q: "According to the survey results, in which month was satisfaction the highest?", opts: ["November", "September", "October", "December"], ans: 0, exp: "表格中十一月的滿意比例最高（85%）。表格沒有十二月的資料。" },
       { q: "When will the trial most likely end?", opts: ["At the end of February", "At the end of November", "At the end of September", "At the end of December"], ans: 0, exp: "跨篇推算：9 月 1 日開始（第一、二篇），為期六個月（第一篇），所以約在隔年二月底結束。" }
+    ]
+  },
+  // ---- 完整閱讀測驗 第 2 回（R2）Part 7：單篇 10 組、雙篇 2 組、三篇 3 組 ----
+  {
+    title: "單篇：圖書館公告",
+    time: 120,
+    form: "R2",
+    passages: [
+      "LAKEVIEW PUBLIC LIBRARY — NEW HOURS\n\nBeginning September 1, the library will extend its weekday hours. The new schedule is:\n\nMonday–Thursday: 9:00 A.M.–9:00 P.M.\nFriday: 9:00 A.M.–6:00 P.M.\nSaturday: 10:00 A.M.–5:00 P.M.\nSunday: Closed\n\nThe change was made in response to a survey in which many residents asked for evening hours. The children's reading room will continue to close at 6:00 P.M. every day."
+    ],
+    qs: [
+      { q: "What is the purpose of the notice?", opts: ["To announce a change in opening hours", "To request responses to a survey", "To introduce a new children's room", "To announce that the library will close"], ans: 0, exp: "公告說明 9 月 1 日起延長平日開放時間，並列出新的時間表。" },
+      { q: "According to the notice, why were the hours changed?", opts: ["Residents asked for evening hours.", "The library hired more staff.", "Fewer people visit on Sundays.", "The children's room was expanded."], ans: 0, exp: "公告說調整時間是因為問卷中很多居民希望晚上也開放（many residents asked for evening hours）。" }
+    ]
+  },
+  {
+    title: "單篇：共享辦公室廣告",
+    time: 120,
+    form: "R2",
+    passages: [
+      "WORKHUB DOWNTOWN — Flexible Office Space\n\nNeed a professional place to work without signing a long-term lease? WorkHub offers private offices, shared desks, and meeting rooms, all with high-speed Internet and free coffee.\n\n• Day pass: $25\n• Monthly shared desk: $280\n• Monthly private office: $650\n\nMembers can book our meeting rooms at no charge for up to four hours per month. Visit us at 200 Grant Street for a free one-day trial."
+    ],
+    qs: [
+      { q: "For whom is the advertisement most likely intended?", opts: ["People who need flexible workspace", "Coffee shop owners", "Real estate agents", "Internet service providers"], ans: 0, exp: "廣告訴求「不用簽長期租約就有專業的工作空間」，對象是需要彈性辦公空間的人。" },
+      { q: "What do members receive at no charge?", opts: ["Limited use of meeting rooms", "A private office", "A monthly parking space", "Printing services"], ans: 0, exp: "Members can book our meeting rooms at no charge for up to four hours per month：會員每月可免費使用會議室最多四小時。" }
+    ]
+  },
+  {
+    title: "單篇：租車明細",
+    time: 120,
+    form: "R2",
+    passages: [
+      "QUICKWAY CAR RENTAL — Rental Agreement Summary\n\nCustomer: Elena Varga\nPick-up: Denver Airport, May 4, 10:00 A.M.\nReturn: Denver Airport, May 7, 10:00 A.M.\nVehicle: Compact sedan\n\nDaily rate: $48 × 3 days = $144\nGPS navigation: $9 × 3 days = $27\nTotal: $171\n\nFuel policy: Return the vehicle with a full tank to avoid a $60 refueling charge."
+    ],
+    qs: [
+      { q: "For how long did Ms. Varga rent the car?", opts: ["Three days", "Four days", "Seven days", "One week"], ans: 0, exp: "5 月 4 日早上 10 點取車，5 月 7 日早上 10 點還車，明細也是 × 3 days，共三天。" },
+      { q: "How can Ms. Varga avoid an additional charge?", opts: ["By filling the gas tank before returning the car", "By returning the GPS unit early", "By paying in cash", "By choosing a larger car"], ans: 0, exp: "Return the vehicle with a full tank to avoid a $60 refueling charge：還車前加滿油就不用付 $60 加油費。" }
+    ]
+  },
+  {
+    title: "單篇：簡訊對話（意圖題）",
+    time: 120,
+    form: "R2",
+    passages: [
+      "Ana Costa (3:05 P.M.)\nHi Luis. I'm at the print shop picking up the brochures for tomorrow's trade show. They printed 300 instead of 500.\n\nLuis Park (3:07 P.M.)\nCan they print the rest today?\n\nAna Costa (3:08 P.M.)\nThey said not before Thursday.\n\nLuis Park (3:09 P.M.)\nThe show is only one day. We'll hand out the 300 and collect e-mail addresses from everyone else.\n\nAna Costa (3:10 P.M.)\nGood idea. I'll bring a sign-up sheet."
+    ],
+    qs: [
+      { q: "What problem does Ms. Costa report?", opts: ["An order is incomplete.", "A print shop is closed.", "A trade show has been canceled.", "Some brochures contain errors."], ans: 0, exp: "印刷店只印了 300 份，不是 500 份，訂單數量不足。" },
+      { q: "At 3:08 P.M., what does Ms. Costa mean when she writes, \"They said not before Thursday\"?", opts: ["The remaining brochures will not be ready in time.", "The trade show has been moved to Thursday.", "She will return to the print shop on Thursday.", "The print shop is closed until Thursday."], ans: 0, exp: "意圖題：Park 問今天能不能印完剩下的，Costa 回答「他們說週四之前不行」，也就是來不及在明天的展覽前印好。Park 接著提議只發 300 份、其他人留 e-mail。" }
+    ]
+  },
+  {
+    title: "單篇：電子郵件",
+    time: 180,
+    form: "R2",
+    passages: [
+      "To: Gavin Shore <gshore@northlinemedia.com>\nFrom: Leah Kim <lkim@brightpath.org>\nDate: June 2\nSubject: Our meeting on June 5\n\nDear Mr. Shore,\n\nI'm afraid I need to reschedule our meeting on Thursday, June 5. Our board has called an emergency meeting that afternoon, and I am required to attend.\n\nWould Monday, June 9, at the same time work for you? If not, I am also free on Tuesday morning. I would be happy to come to your office so that you don't have to travel.\n\nI apologize for the inconvenience and look forward to discussing the advertising campaign with you.\n\nBest regards,\nLeah Kim\nCommunications Director, BrightPath"
+    ],
+    qs: [
+      { q: "Why did Ms. Kim write the e-mail?", opts: ["To change the date of a meeting", "To cancel an advertising campaign", "To invite Mr. Shore to a board meeting", "To request a price quote"], ans: 0, exp: "Kim 說她需要更改 6 月 5 日的會議時間（I need to reschedule our meeting）。" },
+      { q: "What is indicated about the original meeting?", opts: ["It was scheduled for the afternoon.", "It was going to take place on a Monday.", "It was requested by the board.", "It was about a new product design."], ans: 0, exp: "董事會臨時在「那天下午」開會，和原本的會議衝突，所以原本的會議在下午。原訂日期是週四，討論的是廣告活動。" },
+      { q: "What does Ms. Kim offer to do?", opts: ["Travel to Mr. Shore's office", "Pay for Mr. Shore's travel", "Send a draft of the campaign", "Meet on Thursday morning"], ans: 0, exp: "I would be happy to come to your office so that you don't have to travel：她願意到 Shore 的辦公室。" }
+    ]
+  },
+  {
+    title: "單篇：報導（插入句子位置題）",
+    time: 180,
+    form: "R2",
+    passages: [
+      "New Ferry Service Links Harbor Towns\n\nPORT ELLIS (May 20) — A new ferry service between Port Ellis and Clearwater began operating on Monday, cutting travel time between the two towns from 90 minutes by car to 35 minutes. [1]\n\nThe ferry, operated by BlueWave Marine, makes eight round trips daily. One-way tickets cost $12 for adults and $6 for children. [2]\n\nLocal business owners are hopeful that the service will bring more visitors. [3] \"Many tourists stay in Clearwater but never come to Port Ellis because the drive is too long,\" said Maya Dorsey, owner of a café near the ferry dock. [4]"
+    ],
+    qs: [
+      { q: "What is the article mainly about?", opts: ["A new transportation service", "A road construction project", "The opening of a café", "A tourism award"], ans: 0, exp: "報導 Port Ellis 和 Clearwater 之間新開的渡輪服務。" },
+      { q: "How much would two adults pay for one-way tickets?", opts: ["$24", "$12", "$18", "$36"], ans: 0, exp: "成人單程 $12，兩位成人是 $24。" },
+      { q: "In which of the positions marked [1], [2], [3], and [4] does the following sentence best belong? She added, \"The ferry could change that.\"", opts: ["[4]", "[1]", "[2]", "[3]"], ans: 0, exp: "She 要指前面已經出現的女性，that 要指前面說的情況。[4] 前面是 Dorsey 說「遊客嫌開車太遠所以不來」，接著補充「渡輪可能改變這種情況」最連貫。放在 [3] 時 Dorsey 還沒出現。" }
+    ]
+  },
+  {
+    title: "單篇：線上課程方案網頁",
+    time: 180,
+    form: "R2",
+    passages: [
+      "www.skillbridge.com/pricing\n\nSkillBridge Online Courses — Choose Your Plan\n\nBasic: $15/month. Access to 200 courses. Certificates not included.\n\nPlus: $25/month. Access to all 800 courses, plus certificates of completion.\n\nTeam: $20 per user/month (minimum 5 users). Includes everything in Plus, along with progress reports for managers.\n\nAll plans can be canceled at any time. New subscribers get the first two weeks free."
+    ],
+    qs: [
+      { q: "What is a feature of the Plus plan?", opts: ["Certificates of completion", "Progress reports for managers", "A minimum of five users", "Access to 200 courses only"], ans: 0, exp: "Plus 方案包含全部 800 門課和結業證書（certificates of completion）。主管進度報告是 Team 方案才有。" },
+      { q: "How much would a company pay per month for a Team plan with six users?", opts: ["$120", "$100", "$150", "$90"], ans: 0, exp: "Team 方案每人每月 $20，六人是 $120。" },
+      { q: "What is offered to new subscribers?", opts: ["A free trial period", "A discount on certificates", "A free course of their choice", "Lifetime access to courses"], ans: 0, exp: "New subscribers get the first two weeks free：新訂戶前兩週免費。" }
+    ]
+  },
+  {
+    title: "單篇：信件（插入句子位置題）",
+    time: 240,
+    form: "R2",
+    passages: [
+      "Hollis Property Management\n55 Brook Street\nFairview, CA 94012\n\nJuly 14\n\nDear Tenant,\n\nAs part of our ongoing maintenance program, the elevators in your building will be inspected on Wednesday, July 23. [1] During the inspection, which will take place from 8:00 A.M. to noon, both elevators will be out of service.\n\nWe understand that this may cause difficulties for some residents. [2] If you need assistance carrying groceries or other items during the inspection, our building staff will be glad to help. Please call the front desk at 555-0124 to arrange this.\n\nWe also remind residents that the stairwells must be kept clear of bicycles and other personal belongings at all times. [3]\n\nThank you for your understanding. [4]\n\nSincerely,\nRuth Okafor\nBuilding Manager"
+    ],
+    qs: [
+      { q: "What is the main purpose of the letter?", opts: ["To inform residents of a temporary service interruption", "To announce a rent increase", "To introduce a new building manager", "To request payment for repairs"], ans: 0, exp: "信中通知 7 月 23 日早上電梯檢查、暫停使用。" },
+      { q: "What are residents who need help asked to do?", opts: ["Call the front desk", "Use the service elevator", "Speak to the inspector", "Leave their belongings in the lobby"], ans: 0, exp: "需要協助的住戶請打電話到櫃檯安排（Please call the front desk at 555-0124 to arrange this）。" },
+      { q: "What are residents reminded about?", opts: ["Keeping the stairways free of objects", "Recycling their bicycles", "Paying rent on time", "Locking their doors"], ans: 0, exp: "信中提醒樓梯間隨時都要淨空，不能放腳踏車或個人物品（must be kept clear）。" },
+      { q: "In which of the positions marked [1], [2], [3], and [4] does the following sentence best belong? \"To avoid any inconvenience, residents with mobility concerns may wish to plan their errands for the afternoon.\"", opts: ["[2]", "[1]", "[3]", "[4]"], ans: 0, exp: "[2] 前一句說「電梯停用可能對部分住戶造成不便」，接著建議行動不便的住戶把外出安排在下午（電梯中午就恢復），最連貫。放在 [1] 時還沒說明檢查是在上午；[3] 在提醒樓梯間淨空之後，[4] 在結尾致謝之後，都接不上。" }
+    ]
+  },
+  {
+    title: "單篇：線上討論（意圖題）",
+    time: 240,
+    form: "R2",
+    passages: [
+      "Lena Fischer [9:31 A.M.]\nHas anyone heard from the caterer for Friday's client lunch?\n\nOmar Haddad [9:33 A.M.]\nThey called yesterday. They need the final headcount by noon today.\n\nLena Fischer [9:34 A.M.]\nWe have 18 confirmed so far. Are we still waiting on anyone?\n\nGrace Liu [9:36 A.M.]\nTwo people from the Hartwell team haven't replied. I'll call their office.\n\nOmar Haddad [9:37 A.M.]\nLet's just give the caterer 20. Extra food is better than not enough.\n\nLena Fischer [9:38 A.M.]\nFair enough. Grace, could you still let me know what Hartwell says?\n\nGrace Liu [9:39 A.M.]\nWill do. Also, one of the guests is vegetarian, so I'll tell the caterer."
+    ],
+    qs: [
+      { q: "What are the writers mainly discussing?", opts: ["Preparations for a business meal", "A change in a client's contract", "Hiring a new caterer", "A team-building activity"], ans: 0, exp: "大家在討論週五客戶午餐要給外燴廠商的人數和餐點需求。" },
+      { q: "By when must the caterer be given the number of guests?", opts: ["By noon today", "By Friday", "By the end of the week", "By tomorrow morning"], ans: 0, exp: "They need the final headcount by noon today。週五是午餐的日期。" },
+      { q: "At 9:38 A.M., what does Ms. Fischer most likely mean when she writes, \"Fair enough\"?", opts: ["She agrees with Mr. Haddad's suggestion.", "She thinks the price is reasonable.", "She is satisfied with the food choices.", "She believes enough guests have replied."], ans: 0, exp: "意圖題：Haddad 提議直接報 20 人，寧可多不要少；Fischer 回「有道理」，表示同意這個做法。" },
+      { q: "What will Ms. Liu most likely do?", opts: ["Contact the Hartwell team's office", "Change the date of the lunch", "Cancel the catering order", "Prepare vegetarian food herself"], ans: 0, exp: "Liu 說她會打電話到 Hartwell 的辦公室（I'll call their office），Fischer 也請她回報結果。素食是她要轉告外燴廠商，不是自己準備。" }
+    ]
+  },
+  {
+    title: "單篇：報導（同義字題）",
+    time: 240,
+    form: "R2",
+    passages: [
+      "Small Bakery Wins National Award\nBy Rosa Delgado\n\nGREENFIELD — Pane & Co., a small bakery on Elm Street, has been named Best Independent Bakery in the country by Food Trade Monthly. The award recognizes businesses that combine quality products with strong community involvement.\n\nOwner Teresa Fontana opened the bakery eight years ago with just two employees. Today, it employs 14 people and supplies bread to 12 local restaurants. Every Friday, unsold bread is donated to a nearby food bank.\n\n\"We never set out to win awards,\" Fontana said. \"We just wanted to bake good bread for our neighbors.\"\n\nSince the announcement last week, the bakery has seen a sharp rise in customers, and lines now regularly stretch out the door on weekend mornings. Fontana plans to hire three more bakers this summer to keep up with demand."
+    ],
+    qs: [
+      { q: "Why did Pane & Co. receive an award?", opts: ["For its products and its community involvement", "For its long history", "For opening many locations", "For its low prices"], ans: 0, exp: "這個獎表揚「優質產品結合社區參與」的店家，Pane & Co. 每週捐麵包給食物銀行。" },
+      { q: "What is NOT mentioned about Pane & Co.?", opts: ["It sells its products online.", "It supplies bread to restaurants.", "It donates bread every week.", "It has 14 employees."], ans: 0, exp: "NOT 題：文中提到供貨給 12 家餐廳、每週五捐麵包、員工 14 人，沒有提到網路販售。" },
+      { q: "In paragraph 4, the word \"sharp\" is closest in meaning to", opts: ["sudden", "intelligent", "pointed", "clear"], ans: 0, exp: "同義字題：a sharp rise in customers 是「顧客急遽增加」，最接近 sudden。" },
+      { q: "What does Ms. Fontana plan to do?", opts: ["Hire more staff", "Open a second bakery", "Supply bread to more restaurants", "Stop donating bread"], ans: 0, exp: "Fontana 打算今年夏天再雇用三位麵包師傅（plans to hire three more bakers this summer），也就是增加人手。" }
+    ]
+  },
+  {
+    title: "雙篇：志工招募傳單＋報名信",
+    time: 300,
+    form: "R2",
+    passages: [
+      "CITY ARTS FESTIVAL — Volunteer Opportunities\nSaturday, August 16 – Sunday, August 17\n\nWe need volunteers for the following roles:\n• Information booth (shifts: 9 A.M.–1 P.M. or 1 P.M.–5 P.M.)\n• Stage crew (must be able to lift 20 kg; shift: 8 A.M.–2 P.M.)\n• Children's art tent (experience working with children preferred)\n\nAll volunteers receive a free festival T-shirt and lunch. Volunteers who work both days also receive two tickets to the closing concert.\n\nSign up by August 1 at cityartsfest.org/volunteer.",
+      "To: volunteers@cityartsfest.org\nFrom: Noah Brennan\nDate: July 28\nSubject: Volunteer sign-up\n\nHello,\n\nI'd like to volunteer at this year's festival. I'm a primary school teacher, so I think I would be a good fit for the children's area. I'm available on both days, though I'd prefer to work in the afternoon on Saturday.\n\nAlso, I have a back injury and was told not to lift heavy objects for a few months, so please don't assign me to any physical tasks.\n\nThanks,\nNoah Brennan"
+    ],
+    qs: [
+      { q: "What is the purpose of the flyer?", opts: ["To recruit people to help at an event", "To sell concert tickets", "To advertise art classes for children", "To announce a change in festival dates"], ans: 0, exp: "傳單在招募藝術節的志工，列出各種職務和報名方式。" },
+      { q: "What do all volunteers receive?", opts: ["A meal", "Concert tickets", "A cash payment", "Free parking"], ans: 0, exp: "所有志工都有一件 T 恤和午餐（lunch）。音樂會門票只有兩天都參加的人才有。" },
+      { q: "Why is Mr. Brennan probably suited for one of the roles?", opts: ["He works with children.", "He can lift heavy objects.", "He has volunteered before.", "He lives near the festival."], ans: 0, exp: "跨篇題：兒童藝術帳篷優先找有兒童工作經驗的人（第一篇），Brennan 是小學老師（第二篇）。" },
+      { q: "If Mr. Brennan volunteers as he plans, what will he most likely receive?", opts: ["Two tickets to a concert", "A discount on art supplies", "A free parking pass", "A payment for his time"], ans: 0, exp: "跨篇題：兩天都參加的志工可以拿到兩張閉幕音樂會門票（第一篇），Brennan 說他兩天都能參加（第二篇）。" },
+      { q: "What is indicated about Mr. Brennan's e-mail?", opts: ["It was sent before the sign-up deadline.", "It was sent after the festival.", "It was sent on the first day of the festival.", "It was sent after the sign-up deadline."], ans: 0, exp: "跨篇題：報名截止日是 8 月 1 日（第一篇），他的信是 7 月 28 日寄的（第二篇）。" }
+    ]
+  },
+  {
+    title: "雙篇：飯店廣告＋住客評論",
+    time: 300,
+    form: "R2",
+    passages: [
+      "SEASIDE INN — Summer Special\n\nStay three nights and get the fourth night free! (Valid June 1–August 31; not valid on holiday weekends.)\n\nAll rooms include free Wi-Fi and breakfast. Ocean-view rooms are available for an additional $30 per night.\n\nBook online at seasideinn.com or call 555-0199.",
+      "★★★☆☆ Reviewed by J. Moreno, July 20\n\nMy family stayed at the Seaside Inn for four nights in early July, using the summer special. We paid extra for an ocean view, and the view was beautiful. Breakfast was fine, though the selection was limited. Our biggest disappointment was the Wi-Fi, which barely worked in our room. The front desk staff were friendly and offered to move us to another room, but by then we had already unpacked. Overall, a decent place for the price."
+    ],
+    qs: [
+      { q: "What is indicated about the summer special?", opts: ["It cannot be used on some dates.", "It includes a free ocean view.", "It is available only online.", "It includes dinner."], ans: 0, exp: "優惠註明 not valid on holiday weekends（連假週末不適用）。海景房要另外加價；也可以打電話訂房。" },
+      { q: "For how many nights did the Moreno family most likely pay?", opts: ["Three", "Four", "Two", "One"], ans: 0, exp: "跨篇題：他們用夏季優惠住了四晚（第二篇），優惠是住三晚送第四晚（第一篇），所以付三晚的錢。" },
+      { q: "What did the reviewer pay extra for?", opts: ["A room with a view of the ocean", "Breakfast", "Wi-Fi access", "A late checkout"], ans: 0, exp: "We paid extra for an ocean view。早餐和 Wi-Fi 都是免費的。" },
+      { q: "What problem did the reviewer have?", opts: ["The Internet connection was poor.", "The room was not clean.", "The staff were unhelpful.", "Breakfast was not served."], ans: 0, exp: "最大的失望是 Wi-Fi 在房間裡幾乎不能用。櫃檯人員很友善，早餐只是選擇少。" },
+      { q: "What did the hotel staff offer to do?", opts: ["Move the guests to another room", "Refund one night", "Provide a free breakfast", "Repair the Wi-Fi immediately"], ans: 0, exp: "offered to move us to another room：櫃檯提議幫他們換房間。" }
+    ]
+  },
+  {
+    title: "三篇：產品召回公告＋顧客來信＋回信",
+    time: 300,
+    form: "R2",
+    passages: [
+      "PRODUCT SAFETY NOTICE\n\nHomeline Appliances is voluntarily recalling its Model K-200 electric kettle, sold between January and April of this year. In a small number of units, the handle may become loose after repeated use.\n\nCustomers who own a K-200 kettle should stop using it immediately. To receive a free replacement kettle (Model K-250) or a full refund, contact Homeline customer service at support@homeline.com with the serial number found on the bottom of the kettle. Replacement kettles will be shipped within 10 business days.",
+      "To: support@homeline.com\nFrom: Priya Shah\nDate: May 6\nSubject: K-200 kettle\n\nHello,\n\nI bought a K-200 kettle in March and just read about the recall. The serial number is HK2003-7781. I would prefer a refund rather than a replacement, as I have already bought a different kettle.\n\nCould you also tell me whether I need to send the old kettle back?\n\nThank you,\nPriya Shah",
+      "To: Priya Shah\nFrom: Homeline Customer Service\nDate: May 7\nSubject: RE: K-200 kettle\n\nDear Ms. Shah,\n\nThank you for contacting us. We have processed your request, and the full purchase price will be returned to your credit card within five business days.\n\nYou do not need to return the kettle. Instead, please remove the handle and dispose of the kettle according to local regulations. We apologize for any inconvenience.\n\nHomeline Customer Service"
+    ],
+    qs: [
+      { q: "Why is the K-200 kettle being recalled?", opts: ["A part may not stay firmly attached.", "It may overheat.", "Its power cord may be damaged.", "Its lid may not close properly."], ans: 0, exp: "公告說少數產品的把手在多次使用後可能鬆脫（the handle may become loose）。" },
+      { q: "What information must customers provide?", opts: ["A serial number", "A receipt", "A photograph of the kettle", "The name of the store"], ans: 0, exp: "要附上壺底的序號（with the serial number found on the bottom of the kettle）。" },
+      { q: "What is suggested about Ms. Shah?", opts: ["She bought the kettle during the period covered by the recall.", "She was injured by the kettle.", "She would like a Model K-250.", "She has already returned the kettle."], ans: 0, exp: "跨篇題：召回範圍是 1 到 4 月售出的產品（第一篇），Shah 是 3 月買的（第二篇）。她要退款，不要換新品。" },
+      { q: "What will Ms. Shah receive?", opts: ["Her money back", "A replacement kettle", "Store credit", "A discount coupon"], ans: 0, exp: "回信說全額款項會在五個工作天內退回她的信用卡。" },
+      { q: "What is Ms. Shah asked to do with the kettle?", opts: ["Remove the handle and throw it away", "Mail it to Homeline", "Bring it to a store", "Keep it for an inspection"], ans: 0, exp: "回信說不用寄回，請把把手拆下，再依當地規定丟棄（remove the handle and dispose of the kettle）。" }
+    ]
+  },
+  {
+    title: "三篇：辦公室出租資訊＋詢問信＋回信",
+    time: 300,
+    form: "R2",
+    passages: [
+      "OFFICE SPACE FOR LEASE — 400 Harbor Plaza\n\nSuite 210: 120 square meters, 2nd floor, $2,400/month. Available now.\nSuite 315: 180 square meters, 3rd floor, harbor view, $3,600/month. Available September 1.\nSuite 502: 250 square meters, 5th floor, harbor view, private kitchen, $5,000/month. Available October 1.\n\nAll suites include utilities and access to a shared conference room. Underground parking: $150 per space per month.\n\nContact: Derek Lam, Harbor Plaza Leasing, 555-0182",
+      "To: Derek Lam\nFrom: Sofia Marquez\nDate: August 4\nSubject: Office space inquiry\n\nDear Mr. Lam,\n\nMy architecture firm is looking for a new office for our team of 12 people. We need at least 150 square meters, and we would like a harbor view. Our current lease ends on August 31, so we need to move in by September 1.\n\nOur monthly budget is about $4,000, including parking for two cars. Could we arrange a viewing next week?\n\nRegards,\nSofia Marquez",
+      "To: Sofia Marquez\nFrom: Derek Lam\nDate: August 5\nSubject: RE: Office space inquiry\n\nDear Ms. Marquez,\n\nThank you for your interest. I believe one of our suites would suit your needs perfectly, and it would fit within your budget even with two parking spaces. I can show it to you on Tuesday or Thursday afternoon next week.\n\nPlease let me know which day works best.\n\nBest regards,\nDerek Lam"
+    ],
+    qs: [
+      { q: "What is true about all of the suites?", opts: ["Utilities are included in the rent.", "They have a harbor view.", "They are available immediately.", "They include a private kitchen."], ans: 0, exp: "All suites include utilities：所有辦公室都含水電。只有 315 和 502 看得到港口；只有 502 有私人廚房。" },
+      { q: "Which suite is Mr. Lam most likely referring to in his e-mail?", opts: ["Suite 315", "Suite 210", "Suite 502", "A suite on the fourth floor"], ans: 0, exp: "跨篇題：Marquez 要 150 平方公尺以上、港景、9 月 1 日前可入住、預算約 $4,000 含兩個車位（第二篇）。210 太小又沒有港景；502 十月才空出來，也超過預算；只有 315 符合（第一篇）。" },
+      { q: "How much will Ms. Marquez's firm most likely pay per month, including parking?", opts: ["$3,900", "$3,600", "$4,000", "$3,750"], ans: 0, exp: "跨篇計算：Suite 315 月租 $3,600，加兩個車位 2 × $150 = $300，共 $3,900，在預算內。" },
+      { q: "What kind of business does Ms. Marquez work for?", opts: ["One that designs buildings", "One that sells real estate", "One that manages parking facilities", "One that builds kitchens"], ans: 0, exp: "她說 My architecture firm（我的建築師事務所），建築師事務所設計建築物。" },
+      { q: "What does Mr. Lam offer to do?", opts: ["Show a property to Ms. Marquez", "Lower the rent", "Provide free parking", "Extend her current lease"], ans: 0, exp: "他說下週二或週四下午可以帶她看（I can show it to you）。" }
+    ]
+  },
+  {
+    title: "三篇：公司報導＋參與人數表＋電子郵件",
+    time: 300,
+    form: "R2",
+    passages: [
+      "Harper Logistics Launches Wellness Program\n\nIn March, Harper Logistics introduced a wellness program for its 400 employees. The program offers free weekly yoga classes, a step-counting challenge with monthly prizes, and healthy snacks in all break rooms. Employees who take part in at least two activities per month receive an extra paid day off each quarter.\n\n\"We wanted to show employees that we care about their health,\" said HR manager Tanya Brooks.",
+      "Wellness Program Participation (number of employees)\n\nActivity | March | April | May\nYoga classes | 45 | 62 | 78\nStep challenge | 120 | 155 | 140\nNutrition workshop | — | 30 | 52",
+      "To: All Harper Logistics staff\nFrom: Tanya Brooks\nDate: June 2\nSubject: Wellness program update\n\nDear colleagues,\n\nThank you to everyone who has joined our wellness activities. Participation in yoga has grown every month, so we will add a second weekly class starting June 10.\n\nWe were sorry to see fewer participants in last month's step challenge. To make it more appealing, June's prize will be a new pair of running shoes for each of the top three walkers.\n\nFinally, our nutrition workshop, which began in April, will now be held twice a month.\n\nBest regards,\nTanya Brooks"
+    ],
+    qs: [
+      { q: "What do employees receive for joining at least two activities each month?", opts: ["An additional day of paid leave", "A pair of running shoes", "Free healthy snacks", "A monthly cash bonus"], ans: 0, exp: "每月參加至少兩項活動的員工，每季多一天有薪假（an extra paid day off each quarter）。健康零食是所有人都有；跑鞋是步數挑戰前三名的獎品。" },
+      { q: "According to the table, how many employees took part in yoga classes in May?", opts: ["78", "62", "45", "140"], ans: 0, exp: "表格中瑜伽課五月的人數是 78。" },
+      { q: "Why will a change be made to the step challenge?", opts: ["Participation decreased.", "Employees asked for new prizes.", "The program's budget increased.", "Too many people joined."], ans: 0, exp: "跨篇題：步數挑戰從四月的 155 人降到五月的 140 人（第二篇），Brooks 說人數變少，所以換更吸引人的獎品（第三篇）。" },
+      { q: "When was the nutrition workshop first offered?", opts: ["In April", "In March", "In May", "In June"], ans: 0, exp: "表格三月是「—」，郵件也說工作坊 began in April。" },
+      { q: "What will happen starting June 10?", opts: ["An additional yoga class will be offered.", "The step challenge will end.", "Healthy snacks will be removed.", "The nutrition workshop will be canceled."], ans: 0, exp: "郵件說從 6 月 10 日起每週增加第二堂瑜伽課。" }
     ]
   }
 ];

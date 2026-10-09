@@ -29,11 +29,13 @@ function defaultState() {
     mockSeen: {},             // 模考出過的題（各類別索引），支撐不重複組卷
     targetScore: null,        // 新手引導設定的目標分數
     onboarded: false,         // 是否已完成（或略過）新手引導
+    ext: [],                  // 外部測驗成績 [{date, src, L, R}]：使用者自己輸入，L/R 為 0–495，0 代表沒考該部分
     baseN: { ...BASE_N }      // 這份紀錄建立或最後遷移時的內建題數（見 shiftForBuiltinGrowth）
   };
 }
-const APP_VERSION = "1.4.0";
+const APP_VERSION = "1.4.1";
 const CHANGELOG = [
+  { v: "1.4.1", d: "2026-10-11", notes: "考前衝刺第二、三波：新增完整閱讀測驗第 2 回（和第 1 回一樣 100 題、75 分鐘）；聽力新增新制題組 10 組（看圖表作答、三人對話、意圖題，圖表會顯示在畫面上，三人對話用不同聲音）與 Part 2 新題 40 題；統計頁可以記錄外部測驗成績；模擬考頁新增考前作答策略（時間分配與技巧）；插入句子位置題的選項改照 [1]～[4] 排列；舊 Part 6 插入題的錯誤選項重寫，不再一眼就能排除；替換和舊題太像的題目。（v1.4.0 已加入完整閱讀測驗第 1 回，100 題、75 分鐘。）" },
   { v: "1.4.0", d: "2026-10-10", notes: "考前衝刺版：新增 Part 5 高難度題 100 題、Part 7 新制題組 8 組（簡訊與線上討論的意圖題、插入句子位置題、5 題的多篇題組）；Part 2 全部重寫干擾選項，不再能靠「選最長的」猜對；修正題庫審查找到的錯題與兩可題；衝刺期每日菜單加入定期模考，考前三天自動減量；練習中可以按「這題有問題」回報。AI 錯題解析（試用）：在設定頁貼上自己的 Anthropic API 金鑰後，答錯時可以請 AI 說明為什麼錯，金鑰預設關掉 App 就清除、不會同步或備份。資安強化：檢查同步與備份資料的格式、加入內容安全政策與第三方腳本完整性檢查、自訂同步代碼太短時提醒" },
   { v: "1.3.0", d: "2026-10-06", notes: "改顯示練習答對率（不再換算未校準的 TOEIC 分數，錯題本重考不計入）；只做錯題本或模考的日子也算連續學習；模考報告分開顯示聽力與閱讀、趨勢圖固定 0–100%；裝置沒有英文語音時先說明、語音沒播放時提示且模考不會卡住；同步代碼改用安全亂數並檢查格式；修正 Part 7 做完最後一題會跳出錯誤提示" },
   { v: "1.1.0", d: "2026-08-09", notes: "學習演算法強化：錯題要連續答對 2 次（跨天）才移除、Part 5 依弱項類別加權出題、Part 5／聽力 Part 2 不重複輪替出題、單字每日複習量上限" },
@@ -137,6 +139,9 @@ function sanitizeState(d) {
   entries(d.mockSeen).forEach(([kind, v]) => { ms[kind] = seen(v); });
   d.mockSeen = ms;
   const PARTS = ["Part 2", "Part 3", "Part 4", "Part 5", "Part 6", "Part 7"];
+  const score = v => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.min(495, Math.max(0, n)) : 0; };
+  d.ext = (Array.isArray(d.ext) ? d.ext : Object.values(obj(d.ext))).filter(e => e && typeof e === "object" && date(e.date))
+    .map(e => ({ date: e.date, src: String(e.src || "").slice(0, 60), L: score(e.L), R: score(e.R) })).slice(-50);
   d.mocks = (Array.isArray(d.mocks) ? d.mocks : Object.values(obj(d.mocks))).filter(m => m && typeof m === "object").map(m => {
     const out = { date: date(m.date) || "" };
     if (["full", "listen", "read"].includes(m.mode) || /^R\d{1,2}$/.test(m.mode)) out.mode = m.mode; // 舊紀錄沒有 mode 就維持沒有（顯示為「模擬考」）
@@ -233,7 +238,8 @@ function validateItem(type, it) {
       Array.isArray(it.qs) && it.qs.length > 0 && it.qs.every(q => mcq(q, 4));
     case "l2": return mcq(it, 3);
     case "l34": return typeof it.type === "string" && typeof it.title === "string" &&
-      Array.isArray(it.turns) && it.turns.every(t => ["M", "W", "N"].includes(t.s) && typeof t.t === "string") &&
+      Array.isArray(it.turns) && it.turns.every(t => ["M", "W", "M2", "W2", "N"].includes(t.s) && typeof t.t === "string") &&
+      (it.graphic === undefined || typeof it.graphic === "string") &&
       Array.isArray(it.qs) && it.qs.length > 0 && it.qs.every(q => mcq(q, 4));
   }
   return false;
@@ -331,6 +337,12 @@ function shuffle(arr) {
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
+}
+// 選項顯示順序：一般題目洗牌（避免背位置）；「插入句子位置題」的選項 [1]～[4] 照正式考試的順序排列，不洗牌
+function optionOrder(opts) {
+  const idx = opts.map((_, i) => i);
+  if (opts.length && opts.every(o => /^\[\d\]$/.test(o))) return idx.sort((a, b) => opts[a].localeCompare(opts[b]));
+  return shuffle(idx);
 }
 function esc(s) {
   // 也跳脫雙引號：本函式的輸出有時會被接在雙引號屬性裡（如 value="${esc(...)}"），
@@ -469,8 +481,13 @@ const TTS = {
     const pool = (typeof Accents !== "undefined" && Accents.pool[TTS.currentLang]) || TTS.voices;
     if (!pool.length) return null;
     // 盡量讓男女聲用不同語音
-    if (speaker === "W") return pool.find(v => /female|zira|aria|jenny/i.test(v.name)) || pool[0];
-    if (speaker === "M") return pool.find(v => /male|david|guy|mark/i.test(v.name)) || pool[pool.length - 1];
+    const female = v => /female|zira|aria|jenny|samantha|karen|susan|hazel|libby|sonia|natasha/i.test(v.name);
+    const male = v => !female(v) && /male|david|guy|mark|daniel|alex|george|ryan|william|james/i.test(v.name);
+    if (speaker === "W") return pool.find(female) || pool[0];
+    if (speaker === "M") return pool.find(male) || pool[pool.length - 1];
+    // 三人對話的第二位男聲／女聲：找一個和第一位不同的語音，找不到就沿用並靠音高區分
+    if (speaker === "W2") { const w = pool.filter(female); return w[1] || w[0] || pool[0]; }
+    if (speaker === "M2") { const m = pool.filter(male); return m[1] || m[0] || pool[pool.length - 1]; }
     return pool[0];
   },
   rate(rate) {
@@ -494,8 +511,8 @@ const TTS = {
         u.lang = TTS.currentLang;
         u.rate = TTS.rate(rate);
         // 同一語音時用音高區分男女
-        if (speaker === "W") u.pitch = 1.15;
-        if (speaker === "M") u.pitch = 0.9;
+        const pitch = { W: 1.15, M: 0.9, W2: 1.35, M2: 0.75 }[speaker];
+        if (pitch) u.pitch = pitch;
         u.onstart = () => { started = true; if (onStart) onStart(); };
         u.onend = finish; u.onerror = finish;
         speechSynthesis.speak(u);
@@ -987,7 +1004,7 @@ function rateCard(card, r, iv) {
 
 /* ============ 通用選擇題渲染 ============ */
 function renderMCQ(container, item, meta, onDone) {
-  const order = shuffle(item.opts.map((_, i) => i));
+  const order = optionOrder(item.opts);
   container.innerHTML = `
     ${meta.progress ? `<p class="q-progress">${meta.progress}</p>` : ""}
     <div class="q-text">${esc(item.q || "")}</div>
@@ -1240,6 +1257,7 @@ function startL34(si) {
         <div id="l34-accent" style="margin:4px 0 8px;text-align:center"></div>
         ${rateQuickHTML()}
         ${ttsNoteHTML()}
+        ${graphicHTML(set)}
         <div id="l34-q"></div>
         <div id="l34-nav" style="text-align:right"></div>
       </div>`;
@@ -1261,14 +1279,19 @@ function startL34(si) {
   }
   render();
 }
+// 圖表題（Look at the graphic）的圖表：作答時要看得到，用等寬字顯示表格
+function graphicHTML(set) {
+  return set && set.graphic ? `<div class="passage graphic">${esc(set.graphic)}</div>` : "";
+}
 function transcript(set) {
-  const name = { M: "男", W: "女", N: "" };
+  const name = { M: "男", W: "女", M2: "男 2", W2: "女 2", N: "" };
   return set.turns.map(t => `${t.s !== "N" ? `（${name[t.s]}）` : ""}${esc(t.t)}`).join("\n\n");
 }
 // 送給 AI 解析的純文字文章與逐字稿（不經 esc，不會顯示在畫面上）
 function aiTranscript(set) {
-  const name = { M: "男", W: "女", N: "旁白" };
-  return set.turns.map(t => `${name[t.s] || t.s}：${t.t}`).join("\n");
+  const name = { M: "男", W: "女", M2: "男 2", W2: "女 2", N: "旁白" };
+  const lines = set.turns.map(t => `${name[t.s] || t.s}：${t.t}`).join("\n");
+  return set.graphic ? `${lines}\n\n【題目附的圖表】\n${set.graphic}` : lines;
 }
 function aiPassages(set) {
   return set.passages.length > 1 ? set.passages.map((t, i) => `（文章 ${i + 1}）\n${t}`).join("\n\n") : set.passages[0];
@@ -1318,7 +1341,8 @@ function weakCats() {
 // 回傳的陣列長度最多 n，題庫比 n 小時就自然變短，不會卡住也不會湊不出題。
 // 完整閱讀測驗：題目在題庫中以 form 標記（例如 form: "R1"），測驗時依 Part 5 → 6 → 7 的順序出完所有題目
 const FORMS = [
-  { id: "R1", name: "完整閱讀測驗 第 1 回", secs: 75 * 60 }
+  { id: "R1", name: "完整閱讀測驗 第 1 回", secs: 75 * 60 },
+  { id: "R2", name: "完整閱讀測驗 第 2 回", secs: 75 * 60 }
 ];
 // 完整測驗（forms）的題目：保留給完整測驗，一般練習與隨機模考都不抽（答錯後會進錯題本，可以在錯題本重考）
 function isFormItem(type, i) {
@@ -1663,7 +1687,7 @@ function retryWrong(entry) {
     item = PART34[si].qs[qi];
     audio = PART34[si];
     meta.ai.context = aiTranscript(audio);
-    passageHtml = `<div style="text-align:center;padding:8px"><button class="btn ghost small" id="wq-replay">▶ 重播音檔</button>${ttsNoteHTML()}</div>`;
+    passageHtml = `<div style="text-align:center;padding:8px"><button class="btn ghost small" id="wq-replay">▶ 重播音檔</button>${ttsNoteHTML()}</div>${graphicHTML(audio)}`;
   } else {
     const [si, qi] = entry.key.split("-").map(Number);
     item = PART7[si].qs[qi];
@@ -1907,11 +1931,46 @@ renderers.stats = function () {
       <div class="bar-row"><span class="lbl">學習中</span><div class="bar-track"><div class="bar-fill" style="width:${vocabPct(learning)}%;background:var(--warn)"></div></div><span class="val">${learning}</span></div>
       <div class="bar-row"><span class="lbl">未學習</span><div class="bar-track"><div class="bar-fill" style="width:${vocabPct(unseen)}%;background:var(--panel2)"></div></div><span class="val">${unseen}</span></div>
     </div>
+    <div class="card" id="ext-card">
+      <h2>📝 外部測驗成績</h2>
+      <p class="muted">在其他地方做的完整測驗（網路模擬試題、補習班模考）可以記在這裡追蹤。這些成績不是本工具算的，各家難度也不同，只能看大致趨勢；真正的分數以正式考試為準。</p>
+      <div class="ext-form">
+        <input type="date" id="ext-date" value="${todayStr()}" aria-label="測驗日期">
+        <input type="text" id="ext-src" maxlength="60" placeholder="來源（例如：某網站模擬試題 3）" aria-label="測驗來源">
+        <input type="number" id="ext-l" min="0" max="495" step="5" placeholder="聽力" aria-label="聽力分數（0–495）">
+        <input type="number" id="ext-r" min="0" max="495" step="5" placeholder="閱讀" aria-label="閱讀分數（0–495）">
+        <button class="btn small" id="ext-add">記錄</button>
+      </div>
+      <p class="muted" id="ext-msg" aria-live="polite"></p>
+      ${(S.ext || []).length ? `<div class="ext-list">${S.ext.map((e, i) => ({ e, i })).sort((a, b) => b.e.date.localeCompare(a.e.date)).map(({ e, i }) => `
+        <div class="item-row"><div><b>${esc(e.date)}</b> <span class="muted">${esc(e.src || "未填來源")}</span><br>
+          聽力 ${e.L ? esc(e.L) : "—"} · 閱讀 ${e.R ? esc(e.R) : "—"}${e.L && e.R ? ` · 合計 <b>${esc(e.L + e.R)}</b>` : ""}</div>
+          <button class="btn ghost small" data-ext-del="${i}" aria-label="刪除這筆紀錄">刪除</button></div>`).join("")}</div>` : `<p class="muted">還沒有紀錄。</p>`}
+    </div>
     <div class="card">
       <h3>資料管理</h3>
       <p class="muted">學習紀錄每次作答都會即時自動存檔（localStorage）。要防止清除瀏覽資料或換電腦造成遺失，請到「題庫/備份」分頁匯出備份檔。</p><br>
       <button class="btn ghost small" id="reset-all">清除所有學習紀錄</button>
     </div>`;
+  $("#ext-add").addEventListener("click", () => {
+    const date = $("#ext-date").value, src = $("#ext-src").value.trim();
+    const rd = id => { const v = $(id).value.trim(); return v === "" ? 0 : Number(v); };
+    const L = rd("#ext-l"), R = rd("#ext-r");
+    const bad = x => !Number.isInteger(x) || x < 0 || x > 495;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { $("#ext-msg").textContent = "請選擇測驗日期。"; return; }
+    if (bad(L) || bad(R) || (!L && !R)) { $("#ext-msg").textContent = "請輸入 5–495 之間的分數（只考一部分時，另一欄留空）。"; return; }
+    if (!S.ext) S.ext = [];
+    S.ext.push({ date, src: src.slice(0, 60), L, R });
+    save();
+    renderers.stats();
+    UI.toast("已記錄外部測驗成績", "ok");
+  });
+  $("#tab-stats").querySelectorAll("[data-ext-del]").forEach(b => b.addEventListener("click", () => {
+    if (!confirm("刪除這筆外部測驗紀錄？")) return;
+    S.ext.splice(Number(b.dataset.extDel), 1);
+    save();
+    renderers.stats();
+  }));
   $("#reset-all").addEventListener("click", () => {
     if (confirm("確定要清除所有學習紀錄嗎？此操作無法復原。")) {
       S = defaultState(); save(); switchTab("home");

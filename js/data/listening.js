@@ -63,6 +63,47 @@ const PART2 = [
   { q: "Where did the shipment get held up?", opts: ["Somewhere at the border crossing, I heard.", "For over a week, unfortunately.", "It was packed in sealed containers."], ans: 0, exp: "Where 問貨在哪裡被卡住，回答「聽說是在邊境關口」。「For over a week」答時間長度；「It was packed…」描述包裝。" },
   { q: "Would you rather lead the project or support it?", opts: ["I'd be happy to take the lead.", "Yes, it's an exciting project.", "Over the next quarter."], ans: 0, exp: "選擇疑問句擇一回答。「Yes, it's an exciting project」用 Yes 回答是陷阱。" },
   { q: "Why haven't the invoices been sent to accounting?", opts: ["I'm still waiting on two receipts.", "By the end of the day at the latest.", "In the top drawer of my desk."], ans: 0, exp: "Why 問發票為什麼還沒送會計，回答「還在等兩張收據」。「By the end of the day」答時間；「In the top drawer…」答地點。" },
+  // ---- S2（2026-10-11）：新題 40 題，兩位獨立審查者盲解一致 ----
+  { q: "When is the new branch opening?", opts: ["Sometime in early spring.", "On Maple Avenue, near the bank.", "Yes, it's a branch of the bank."], ans: 0, exp: "When 問時間，回答「春初的某個時候」。「On Maple Avenue…」答地點；「Yes, it's a branch…」用 Yes 回答 When 問句，而且 branch 是同字陷阱。", src: "S2" },
+  { q: "Who's going to train the new interns?", opts: ["Ms. Okoro volunteered to do it.", "They start on Monday.", "The train leaves at noon."], ans: 0, exp: "Who 問誰負責訓練，回答「Okoro 女士自願擔任」。「They start on Monday」答時間；「The train leaves…」用 train 做同字陷阱（訓練／火車）。", src: "S2" },
+  { q: "Where can I recharge my phone?", opts: ["There's an outlet behind the sofa.", "About two hours ago, before the meeting started.", "Yes, the charge was refunded."], ans: 0, exp: "Where 問在哪裡充電，回答「沙發後面有插座」。「About two hours ago」答時間；「the charge was refunded」用 charge 做同字陷阱（充電／費用）。", src: "S2" },
+  { q: "Why was the meeting moved to Room 6?", opts: ["Room 4 is being painted.", "At two o'clock this afternoon.", "I moved here three years ago."], ans: 0, exp: "Why 問原因，回答「4 號會議室在油漆」。「At two o'clock…」答時間；「I moved here…」用 moved 做同字陷阱。", src: "S2" },
+  { q: "How long will the inspection take?", opts: ["Most of the afternoon, I'd guess.", "The inspector arrives at nine.", "It's a long hallway."], ans: 0, exp: "How long 問需要多久，回答「我猜大概一個下午」。「The inspector arrives at nine」答幾點來；「It's a long hallway」用 long 做同字陷阱。", src: "S2" },
+  { q: "Which hotel did you book for the conference?", opts: ["I haven't decided yet.", "Three nights, starting Tuesday.", "The conference was very useful."], ans: 0, exp: "Which 問訂哪家飯店，間接回答「還沒決定」。「Three nights…」答住幾晚；「The conference was very useful」用 conference 做同字陷阱。", src: "S2" },
+  { q: "Would you like some help carrying those boxes?", opts: ["Thanks, they're heavier than they look.", "Yes, I'd like a box of pens.", "In the supply closet."], ans: 0, exp: "提議幫忙搬箱子，回答「謝謝，它們比看起來重」，表示接受幫忙。「a box of pens」用 box 做同字陷阱；「In the supply closet」答地點。", src: "S2" },
+  { q: "Can you review my report before I submit it?", opts: ["Sure, send it over.", "It was reviewed by the board.", "The deadline was last month."], ans: 0, exp: "請對方幫忙看報告，回答「好，寄過來」。「It was reviewed by the board」用 review 做同字陷阱；「The deadline was last month」說期限已過，和「還沒交」的情況矛盾。", src: "S2" },
+  { q: "Didn't Mr. Hill approve the budget yesterday?", opts: ["He's still reviewing a few items.", "A budget of ten thousand dollars.", "Yes, a budget hotel."], ans: 0, exp: "否定疑問句問「Hill 先生昨天不是核准了嗎」，間接回答「他還在看幾個項目」（還沒核准）。另外兩個用 budget 做同字陷阱，答非所問。", src: "S2" },
+  { q: "Should we take a taxi or walk to the restaurant?", opts: ["It's only five minutes away.", "Yes, the restaurant was excellent.", "A table for four, please."], ans: 0, exp: "選擇疑問句（搭計程車還是走路），間接回答「只要五分鐘」（走路就好）。選擇疑問句不能用 Yes 回答；「A table for four」是訂位用語。", src: "S2" },
+  { q: "The printer on the second floor is jammed again.", opts: ["I'll call the technician.", "Print two copies, please.", "On the second floor, next to the elevator."], ans: 0, exp: "對方說印表機又卡紙了，回應「我來找技術人員」。「Print two copies」用 print 聯想；「On the second floor…」重複題目的地點，答非所問。", src: "S2" },
+  { q: "You've worked with this client before, haven't you?", opts: ["Yes, on last year's ad campaign.", "He works on the fifth floor.", "The client signed the contract last week."], ans: 0, exp: "附加問句確認以前是否合作過，回答「是的，在去年的廣告活動」。「He works on the fifth floor」用 work 做同字陷阱；「The client signed…」用 client 做同字陷阱。", src: "S2" },
+  { q: "Why don't we hold the training session online?", opts: ["That would save on travel costs.", "Because the session was canceled.", "Online banking is convenient."], ans: 0, exp: "Why don't we…? 是提議，回答「那可以省下交通費」表示贊成。用 Because 回答提議是常見陷阱；「Online banking…」用 online 做同字陷阱。", src: "S2" },
+  { q: "What time does the post office close today?", opts: ["At five thirty, I think.", "Next to the pharmacy.", "I posted it on the website."], ans: 0, exp: "What time 問幾點關門，回答「我想是五點半」。「Next to the pharmacy」答地點；「I posted it…」用 post 做同字陷阱。", src: "S2" },
+  { q: "Is this seat taken?", opts: ["No, go right ahead.", "Yes, I took it yesterday.", "A window seat, please."], ans: 0, exp: "問「這個位子有人嗎」，回答「沒有，請坐」。「Yes, I took it yesterday」用 take 做同字陷阱，語意不通；「A window seat, please」是訂位用語。", src: "S2" },
+  { q: "How did the product demonstration go?", opts: ["Better than we expected.", "It went to the Boston office.", "The product is sold online."], ans: 0, exp: "How did… go? 問進行得如何，回答「比預期好」。「It went to the Boston office」用 go／went 做同字陷阱；「The product is sold online」用 product 做同字陷阱。", src: "S2" },
+  { q: "Who should I give these invoices to?", opts: ["Leave them on Gina's desk.", "Thirty dollars each.", "I gave a presentation yesterday."], ans: 0, exp: "Who 問要交給誰，間接回答「放在 Gina 的桌上」。「Thirty dollars each」答金額；「I gave a presentation」用 give 做同字陷阱。", src: "S2" },
+  { q: "Aren't you presenting at the sales meeting?", opts: ["No, Patrick is doing it this time.", "The sales figures were strong.", "It meets every Monday."], ans: 0, exp: "否定疑問句問「你不是要在業務會議上報告嗎」，回答「不是，這次由 Patrick 報告」。另外兩個分別用 sales、meeting 做聯想，答非所問。", src: "S2" },
+  { q: "Could you show me how to use the scanner?", opts: ["I'm in a meeting until three, actually.", "It scans both sides.", "Yes, I showed it to him and his whole team."], ans: 0, exp: "請對方教用掃描器，間接回答「其實我開會到三點」（現在沒空）。「It scans both sides」描述功能，沒回應請求；「I showed it to him」用 show 做同字陷阱。", src: "S2" },
+  { q: "Do you know where the extra chairs are kept?", opts: ["Check the storage room downstairs.", "Yes, I'll keep it.", "Ten more people are coming."], ans: 0, exp: "問多的椅子放在哪裡，回答「去樓下儲藏室找」。「Yes, I'll keep it」用 keep 做同字陷阱；「Ten more people are coming」說的是人數。", src: "S2" },
+  { q: "When will the shipment from Korea arrive?", opts: ["It's been delayed at customs.", "By air freight.", "Korea has great food."], ans: 0, exp: "When 問何時到，間接回答「在海關被耽擱了」。「By air freight」答運送方式；「Korea has great food」用 Korea 做聯想。", src: "S2" },
+  { q: "Why is the parking lot so full today?", opts: ["There's a job fair in the lobby.", "Park on the second level.", "It's full of useful information."], ans: 0, exp: "Why 問停車場為什麼這麼滿，回答「大廳在辦徵才博覽會」。「Park on the second level」告訴對方停哪裡，沒回答原因；「It's full of useful information」用 full 做同字陷阱。", src: "S2" },
+  { q: "Have the new uniforms been delivered?", opts: ["They're in the back room.", "Yes, the uniform size chart.", "Deliver them to the lobby."], ans: 0, exp: "問新制服送來了沒，間接回答「在後面的房間」（已經送到）。「Yes, the uniform size chart」答非所問；「Deliver them to the lobby」用 deliver 做同字陷阱，是指示而不是回答。", src: "S2" },
+  { q: "Where's the nearest gas station?", opts: ["There's one just past the bridge.", "About forty dollars to fill up.", "Yes, it's nearly empty."], ans: 0, exp: "Where 問最近的加油站，回答「過橋就有一家」。「About forty dollars…」答加滿的費用；「Yes, it's nearly empty」用 Yes 回答 Where 問句。", src: "S2" },
+  { q: "I can't find the contract you sent me.", opts: ["I'll e-mail it again.", "The contractor is here.", "The contract runs for two years."], ans: 0, exp: "對方說找不到合約，回應「我再寄一次」。「The contractor is here」用 contract／contractor 做相似字陷阱；「The contract runs for two years」描述合約內容，沒解決問題。", src: "S2" },
+  { q: "How often do you back up the files?", opts: ["Every Friday afternoon.", "Back up the truck, please.", "In the cloud folder."], ans: 0, exp: "How often 問頻率，回答「每週五下午」。「Back up the truck」用 back up 做同字陷阱（備份／倒車）；「In the cloud folder」答地點。", src: "S2" },
+  { q: "Would you rather meet on Tuesday or Wednesday?", opts: ["Either works for me.", "Yes, I'd rather not.", "The meeting went well."], ans: 0, exp: "選擇疑問句（週二還是週三），回答「哪天都可以」。選擇疑問句不能用 Yes 回答；「The meeting went well」用過去式描述會議，答非所問。", src: "S2" },
+  { q: "Isn't the cafeteria closed on weekends?", opts: ["Only on Sundays.", "The café sells sandwiches.", "It's close to the station."], ans: 0, exp: "否定疑問句問「週末不是休息嗎」，回答「只有週日休息」。「The café sells sandwiches」用 café 聯想；「It's close to the station」用 close 做同字陷阱（關門／靠近）。", src: "S2" },
+  { q: "Why did Ms. Duval leave early?", opts: ["She had a dentist appointment.", "Leave it on the table by the front entrance.", "Early in the morning."], ans: 0, exp: "Why 問提早離開的原因，回答「她要看牙醫」。「Leave it on the table」用 leave 做同字陷阱；「Early in the morning」用 early 做同字陷阱。", src: "S2" },
+  { q: "Can I pay with a credit card?", opts: ["Yes, we accept all major cards.", "A birthday card for my sister.", "It costs twenty dollars."], ans: 0, exp: "問能不能刷卡，回答「可以，主要的卡都收」。「A birthday card…」用 card 做同字陷阱；「It costs twenty dollars」答價格。", src: "S2" },
+  { q: "Who's in charge of the holiday party this year?", opts: ["The events committee is planning it.", "Last December.", "Charge it to my company account, please."], ans: 0, exp: "Who 問誰負責，回答「活動委員會在籌劃」。「Last December」答時間；「Charge it to my company account」用 charge 做同字陷阱。", src: "S2" },
+  { q: "The quarterly report needs a few more changes.", opts: ["I'll revise it this afternoon.", "Change for a twenty, please.", "Every quarter."], ans: 0, exp: "對方說季報還要再改，回應「我今天下午修改」。「Change for a twenty」用 change 做同字陷阱（修改／零錢）；「Every quarter」用 quarterly 聯想，答非所問。", src: "S2" },
+  { q: "Did you get the message I left?", opts: ["Sorry, my phone was off.", "The left side of the screen.", "A message board."], ans: 0, exp: "問有沒有收到留言，間接回答「抱歉，我手機關機了」（沒收到）。「The left side of the screen」用 left 做同字陷阱（留下／左邊）；「A message board」用 message 做同字陷阱。", src: "S2" },
+  { q: "Which of these designs do you prefer?", opts: ["The blue one stands out more.", "A graphic designer.", "I prefer to work from home."], ans: 0, exp: "Which 問比較喜歡哪個設計，回答「藍色那個比較醒目」。「A graphic designer」用 design 聯想；「I prefer to work from home」用 prefer 做同字陷阱。", src: "S2" },
+  { q: "How much does the annual membership cost?", opts: ["It depends on the plan you choose.", "Every year in June.", "A membership card."], ans: 0, exp: "How much 問費用，間接回答「要看你選哪個方案」。「Every year in June」答時間；「A membership card」用 membership 做同字陷阱。", src: "S2" },
+  { q: "Where should we put the new printer?", opts: ["How about next to the copier?", "It prints in color.", "We bought it on sale last week from an online store."], ans: 0, exp: "Where 問印表機放哪裡，用反問提出建議「放在影印機旁邊如何？」。「It prints in color」描述功能；最後一個說的是在哪裡買的，答非所問。", src: "S2" },
+  { q: "Let's order lunch for the whole team.", opts: ["Good idea — I'll get the menu.", "The team won the game.", "I ordered it online two weeks ago from the warehouse."], ans: 0, exp: "提議幫全隊訂午餐，回應「好主意，我去拿菜單」。「The team won the game」用 team 做同字陷阱；最後一個用 order 做同字陷阱，答非所問。", src: "S2" },
+  { q: "Weren't the sales figures supposed to be ready by now?", opts: ["Accounting asked for one more day.", "Yes, they're for sale.", "Yes, the store's sale ends on Sunday afternoon."], ans: 0, exp: "否定疑問句問「銷售數字不是應該好了嗎」，間接回答「會計部要求再多一天」。另外兩個都用 sale 做同字陷阱，答非所問。", src: "S2" },
+  { q: "Why don't you ask Mr. Kim for advice?", opts: ["He's out of the office this week.", "Because he gave me some advice.", "I asked for the bill and paid it at the front counter."], ans: 0, exp: "Why don't you…? 是建議，間接回答「他這週不在辦公室」（沒辦法問）。用 Because 回答建議是常見陷阱；最後一個用 ask 做同字陷阱，答非所問。", src: "S2" },
+  { q: "When does your flight leave?", opts: ["Not until tomorrow night.", "From Gate 12, I believe.", "I'm flying with my two colleagues from the marketing department."], ans: 0, exp: "When 問班機何時起飛，回答「明天晚上才飛」。「From Gate 12」答登機門；最後一個答的是和誰同行。", src: "S2" }
 ];
 
 // Part 3 對話 + Part 4 短講（turns: M=男聲, W=女聲, N=旁白/單人）
@@ -231,6 +272,177 @@ const PART34 = [
       { q: "Why is the third-floor exhibit closed?", opts: ["A new collection is being installed", "The lighting is being repaired", "It is being cleaned", "An event is taking place"], ans: 0, exp: "廣播說三樓攝影展因 installation of a new collection（安裝新館藏）暫時關閉。" },
       { q: "What does the speaker say about the guided tours?", opts: ["They are included with admission", "They must be booked in advance", "They cost an extra fee", "They are only on weekends"], ans: 0, exp: "導覽 included with your admission（含在門票內），每小時整點從大廳出發。" },
       { q: "What are visitors asked NOT to do?", opts: ["Use flash photography", "Bring food inside", "Touch the sculptures", "Enter the garden"], ans: 0, exp: "廣播請訪客 refrain from using flash（勿使用閃光燈），以免損害藝術品。" }
+    ]
+  },
+  // ---- S2（2026-10-11）：新制題組 10 組（圖表題、三人對話、意圖題）----
+  {
+    type: "Part 3",
+    title: "對話：訪客問路（圖表題）",
+    src: "S2",
+    graphic: "BUILDING DIRECTORY\nFloor 2 ... Marketing\nFloor 3 ... Customer Service\nFloor 4 ... Accounting / Legal\nFloor 5 ... Executive Offices",
+    turns: [
+      { s: "W", t: "Hi, I'm here for the two o'clock interview with Ms. Grant in human resources. Could you tell me where her office is?" },
+      { s: "M", t: "Sure. Human resources used to be on the third floor, but it moved last month. It's now on the same floor as accounting." },
+      { s: "W", t: "Great, thanks. Is there an elevator I can take?" },
+      { s: "M", t: "Yes, it's just behind you. But first, you'll need to sign in here and wear this visitor badge while you're in the building." }
+    ],
+    qs: [
+      { q: "Why is the woman visiting the building?", opts: ["To attend a job interview", "To deliver a package", "To meet with an accountant", "To repair an elevator"], ans: 0, exp: "女士說她是來參加兩點和人資部 Grant 女士的面試（the two o'clock interview）。" },
+      { q: "Look at the graphic. Which floor will the woman go to?", opts: ["Floor 4", "Floor 3", "Floor 2", "Floor 5"], ans: 0, exp: "圖表題：男士說人資部原本在三樓，上個月搬到和會計部同一層。樓層表上會計部（Accounting）在 4 樓。" },
+      { q: "What does the man ask the woman to do first?", opts: ["Sign in at the desk", "Take the stairs", "Come back at two o'clock", "Call Ms. Grant"], ans: 0, exp: "男士說 first, you'll need to sign in here（要先在這裡登記），並配戴訪客證。" }
+    ]
+  },
+  {
+    type: "Part 3",
+    title: "對話：訂購名片（圖表題）",
+    src: "S2",
+    graphic: "BUSINESS CARDS (Standard)\n250 cards ........ $25\n500 cards ........ $40\n1,000 cards ...... $65\n2,000 cards ...... $110",
+    turns: [
+      { s: "M", t: "Hello, I'd like to order business cards for our new sales associate. We usually get the standard ones." },
+      { s: "W", t: "Of course. How many would you like?" },
+      { s: "M", t: "Five hundred, please. Actually, she'll be handing them out at a trade show next month, so let's make it a thousand." },
+      { s: "W", t: "No problem. Just so you know, if you upload the design by noon today, we can have them ready tomorrow afternoon." },
+      { s: "M", t: "Perfect. I'll e-mail the file right after this call." }
+    ],
+    qs: [
+      { q: "Who are the business cards for?", opts: ["A new employee", "A trade show organizer", "A printing company", "A regular customer"], ans: 0, exp: "男士說名片是給新的業務助理（our new sales associate）。" },
+      { q: "Look at the graphic. How much will the man most likely pay?", opts: ["$65", "$40", "$25", "$110"], ans: 0, exp: "圖表題：他一開始說 500 張，接著改成 1,000 張（let's make it a thousand），價目表上 1,000 張是 $65。" },
+      { q: "What will the man most likely do next?", opts: ["Send a design file", "Visit the print shop", "Call a sales associate", "Pay a deposit"], ans: 0, exp: "男士說掛電話後就把檔案寄過去（I'll e-mail the file right after this call）。" }
+    ]
+  },
+  {
+    type: "Part 3",
+    title: "對話：搭火車（圖表題）",
+    src: "S2",
+    graphic: "DEPARTURES — Northbound\nTime   Train    Platform\n9:15   Local    3\n9:40   Express  1\n10:05  Local    3\n10:30  Express  2",
+    turns: [
+      { s: "W", t: "Excuse me, I need to get to Riverside for a meeting at eleven. Which train should I take?" },
+      { s: "M", t: "Let me check. The nine-forty express is the fastest, but it doesn't stop at Riverside." },
+      { s: "W", t: "Oh, I see. What about the next one?" },
+      { s: "M", t: "That one stops there, but because of track repairs it's running about twenty minutes late today. You'd still make it, though." },
+      { s: "W", t: "I'd rather not cut it that close. Is there anything earlier?" },
+      { s: "M", t: "Yes, the local before the express stops at Riverside, and it's on time." }
+    ],
+    qs: [
+      { q: "Where does the conversation most likely take place?", opts: ["At a train station", "At a travel agency", "On a bus", "At an airport"], ans: 0, exp: "兩人在討論要搭哪一班火車、哪班會停 Riverside，地點最可能是火車站。" },
+      { q: "Why is one of the trains delayed?", opts: ["Because of track repairs", "Because of bad weather", "Because of a staff shortage", "Because of a mechanical problem"], ans: 0, exp: "男士說 because of track repairs it's running about twenty minutes late（因為鐵軌維修晚了約 20 分鐘）。" },
+      { q: "Look at the graphic. What time will the woman most likely leave?", opts: ["9:15", "9:40", "10:05", "10:30"], ans: 0, exp: "圖表題：9:40 的快車不停 Riverside，下一班 10:05 會誤點，她不想冒險；男士建議快車之前那班慢車，時刻表上是 9:15。" }
+    ]
+  },
+  {
+    type: "Part 3",
+    title: "對話：顧客問卷結果（圖表題）",
+    src: "S2",
+    graphic: "FAVORITE NEW MENU ITEM (votes)\nTurkey sandwich ...... 48\nIced latte ........... 35\nFruit smoothie ....... 12\nLemon cake ........... 27",
+    turns: [
+      { s: "M", t: "Have you seen the results of the customer survey about our new café menu?" },
+      { s: "W", t: "Yes. Most people loved the sandwiches, but I was surprised by the drink results." },
+      { s: "M", t: "Me too. Our best-selling drink got the fewest votes of anything on the menu." },
+      { s: "W", t: "Maybe people just don't think of it as a café item. We could promote it with a discount next month." },
+      { s: "M", t: "Good idea. Could you make a sign for the counter?" }
+    ],
+    qs: [
+      { q: "What are the speakers mainly discussing?", opts: ["The results of a survey", "The cost of ingredients", "A new café location", "A staff schedule"], ans: 0, exp: "兩人在討論新菜單的顧客問卷結果（the results of the customer survey）。" },
+      { q: "Look at the graphic. How many votes did the café's best-selling drink receive?", opts: ["12", "35", "48", "27"], ans: 0, exp: "圖表題：男士說最暢銷的飲料得票最少（got the fewest votes），表上最少票的是 Fruit smoothie，12 票。" },
+      { q: "What does the woman suggest doing?", opts: ["Offering a discount", "Removing an item from the menu", "Conducting another survey", "Hiring more staff"], ans: 0, exp: "女士說下個月可以用折扣來推廣（promote it with a discount）。" }
+    ]
+  },
+  {
+    type: "Part 3",
+    title: "對話：三人討論電話系統（三人對話）",
+    src: "S2",
+    turns: [
+      { s: "M", t: "Thanks for coming in, Ms. Lopez. I'm Tom Reilly, the office manager, and this is Sanjay Mehta from our IT department." },
+      { s: "W", t: "Nice to meet you both. Your e-mail said you're looking for a new phone system?" },
+      { s: "M2", t: "That's right. Our current one is over ten years old, and we can't add any new lines for the staff we're hiring next month." },
+      { s: "W", t: "Our cloud-based system would solve that. You can add lines online in a few minutes, and employees can even take calls on their laptops when they work from home." },
+      { s: "M", t: "That sounds ideal. Could you send us a price quote by Friday?" },
+      { s: "W", t: "Certainly. I'll just need to know how many lines you'd like to start with." },
+      { s: "M2", t: "About forty. I'll e-mail you the details this afternoon." }
+    ],
+    qs: [
+      { q: "Who most likely is the woman?", opts: ["A sales representative", "An office manager", "An IT technician", "A new employee"], ans: 0, exp: "女士介紹自家的雲端電話系統，男士請她報價，她是來推銷產品的業務代表。辦公室經理是 Tom Reilly。" },
+      { q: "What problem do the men mention?", opts: ["Their current system cannot be expanded.", "Their phone bills are too high.", "Their employees cannot work from home.", "Their office is too small."], ans: 0, exp: "IT 部門的 Mehta 說現在的系統太舊，無法為即將錄用的員工增加線路（can't add any new lines）。" },
+      { q: "What will Mr. Mehta do this afternoon?", opts: ["Send some information by e-mail", "Install new software", "Interview job applicants", "Visit the woman's office"], ans: 0, exp: "三人對話：最後一句「About forty. I'll e-mail you the details this afternoon.」是 IT 部門的 Mehta 說的（和前面說明舊系統問題的是同一個聲音）。" }
+    ]
+  },
+  {
+    type: "Part 3",
+    title: "對話：展覽攤位準備（三人對話）",
+    src: "S2",
+    turns: [
+      { s: "W", t: "Rachel, did you see the e-mail from the conference organizers? They want our booth set up by seven A.M. on Thursday." },
+      { s: "W2", t: "Seven? The exhibit hall doesn't open to the public until ten." },
+      { s: "W", t: "I know, but they need time for safety inspections before the doors open." },
+      { s: "M", t: "I could drive the display materials over on Wednesday evening. The hall allows early drop-offs after six P.M." },
+      { s: "W2", t: "That would help a lot. Then we'd only have to assemble everything in the morning." },
+      { s: "W", t: "Great. I'll reserve a parking spot near the loading dock for you, Alan." }
+    ],
+    qs: [
+      { q: "What are the speakers preparing for?", opts: ["An exhibition", "A safety training session", "A product launch party", "A job interview"], ans: 0, exp: "她們要在會議的展覽廳（exhibit hall）布置攤位（booth），是在準備展覽。" },
+      { q: "Why must the booth be set up early?", opts: ["To allow time for inspections", "Because the hall closes at ten", "Because of morning traffic", "To meet with the organizers"], ans: 0, exp: "主辦單位需要時間做安全檢查（they need time for safety inspections）。展覽廳是十點才開放，不是十點關閉。" },
+      { q: "What will the man do on Wednesday evening?", opts: ["Deliver some materials", "Attend a safety inspection", "Assemble the booth", "Reserve a parking space"], ans: 0, exp: "男士說他週三晚上可以把展示材料載過去（drive the display materials over）。停車位是女士要幫他預約的。" }
+    ]
+  },
+  {
+    type: "Part 3",
+    title: "對話：簡報提前（意圖題）",
+    src: "S2",
+    turns: [
+      { s: "M", t: "Hi, Maria. The client from Lindell Foods just called. They want to move tomorrow's presentation from three P.M. to ten A.M." },
+      { s: "W", t: "Ten in the morning? The slides still need the updated sales figures." },
+      { s: "M", t: "I know. Finance said they'd send us the numbers by the end of today." },
+      { s: "W", t: "Well, I've got the evening free." },
+      { s: "M", t: "Thanks. I'll let the client know we can do ten, then." }
+    ],
+    qs: [
+      { q: "What does the client want to do?", opts: ["Change the time of a presentation", "Cancel a contract", "Visit the office today", "Request new sales figures"], ans: 0, exp: "客戶想把明天的簡報從下午三點提前到上午十點。" },
+      { q: "What does the woman imply when she says, \"Well, I've got the evening free\"?", opts: ["She can update the slides tonight.", "She would like to leave work early.", "She cannot attend the presentation.", "She wants to meet the client in the evening."], ans: 0, exp: "意圖題：財務部今天下班前才會給數字，女士說她今晚有空，意思是她可以今晚把數字更新到簡報上，所以十點沒問題。" },
+      { q: "What will the man most likely do next?", opts: ["Contact the client", "Call the finance department", "Revise the slides", "Book a meeting room for the evening"], ans: 0, exp: "男士說會通知客戶十點可以（I'll let the client know we can do ten）。" }
+    ]
+  },
+  {
+    type: "Part 3",
+    title: "對話：新筆電設定（意圖題）",
+    src: "S2",
+    turns: [
+      { s: "W", t: "Brian, the new laptops for the design team arrived this morning. Do you want me to set them up today?" },
+      { s: "M", t: "That would be great, but there's a problem. The accounting software they need isn't compatible with the new operating system." },
+      { s: "W", t: "The design team doesn't use accounting software, though." },
+      { s: "M", t: "Oh, you're right. I was thinking of the order for the finance department." },
+      { s: "W", t: "OK. Then I'll start installing the design programs after lunch." }
+    ],
+    qs: [
+      { q: "What arrived this morning?", opts: ["New computers", "Software licenses", "Office furniture", "Design samples"], ans: 0, exp: "女士說設計團隊的新筆電（the new laptops）今天早上送到了。" },
+      { q: "Why does the woman say, \"The design team doesn't use accounting software, though\"?", opts: ["To point out that a concern does not apply", "To request new software for the team", "To complain about a purchasing decision", "To suggest training for the design team"], ans: 0, exp: "意圖題：男士擔心會計軟體不相容，女士指出設計團隊根本不用會計軟體，也就是這個顧慮不適用。男士接著承認他想成財務部的訂單了。" },
+      { q: "What will the woman do after lunch?", opts: ["Install some programs", "Meet with the finance department", "Return some laptops", "Order new software"], ans: 0, exp: "女士說午餐後開始安裝設計軟體（start installing the design programs）。" }
+    ]
+  },
+  {
+    type: "Part 4",
+    title: "短講：博物館廣播（圖表題）",
+    src: "S2",
+    graphic: "MUSEUM MAP — First Floor\nHall A ... Dinosaurs\nHall B ... Planetarium\nHall C ... Ocean Life\nHall D ... Space Exploration",
+    turns: [
+      { s: "N", t: "Good morning, and welcome to the Westbrook Science Museum. Before you begin exploring, here are a few announcements. Today's planetarium show, Journey to Mars, has been moved from Hall B to Hall D because of a lighting problem. The show times have not changed. Also, our café on the first floor is offering a ten percent discount to visitors with a membership card. Finally, please remember that photography is welcome everywhere except in the special exhibit on ancient textiles, where camera flashes can damage the materials. Enjoy your visit!" }
+    ],
+    qs: [
+      { q: "Who is the speaker most likely addressing?", opts: ["Museum visitors", "Museum employees", "Science teachers", "Café workers"], ans: 0, exp: "開頭說 welcome to the Westbrook Science Museum… Before you begin exploring，對象是來參觀的訪客。" },
+      { q: "Look at the graphic. Where will the planetarium show be held today?", opts: ["In the Space Exploration hall", "In the Planetarium hall", "In the Dinosaurs hall", "In the Ocean Life hall"], ans: 0, exp: "圖表題：表演從 Hall B 移到 Hall D，平面圖上 Hall D 是 Space Exploration（太空探索廳）。" },
+      { q: "What are listeners asked not to do?", opts: ["Take photos in a certain exhibit", "Use flash in the café", "Enter Hall B", "Eat in the exhibit halls"], ans: 0, exp: "廣播說除了古代紡織品特展以外都可以拍照，因為閃光會損害展品，也就是不要在那個特展拍照。" }
+    ]
+  },
+  {
+    type: "Part 4",
+    title: "短講：修車廠語音留言（意圖題）",
+    src: "S2",
+    turns: [
+      { s: "N", t: "Hi, Ms. Patel, this is Greg from Sunrise Auto Repair calling about your car. We've finished replacing the brakes, and the car is ready for pickup. While we were working on it, our mechanic noticed that the front tires are quite worn. I know you mentioned you're driving to Portland this weekend. That's about six hours on the highway. We have a set of tires in stock that would fit your car, and we could install them this afternoon if you'd like. Please call me back at 555-0187 before three o'clock, and I'll let you know the final price." }
+    ],
+    qs: [
+      { q: "Why is the speaker calling?", opts: ["To say that a car is ready", "To schedule a brake inspection", "To give directions to Portland", "To apologize for a delay"], ans: 0, exp: "留言一開始說煞車已經換好，車子可以來取了（the car is ready for pickup）。" },
+      { q: "Why does the speaker say, \"That's about six hours on the highway\"?", opts: ["To suggest that new tires would be a good idea", "To recommend a different route", "To explain why a repair took so long", "To ask about the listener's travel plans"], ans: 0, exp: "意圖題：他先說前輪胎磨損得很厲害，再提醒週末去 Portland 要在高速公路開六小時，暗示最好換新輪胎；接著就說店裡有合適的輪胎、今天下午可以裝。" },
+      { q: "What does the speaker ask the listener to do?", opts: ["Return his call before three o'clock", "Pick up the car this weekend", "Pay for the brakes in advance", "Visit another repair shop"], ans: 0, exp: "Please call me back at 555-0187 before three o'clock（請在三點前回電）。" }
     ]
   }
 ];

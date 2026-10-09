@@ -64,14 +64,14 @@ test("form-R1 測驗交卷後：答錯的題目進錯題本，紀錄的模式是
   assert.equal(again.run("S.mocks[S.mocks.length - 1].mode"), "R1");
 });
 
-test("form-R1 衝刺期模考日：還沒做過完整測驗時優先排完整測驗；做過之後改排閱讀節", () => {
+test("form-R1 衝刺期模考日：還有沒做過的完整測驗時優先排；全部做過之後改排閱讀節", () => {
   const app = loadApp();
   app.run(`S.exam = todayStr(10); S.mocks = [];`);
   assert.equal(app.run("nextForm().id"), "R1");
   let item = plain(app.run("todayPlan()")).find(p => p.tab === "mock");
   assert.match(item.label, /完整閱讀測驗 第 1 回/);
-  app.run(`S.mocks = [{ date: todayStr(-5), mode: "R1", lR: 0, lT: 0, rR: 70, rT: 100 }];`);
-  assert.equal(app.run("nextForm()"), null);
+  app.run(`S.mocks = [{ date: todayStr(-8), mode: "R1", lR: 0, lT: 0, rR: 70, rT: 100 }, { date: todayStr(-5), mode: "R2", lR: 0, lT: 0, rR: 72, rT: 100 }];`);
+  assert.equal(app.run("nextForm()"), null, "所有完整測驗都做過後，不再優先排完整測驗");
   item = plain(app.run("todayPlan()")).find(p => p.tab === "mock");
   assert.match(item.label, /閱讀節/);
 });

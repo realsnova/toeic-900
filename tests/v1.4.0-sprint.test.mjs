@@ -46,8 +46,8 @@ test("S1-P2 Part 2 不再能靠選項長度猜答案：正解是最長或最短�
     if (r === s[0]) shortest++;
     assert.equal(/\([A-C]\)/.test(q.exp), false);
   }
-  assert.ok(longest <= 30, `正解最長 ${longest}/60`);
-  assert.ok(shortest <= 30, `正解最短 ${shortest}/60`);
+  assert.ok(longest <= P2.length / 2, `正解最長 ${longest}/${P2.length}`);
+  assert.ok(shortest <= P2.length / 2, `正解最短 ${shortest}/${P2.length}`);
 });
 
 test("S1-phase 考前三天進入「考前調整」：不學新字、菜單減量；考試日期過了會提示更新", () => {
