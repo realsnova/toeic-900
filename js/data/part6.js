@@ -195,5 +195,50 @@ Human Resources`,
       { opts: ["A short video tutorial is available on the homepage.", "The portal will be discontinued next month.", "Paper pay slips will still be mailed weekly.", "The office will close early on Friday."], ans: 0, exp: "句子插入題：延續操作說明，接「首頁有簡短影片教學」最連貫。" },
       { opts: ["around the clock", "out of order", "on the house", "in the red"], ans: 0, exp: "around the clock（全天候）表 IT 支援隨時待命。其餘片語語意不合。" }
     ]
+  },
+  // ---- 完整閱讀測驗 第 1 回（R1）Part 6 ----
+  {
+    title: "電子郵件：辦公室搬遷",
+    form: "R1",
+    text: "To: All Staff\nFrom: Facilities Management\nSubject: Office relocation\n\nOur move to the new office on Harmon Avenue will take place over the weekend of March 14. Staff are asked to pack the contents of their desks ___[1]___ Friday afternoon. Boxes and labels will be delivered to each department on Wednesday.\n\nPlease note that the IT team will disconnect all computers at 3:00 P.M. on Friday. ___[2]___ Any files saved only on your desktop may be lost during the move.\n\nThe new office features an open floor plan, a larger break room, and ___[3]___ bicycle storage for employees. Questions about the move should be ___[4]___ to Hannah Cho in Facilities.",
+    blanks: [
+      { opts: ["by", "beside", "since", "along"], ans: 0, exp: "by + 時間（在⋯之前完成）：週五下午以前把東西打包好。beside 是「在旁邊」；since 搭配完成式，表示「自從」；along 是「沿著」，都不能接時間表示期限。" },
+      { opts: ["Before then, please save all your work to the shared network drive.", "The new office is located two blocks from the train station.", "Boxes should be labeled with your name and department.", "All computers will be replaced with newer models next year."], ans: 0, exp: "句子插入題：前一句說週五下午三點會拔掉電腦，後一句說只存在桌面的檔案可能遺失，中間最適合提醒「在那之前把檔案存到共用磁碟」。標示紙箱的說明屬於第一段；新辦公室位置和明年換電腦都和前後文接不上。" },
+      { opts: ["secure", "securely", "security", "secures"], ans: 0, exp: "名詞片語 bicycle storage 前面要用形容詞 secure（安全的），和前面的 open、larger 對等。" },
+      { opts: ["directed", "directing", "direct", "direction"], ans: 0, exp: "should be + 過去分詞（被動）：問題應該「被轉給」Hannah Cho，be directed to。" }
+    ]
+  },
+  {
+    title: "信件：訂閱續約通知",
+    form: "R1",
+    text: "Dear Ms. Albright,\n\nThank you for being a loyal subscriber to Business Weekly. Our records show that your subscription will ___[1]___ on April 30. To continue receiving the magazine without interruption, simply renew online or by phone.\n\nIf you renew before April 15, you will receive 20 percent off the regular price. ___[2]___, you will gain full access to our online archive, which includes every issue published since 1995.\n\n___[3]___ Our customer service representatives are available Monday through Friday, 8 A.M. to 6 P.M.\n\nWe look forward to ___[4]___ you for many years to come.\n\nSincerely,\nLeon Marsh\nSubscription Services",
+    blanks: [
+      { opts: ["expire", "extend", "exceed", "export"], ans: 0, exp: "subscription will expire（訂閱將到期）。後面說「為了不中斷，請續訂」，所以是到期。extend 是延長；exceed 是超過；export 是出口。" },
+      { opts: ["In addition", "However", "Otherwise", "Nevertheless"], ans: 0, exp: "In addition（此外）：續訂除了打八折，還能使用線上資料庫，是追加的好處。However、Nevertheless 表示轉折；Otherwise 是「否則」。" },
+      { opts: ["If you have any questions about your account, please call 1-800-555-0142.", "Back issues can be ordered for $5 each.", "Many subscribers read the magazine during their commute.", "The magazine is printed on recycled paper."], ans: 0, exp: "句子插入題：後一句說客服人員的服務時間，前面最適合「有問題請打這支電話」。其他三句都和客服時間接不上。" },
+      { opts: ["serving", "serve", "served", "server"], ans: 0, exp: "look forward to + V-ing（期待做⋯），這裡的 to 是介系詞，所以用 serving。" }
+    ]
+  },
+  {
+    title: "報導：共享單車計畫",
+    form: "R1",
+    text: "GREENVILLE — The city's new bike-sharing program, CityCycle, has exceeded expectations in its first three months. More than 12,000 residents have ___[1]___ for memberships since the program launched in June.\n\nRiders can pick up a bicycle at any of the 40 stations located throughout downtown and return it to ___[2]___ station. ___[3]___ City officials say they plan to add 25 more stations next year, mainly in residential neighborhoods.\n\n\"The response has been ___[4]___,\" said Mayor Lisa Tran. \"It shows that people want more options for getting around the city.\"",
+    blanks: [
+      { opts: ["applied", "application", "applicant", "applicable"], ans: 0, exp: "have + 過去分詞（現在完成式）：have applied for（已經申請）。其他三個是名詞或形容詞。" },
+      { opts: ["any", "every", "all", "each"], ans: 0, exp: "return it to any station（還到任何一站都可以）。every、each 表示「每一站」，語意不合；all 後面要接複數名詞。" },
+      { opts: ["Memberships cost $15 per month and include unlimited rides of up to 30 minutes.", "Bicycles must be returned to the station where they were picked up.", "Construction of the first stations will begin next spring.", "Several stations have been closed because of low demand."], ans: 0, exp: "句子插入題：會員費用說明接在租還方式之後最自然。必須還到原站和前一句「可以還到任何一站」矛盾；計畫六月已經上路，不會「明年春天才開始蓋站」；因需求低而關站和「超出預期」矛盾。" },
+      { opts: ["overwhelming", "overwhelmed", "overwhelm", "overwhelmingly"], ans: 0, exp: "反應「熱烈得驚人」用現在分詞 overwhelming（令人驚嘆的）。overwhelmed 是「（人）感到不知所措」。" }
+    ]
+  },
+  {
+    title: "備忘錄：差旅費新規定",
+    form: "R1",
+    text: "MEMO\nTo: Sales Department\nFrom: Finance Office\nDate: May 2\nRe: Updated travel expense policy\n\nEffective June 1, all travel expenses must be submitted through the new online system, ExpensePro. Paper forms will no longer be ___[1]___.\n\nTo submit a claim, upload a photo of each receipt and enter the amount and purpose of the expense. Claims must be filed ___[2]___ 30 days of the end of the trip. ___[3]___\n\nA short training session on ExpensePro will be held on May 20. Although attendance is not mandatory, we ___[4]___ recommend it for anyone who travels regularly.",
+    blanks: [
+      { opts: ["accepted", "accepting", "accept", "acceptance"], ans: 0, exp: "will no longer be + 過去分詞（被動）：紙本表格不再「被受理」。" },
+      { opts: ["within", "during", "between", "among"], ans: 0, exp: "within 30 days of（在⋯之後 30 天內）。" },
+      { opts: ["Claims submitted after this deadline will not be reimbursed.", "Receipts are not required for expenses under $500.", "The training session will last about one hour.", "Paper forms can still be used for international trips."], ans: 0, exp: "句子插入題：前一句說 30 天內要申報，接著說明逾期不予報銷最連貫。不需要收據和前面「每張收據都要上傳」矛盾；紙本仍可使用和「不再受理紙本」矛盾；訓練課程要到下一段才介紹，放在這裡太早。" },
+      { opts: ["strongly", "strong", "strength", "strengthen"], ans: 0, exp: "修飾動詞 recommend，要用副詞 strongly（強烈地）。" }
+    ]
   }
 ];

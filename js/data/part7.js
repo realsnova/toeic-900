@@ -465,5 +465,218 @@ We offer a competitive salary, health benefits, paid time off, and opportunities
       { q: "What time will the Negotiation Skills workshop begin on November 5?", opts: ["9:00 A.M.", "1:00 P.M.", "12:00 P.M.", "4:00 P.M."], ans: 0, exp: "跨篇題：郵件說改到 11 月 5 日、時間不變（at the same time），備忘錄上原本是 9:00 A.M.–12:00 P.M.，所以 9:00 開始。" },
       { q: "What is indicated about the Data Visualization workshop?", opts: ["Ms. Brooks is still registered for it.", "It has been moved to November.", "It will be taught by a new instructor.", "It is no longer being offered."], ans: 0, exp: "她報名了兩個工作坊（第二篇），郵件說 Your registration for the other workshop is unchanged（第三篇），另一個就是 Data Visualization，所以她仍然是報名狀態。" }
     ]
+  },
+  // ---- 完整閱讀測驗 第 1 回（R1）Part 7：單篇 10 組、雙篇 2 組、三篇 3 組 ----
+  {
+    title: "單篇：公寓公告",
+    time: 120,
+    form: "R1",
+    passages: [
+      "ATTENTION RESIDENTS OF MAPLE COURT APARTMENTS\n\nWater service will be shut off on Tuesday, August 12, from 9:00 A.M. to 1:00 P.M. while the city replaces a valve on Elm Street. Residents are advised to store water for drinking and cooking before the shutoff begins.\n\nThe laundry room will also be unavailable during this time. We apologize for the inconvenience. If you have questions, please contact the building manager, Paul Ferris, at 555-0193."
+    ],
+    qs: [
+      { q: "What is the purpose of the notice?", opts: ["To announce a temporary interruption in service", "To introduce a new building manager", "To request payment for repairs", "To announce the opening of a laundry room"], ans: 0, exp: "公告說週二上午 9 點到下午 1 點停水，是暫時中斷服務的通知。Paul Ferris 只是聯絡人，不是新任經理。" },
+      { q: "What are residents advised to do?", opts: ["Fill containers with water before 9:00 A.M. on Tuesday", "Call the city water department", "Avoid driving on Elm Street", "Move their cars from the parking area"], ans: 0, exp: "Residents are advised to store water… before the shutoff begins：在週二上午 9 點停水前先把水裝起來備用。" }
+    ]
+  },
+  {
+    title: "單篇：清潔公司廣告",
+    time: 120,
+    form: "R1",
+    passages: [
+      "Brightway Office Cleaning\n\nKeep your workplace spotless without disrupting your business! Our trained crews clean offices in the evenings and on weekends, so your employees can work without interruption.\n\n• Daily, weekly, or monthly service plans\n• Eco-friendly cleaning products\n• Fully insured and bonded staff\n\nNew customers receive their first cleaning free when they sign up for a six-month plan. Call 555-0148 or visit brightwayclean.com for a free estimate."
+    ],
+    qs: [
+      { q: "What is mentioned about Brightway's crews?", opts: ["They work outside normal business hours.", "They specialize in cleaning factories.", "They provide office furniture.", "They are available only on weekends."], ans: 0, exp: "廣告說清潔人員在晚上和週末工作（in the evenings and on weekends），也就是上班時間以外。不是「只有週末」。" },
+      { q: "How can a new customer get a free cleaning?", opts: ["By signing up for a six-month plan", "By referring a friend", "By visiting the Web site", "By paying for a year in advance"], ans: 0, exp: "New customers receive their first cleaning free when they sign up for a six-month plan。" }
+    ]
+  },
+  {
+    title: "單篇：發票",
+    time: 120,
+    form: "R1",
+    passages: [
+      "Hartley Office Supply — INVOICE #20417\n\nBill to: Larkspur Dental Clinic, 88 Fenwick Road\nOrder date: September 3    Delivery date: September 5\n\nItem | Qty | Unit price | Total\nPrinter paper (box of 10 reams) | 3 | $42.00 | $126.00\nToner cartridge, black | 2 | $68.00 | $136.00\nDesk organizer | 4 | $12.50 | $50.00\n\nSubtotal: $312.00\nDelivery: $0.00 (free on orders over $300)\nTotal due: $312.00\n\nPayment due within 30 days. A 2 percent late fee applies to overdue balances."
+    ],
+    qs: [
+      { q: "What is indicated about the order?", opts: ["It qualified for free delivery.", "It was delivered on September 3.", "It included a printer.", "It has already been paid for."], ans: 0, exp: "小計 $312 超過 $300，所以運費是 $0。9 月 3 日是訂購日，送達是 9 月 5 日；訂單裡有碳粉匣但沒有印表機。" },
+      { q: "What will happen if the clinic pays late?", opts: ["An additional charge will be added.", "The order will be canceled.", "Future deliveries will be delayed.", "A discount will be removed."], ans: 0, exp: "A 2 percent late fee applies to overdue balances：逾期會加收 2% 滯納金。" }
+    ]
+  },
+  {
+    title: "單篇：簡訊對話（意圖題）",
+    time: 120,
+    form: "R1",
+    passages: [
+      "Marco Silva (11:42 A.M.)\nHi Jenna. The caterer just called. They can't deliver the sandwiches for the 1:00 training until 1:30.\n\nJenna Wu (11:44 A.M.)\nHmm. The session starts at 1:00 sharp, and the trainer has a flight at 5.\n\nMarco Silva (11:45 A.M.)\nShould I look for another caterer?\n\nJenna Wu (11:46 A.M.)\nOn such short notice? Let's just start on time and take a break when the food arrives.\n\nMarco Silva (11:47 A.M.)\nOK, I'll let the trainer know."
+    ],
+    qs: [
+      { q: "What problem does Mr. Silva mention?", opts: ["A food delivery will be late.", "A trainer has canceled a session.", "A room has been double-booked.", "A flight has been delayed."], ans: 0, exp: "外燴廠商說三明治要到 1:30 才能送到，比訓練開始時間晚。" },
+      { q: "At 11:46 A.M., what does Ms. Wu most likely mean when she writes, \"On such short notice?\"", opts: ["She doubts another caterer can be found in time.", "She is surprised the training was scheduled so soon.", "She wants Mr. Silva to give the trainer more notice.", "She would like to cancel the training."], ans: 0, exp: "意圖題：Silva 問要不要找別家外燴，Wu 回「這麼臨時？」，意思是這麼短的時間內大概找不到，接著提議照常開始、餐點到了再休息。" }
+    ]
+  },
+  {
+    title: "單篇：電子郵件",
+    time: 180,
+    form: "R1",
+    passages: [
+      "To: Priya Nair <pnair@coastline.com>\nFrom: Daniel Osei <dosei@vantagepr.com>\nDate: November 4\nSubject: Press release draft\n\nDear Ms. Nair,\n\nAttached is the draft press release announcing Coastline's new line of solar-powered outdoor lights. I have incorporated the product details you sent last week, along with a quote from your CEO.\n\nBefore we distribute the release to our media contacts, please confirm the launch date. Your earlier e-mail said November 20, but the product brochure lists November 27. We would like to send the release at least ten days before the launch.\n\nOnce I hear from you, I will finalize the document and prepare the list of publications.\n\nBest regards,\nDaniel Osei\nVantage Public Relations"
+    ],
+    qs: [
+      { q: "Why did Mr. Osei write the e-mail?", opts: ["To ask for confirmation of a detail", "To request samples of a product", "To schedule an interview with a CEO", "To report that a release has been published"], ans: 0, exp: "Osei 請 Nair 確認上市日期，因為她的信和型錄上的日期不一致。" },
+      { q: "What is suggested about the press release?", opts: ["It has not yet been sent to the media.", "It was written by Ms. Nair.", "It describes several companies' products.", "It will be printed in a brochure."], ans: 0, exp: "信中說 Before we distribute the release to our media contacts，所以新聞稿還沒發給媒體。新聞稿是 Osei 寫的草稿。" },
+      { q: "If the launch date is November 20, what is the latest date the release can be sent?", opts: ["November 10", "November 4", "November 17", "November 27"], ans: 0, exp: "他們想在上市前至少十天發稿：11 月 20 日往前十天是 11 月 10 日。" }
+    ]
+  },
+  {
+    title: "單篇：報導（插入句子位置題）",
+    time: 180,
+    form: "R1",
+    passages: [
+      "BAYSIDE (April 2) — Fernwood Grocers will open its first store in Bayside on May 15, the company announced yesterday. The 3,000-square-meter store will be located in the former Harbor Books building on Pier Street. [1]\n\nFernwood, which operates 22 stores across the region, is known for its large selection of locally grown produce. [2] The Bayside location will also include a café and a cooking school offering evening classes.\n\n\"We've wanted to come to Bayside for years,\" said Fernwood president Alan Moreau. [3] \"When the Harbor Books building became available, we knew it was the right fit.\"\n\nThe store expects to hire about 60 employees. [4] Applications are being accepted on the company's Web site."
+    ],
+    qs: [
+      { q: "What is the article mainly about?", opts: ["The opening of a new store", "The closing of a bookstore", "A cooking competition", "A local farming program"], ans: 0, exp: "整篇在說 Fernwood Grocers 要在 Bayside 開第一家店。Harbor Books 只是店面原本的用途。" },
+      { q: "What is NOT mentioned as a feature of the Bayside store?", opts: ["A pharmacy", "A café", "A cooking school", "Locally grown produce"], ans: 0, exp: "NOT 題：文中提到咖啡館、烹飪教室，以及 Fernwood 以在地農產品聞名；沒有提到藥局。" },
+      { q: "In which of the positions marked [1], [2], [3], and [4] does the following sentence best belong? \"About half of its fruits and vegetables come from farms within 100 kilometers.\"", opts: ["[2]", "[1]", "[3]", "[4]"], ans: 0, exp: "its fruits and vegetables 要接在提到農產品的句子後面。[2] 前一句說 Fernwood 以大量在地農產品聞名，接著用「一半蔬果來自 100 公里內的農場」說明，最連貫。" }
+    ]
+  },
+  {
+    title: "單篇：網頁（藝術中心課程）",
+    time: 180,
+    form: "R1",
+    passages: [
+      "www.lindenartcenter.org/classes\n\nLinden Art Center — Fall Classes\n\nWatercolor for Beginners — Mondays, 6:00–8:00 P.M., Sept. 8–Oct. 27. Instructor: Grace Holm. $160\n\nPortrait Drawing — Wednesdays, 6:30–8:30 P.M., Sept. 10–Oct. 29. Instructor: Victor Lam. $180\n\nDigital Photography — Saturdays, 10:00 A.M.–12:00 P.M., Sept. 13–Nov. 1. Instructor: Ruth Adeyemi. $200 (students must bring their own camera)\n\nMembers of the Linden Art Center receive a 15 percent discount on all classes. All supplies are included except where noted. Register online or at the front desk. Classes with fewer than six registered students by September 1 may be canceled."
+    ],
+    qs: [
+      { q: "What is true about the Digital Photography class?", opts: ["Students must provide their own equipment.", "It meets on weekday evenings.", "It is taught by Victor Lam.", "It is the least expensive class."], ans: 0, exp: "攝影課註明 students must bring their own camera（學生要自備相機）。它在週六上午、由 Ruth Adeyemi 授課，而且是最貴的。" },
+      { q: "How much would a member pay for Portrait Drawing?", opts: ["$153", "$180", "$160", "$136"], ans: 0, exp: "人像素描 $180，會員打 85 折：180 × 0.85 = $153。" },
+      { q: "According to the Web page, why might a class be canceled?", opts: ["Not enough people register for it.", "The instructor is unavailable.", "The art center is being renovated.", "Supplies have not arrived."], ans: 0, exp: "Classes with fewer than six registered students by September 1 may be canceled：報名人數不足六人可能取消。" }
+    ]
+  },
+  {
+    title: "單篇：信件（插入句子位置題）",
+    time: 240,
+    form: "R1",
+    passages: [
+      "Pinecrest Medical Group\n410 Lakeview Drive, Suite 200\nAshford, OR 97520\n\nOctober 6\n\nMs. Teresa Lund\n27 Willow Lane\nAshford, OR 97521\n\nDear Ms. Lund,\n\nWe are writing to let you know that Dr. Samuel Bryce will be retiring at the end of this year after 30 years of practice. [1] We are grateful for his many years of service to our patients.\n\nBeginning January 2, Dr. Bryce's patients will be cared for by Dr. Helena Ruiz, who joined Pinecrest in August. [2] Dr. Ruiz completed her training at Ashford University Hospital and has a special interest in sports medicine.\n\nYour medical records will be transferred to Dr. Ruiz automatically. [3] If you would prefer to see another doctor at Pinecrest, please call our office at 555-0170, and we will be happy to help.\n\n[4] Dr. Bryce will be at the clinic until December 19 and looks forward to seeing many of you before then.\n\nSincerely,\nMonica Hale\nOffice Manager"
+    ],
+    qs: [
+      { q: "Why was the letter sent?", opts: ["To inform a patient about a change in doctors", "To remind a patient of an appointment", "To announce the opening of a new clinic", "To request updated medical records"], ans: 0, exp: "信中通知 Bryce 醫師年底退休，病人明年起改由 Ruiz 醫師照顧。" },
+      { q: "What is indicated about Dr. Ruiz?", opts: ["She has been working at Pinecrest for a few months.", "She trained under Dr. Bryce.", "She will retire next year.", "She specializes in children's medicine."], ans: 0, exp: "Ruiz 八月加入 Pinecrest，信是十月寫的，所以她已經在這裡工作幾個月了。她的專長是運動醫學，不是兒科。" },
+      { q: "What should Ms. Lund do if she wants to see a different doctor?", opts: ["Telephone the clinic", "Visit the clinic before December 19", "Write a letter to Dr. Bryce", "Fill out a form online"], ans: 0, exp: "If you would prefer to see another doctor… please call our office at 555-0170。" },
+      { q: "In which of the positions marked [1], [2], [3], and [4] does the following sentence best belong? \"You do not need to take any action.\"", opts: ["[3]", "[1]", "[2]", "[4]"], ans: 0, exp: "前一句說病歷會「自動」轉給 Ruiz 醫師，接著說「您不需要做任何事」最連貫；下一句再說明想換其他醫師時該怎麼做。" }
+    ]
+  },
+  {
+    title: "單篇：線上討論（意圖題）",
+    time: 240,
+    form: "R1",
+    passages: [
+      "Olivia Grant [10:02 A.M.]\nThe Kensington client wants the revised floor plans by Thursday instead of Friday. Can we manage that?\n\nRavi Patel [10:04 A.M.]\nThe layout is done. I'm just waiting on the lighting specifications from Henrik.\n\nHenrik Dahl [10:05 A.M.]\nI'll have those to you by noon tomorrow.\n\nOlivia Grant [10:06 A.M.]\nThat leaves Ravi only a day and a half.\n\nRavi Patel [10:07 A.M.]\nThat's plenty. The final drawings won't take long once I have the specs.\n\nMei Chen [10:09 A.M.]\nI can do the 3D renderings Wednesday night if Ravi sends me the files by 5.\n\nOlivia Grant [10:10 A.M.]\nGreat. I'll tell the client we'll deliver Thursday morning."
+    ],
+    qs: [
+      { q: "What is the discussion mainly about?", opts: ["Meeting an earlier deadline", "Hiring a lighting specialist", "Reducing the cost of a project", "Scheduling a client visit"], ans: 0, exp: "客戶要求從週五提前到週四交平面圖，大家在討論能不能趕上。" },
+      { q: "What is Mr. Patel waiting for?", opts: ["Information from a colleague", "Approval from the client", "Payment for a project", "3D renderings"], ans: 0, exp: "Patel 說他在等 Henrik 的照明規格（lighting specifications from Henrik），Henrik 是同事。" },
+      { q: "At 10:07 A.M., what does Mr. Patel mean when he writes, \"That's plenty\"?", opts: ["He has enough time to finish his work.", "He has received enough information.", "The client has paid enough for the project.", "Too many people are working on the project."], ans: 0, exp: "意圖題：Grant 擔心 Patel 只剩一天半，Patel 回「那很夠了」，接著說拿到規格後完稿不會花太久，意思是時間足夠。" },
+      { q: "What will Ms. Chen most likely do on Wednesday?", opts: ["Create images of the design", "Meet with the client", "Send files to Mr. Patel", "Prepare lighting specifications"], ans: 0, exp: "Chen 說她可以在週三晚上做 3D 渲染圖（3D renderings），也就是設計的立體圖像。是 Patel 要把檔案寄給她。" }
+    ]
+  },
+  {
+    title: "單篇：報導（同義字題）",
+    time: 240,
+    form: "R1",
+    passages: [
+      "Remote Work Reshapes Office Market\nBy Hannah Lowe\n\nDemand for traditional office space in the city center has fallen for the third year in a row, according to a report released Monday by the Metropolitan Business Council. The vacancy rate for downtown offices now stands at 18 percent, up from 11 percent three years ago.\n\nThe report attributes the decline mainly to the growth of remote and hybrid work. Many companies have reduced the size of their offices, choosing instead to rent shared workspaces for days when employees come in.\n\nHowever, not all landlords are struggling. Buildings that offer modern amenities, such as fitness centers, outdoor terraces, and flexible floor plans, have kept occupancy rates above 90 percent. \"Tenants are willing to pay more for space that gives employees a reason to come to the office,\" said council director Martin Abe.\n\nSome property owners are now converting older office buildings into apartments, a trend the council expects to continue."
+    ],
+    qs: [
+      { q: "What is the article mainly about?", opts: ["Changes in the demand for office space", "The construction of a new fitness center", "A city's plan to build apartments", "The benefits of working from home"], ans: 0, exp: "報導說市中心辦公室需求連續三年下降、空置率上升，以及哪些大樓仍然搶手，主題是辦公室市場需求的變化。" },
+      { q: "What was the downtown office vacancy rate three years ago?", opts: ["11 percent", "18 percent", "90 percent", "3 percent"], ans: 0, exp: "The vacancy rate… now stands at 18 percent, up from 11 percent three years ago：三年前是 11%。" },
+      { q: "In paragraph 3, the word \"kept\" is closest in meaning to", opts: ["maintained", "stored", "delayed", "prevented"], ans: 0, exp: "同義字題：have kept occupancy rates above 90 percent 是「維持」出租率在九成以上，最接近 maintained。" },
+      { q: "According to Mr. Abe, why are some buildings successful?", opts: ["They offer features that attract workers.", "They charge lower rents.", "They are located near train stations.", "They have been converted into apartments."], ans: 0, exp: "Abe 說租戶願意為「讓員工有理由進辦公室」的空間多付錢，也就是提供健身中心、露台等吸引員工的設施。報導說租戶願意付更多，不是租金比較低。" }
+    ]
+  },
+  {
+    title: "雙篇：講者通知信＋議程表",
+    time: 300,
+    form: "R1",
+    passages: [
+      "To: All Conference Speakers\nFrom: Nadia Petrov, Program Coordinator\nDate: February 3\nSubject: Northwest Retail Summit — final schedule\n\nDear Speakers,\n\nThank you for agreeing to present at this year's Northwest Retail Summit, which will take place on March 6 at the Harborview Convention Center. The final schedule is attached.\n\nPlease arrive at least 30 minutes before your session begins so that our technical staff can test your equipment. Presentation slides should be sent to me by February 27.\n\nSpeakers whose sessions are in the Cedar Room should note that this room does not have a microphone system, as it is our smallest space.\n\nBest regards,\nNadia Petrov",
+      "Northwest Retail Summit — March 6\n\n9:00 A.M. | Opening Remarks | Main Hall | Nadia Petrov\n9:30 A.M. | The Future of Online Shopping | Main Hall | Gregory Hale\n11:00 A.M. | Building Customer Loyalty | Cedar Room | Amira Saleh\n1:00 P.M. | Managing Inventory Costs | Pine Room | Lucas Brandt\n2:30 P.M. | Designing Store Layouts | Cedar Room | Erin Walsh"
+    ],
+    qs: [
+      { q: "What is the purpose of the e-mail?", opts: ["To provide information to presenters", "To invite people to attend a summit", "To announce a change of venue", "To request feedback on a conference"], ans: 0, exp: "信是寫給所有講者，說明議程、報到時間、投影片期限和會議室設備。" },
+      { q: "By when should speakers send their slides?", opts: ["February 27", "February 3", "March 6", "March 1"], ans: 0, exp: "Presentation slides should be sent to me by February 27。" },
+      { q: "What is the latest time Mr. Brandt should arrive?", opts: ["12:30 P.M.", "1:00 P.M.", "9:00 A.M.", "2:00 P.M."], ans: 0, exp: "跨篇題：Brandt 的場次是下午 1:00（第二篇），講者要提前至少 30 分鐘到（第一篇），所以最晚 12:30。" },
+      { q: "Who will most likely present without a microphone?", opts: ["Erin Walsh", "Lucas Brandt", "Gregory Hale", "Nadia Petrov"], ans: 0, exp: "跨篇題：Cedar Room 沒有麥克風（第一篇）；議程表上 Erin Walsh 的場次在 Cedar Room（第二篇）。" },
+      { q: "What is suggested about the Cedar Room?", opts: ["It is the smallest room at the venue.", "It will be used only in the morning.", "It has the newest equipment.", "It is next to the Main Hall."], ans: 0, exp: "信中說 Cedar Room 沒有麥克風系統，as it is our smallest space（因為它是最小的場地）。下午 2:30 也有場次在這裡。" }
+    ]
+  },
+  {
+    title: "雙篇：家具特賣廣告＋顧客來信",
+    time: 300,
+    form: "R1",
+    passages: [
+      "SUMMIT FURNITURE — SPRING SALE\nApril 1–15 only!\n\n• 25% off all office chairs\n• 15% off desks and bookcases\n• Free delivery within 30 kilometers of any Summit store\n\nCan't visit in person? Shop online at summitfurniture.com. Online orders placed during the sale also qualify for sale prices.\n\nStore hours: Monday–Saturday 9 A.M.–8 P.M.; Sunday 11 A.M.–6 P.M.",
+      "To: Customer Service <help@summitfurniture.com>\nFrom: Kenji Watanabe\nDate: April 9\nSubject: Order #A-5521\n\nHello,\n\nOn April 6, I ordered two ergonomic office chairs and a standing desk from your Web site. The chairs arrived yesterday, but the desk is not expected until April 20. I live about 45 kilometers from your Riverside store, so I paid a delivery fee, and I would prefer not to pay a second time for the desk.\n\nAlso, the chairs were charged at full price, even though the sale was in effect when I ordered. Could you please look into this?\n\nThank you,\nKenji Watanabe"
+    ],
+    qs: [
+      { q: "What is NOT offered during the sale?", opts: ["Discounts on lighting", "Lower prices on chairs", "Reduced prices on bookcases", "Free delivery to nearby customers"], ans: 0, exp: "NOT 題：特賣有椅子 75 折、書桌和書櫃 85 折、30 公里內免運，沒有提到燈具。" },
+      { q: "Why did Mr. Watanabe have to pay for delivery?", opts: ["He lives too far from a store.", "He ordered items online.", "He placed his order after the sale ended.", "He requested express delivery."], ans: 0, exp: "跨篇題：免運限 30 公里內（第一篇），Watanabe 住在離門市約 45 公里的地方（第二篇）。網購也適用特價，所以不是因為網購。" },
+      { q: "What discount should Mr. Watanabe have received on the chairs?", opts: ["25 percent", "15 percent", "30 percent", "45 percent"], ans: 0, exp: "跨篇題：他 4 月 6 日下單，在特賣期間內；辦公椅打 75 折，也就是 25% off。" },
+      { q: "What is indicated about the desk?", opts: ["It will arrive after the sale has ended.", "It was charged at the sale price.", "Its order has been canceled.", "It is out of stock at the Riverside store."], ans: 0, exp: "跨篇題：書桌預計 4 月 20 日才到（第二篇），特賣只到 4 月 15 日（第一篇）。信中沒有說書桌用什麼價格計算。" },
+      { q: "What does Mr. Watanabe ask the company to do?", opts: ["Look into a billing problem", "Exchange one of the chairs", "Deliver the desk sooner", "Refund his entire order"], ans: 0, exp: "他說椅子被收了原價，請公司查明（Could you please look into this?），也就是處理收費問題。" }
+    ]
+  },
+  {
+    title: "三篇：獨木舟行程網頁＋訂位信＋評論",
+    time: 300,
+    form: "R1",
+    passages: [
+      "Coastal Kayak Tours — Tour Options\n\nHarbor Sunset Tour: 2 hours, departs 6:00 P.M. daily, $55 per person. Suitable for beginners.\n\nIsland Explorer Tour: 4 hours, departs 9:00 A.M. on weekends, $95 per person, lunch included. Some kayaking experience required.\n\nPrivate Group Tour: customizable route and schedule, minimum 6 people, $80 per person.\n\nAll tours include equipment and a certified guide. Bookings canceled at least 48 hours in advance receive a full refund.",
+      "To: bookings@coastalkayak.com\nFrom: Laura Mendes\nDate: June 10\nSubject: Group booking\n\nHello,\n\nI would like to book a tour for my team of eight on Saturday, June 21. None of us has kayaked before, so we'd prefer something suitable for beginners. Ideally, we'd go in the morning, since several of us have commitments in the evening. Could you arrange a route along the harbor?\n\nThank you,\nLaura Mendes, Brightline Consulting",
+      "★★★★★ Posted June 24 by L. Mendes\n\nOur team had a fantastic morning on the water with our guide, Tomás. He adjusted the route when the wind picked up and kept everyone safe and laughing. We even saw seals near the old lighthouse! The only drawback was that the changing rooms were quite small for a group our size. Highly recommended for team outings."
+    ],
+    qs: [
+      { q: "What is required for the Island Explorer Tour?", opts: ["Previous kayaking experience", "A group of at least six people", "Payment in advance", "A reservation made 48 hours ahead"], ans: 0, exp: "Island Explorer Tour 註明 Some kayaking experience required（需要一些划獨木舟的經驗）。至少六人是私人團的條件。" },
+      { q: "Which tour did Ms. Mendes's team most likely take?", opts: ["Private Group Tour", "Harbor Sunset Tour", "Island Explorer Tour", "Seal Watching Tour"], ans: 0, exp: "跨篇題：她們八人、都是新手、想在早上出發、自訂港灣路線（第二篇）；夕陽團在傍晚，島嶼團要經驗，只有可自訂路線和時間的私人團符合（第一篇）。評論也說是上午出團（第三篇）。" },
+      { q: "How much did the tour most likely cost for the whole team?", opts: ["$640", "$440", "$760", "$480"], ans: 0, exp: "跨篇題：私人團每人 $80（第一篇），團隊八人（第二篇）：80 × 8 = $640。" },
+      { q: "What is suggested about Tomás?", opts: ["He changed plans in response to the weather.", "He works at a lighthouse.", "He organized the team outing.", "He provided lunch for the group."], ans: 0, exp: "評論說起風時（when the wind picked up）他調整了路線。" },
+      { q: "What did Ms. Mendes dislike?", opts: ["The size of a facility", "The length of the tour", "The price of the tour", "The behavior of the guide"], ans: 0, exp: "唯一的缺點是更衣室對她們這麼多人來說太小（the changing rooms were quite small）。" }
+    ]
+  },
+  {
+    title: "三篇：社區菜園公告＋申請表＋電子郵件",
+    time: 300,
+    form: "R1",
+    passages: [
+      "CITY OF MILFORD — Community Garden Plots Available\n\nApplications are now being accepted for plots at the Riverside Community Garden for the upcoming growing season (April–October).\n\nPlot sizes and annual fees:\nSmall (2 m × 3 m): $40\nMedium (3 m × 4 m): $65\nLarge (4 m × 6 m): $90\n\nMilford residents receive priority. Applications received by February 28 will be processed first; plots will then be assigned on a first-come, first-served basis. Water and basic tools are provided. Gardeners must attend a one-hour orientation session before planting.",
+      "RIVERSIDE COMMUNITY GARDEN — PLOT APPLICATION\n\nName: Arthur Benoit\nAddress: 14 Chestnut Street, Milford\nPhone: 555-0116\nPlot size requested: Medium\nPrevious experience: Grew vegetables on my balcony for 3 years.\nOrientation session preference: ☐ March 22 (Sat., 10 A.M.)  ☑ March 26 (Wed., 6 P.M.)\nDate submitted: February 25",
+      "To: Arthur Benoit\nFrom: Parks Department, City of Milford\nDate: March 10\nSubject: Your garden plot\n\nDear Mr. Benoit,\n\nWe are pleased to confirm your plot at the Riverside Community Garden. Due to high demand for medium plots, we have assigned you a small plot (#27) instead. The difference in fees will be refunded to the card you used to pay. If a medium plot becomes available, we will contact you.\n\nYour orientation session is confirmed for the date you selected.\n\nParks Department"
+    ],
+    qs: [
+      { q: "What is mentioned about the community garden?", opts: ["Gardeners are provided with water.", "It is open all year.", "Only Milford residents may apply.", "Plots are assigned by lottery."], ans: 0, exp: "公告說 Water and basic tools are provided。種植季是 4 到 10 月；米爾福德居民只是優先，不是只限居民；分配方式是先到先得，不是抽籤。" },
+      { q: "What is indicated about Mr. Benoit's application?", opts: ["It was submitted before the priority deadline.", "It did not include a phone number.", "It requested a large plot.", "It was rejected."], ans: 0, exp: "跨篇題：2 月 28 日前收到的申請優先處理（第一篇），他 2 月 25 日送出（第二篇）。" },
+      { q: "How much will Mr. Benoit most likely be refunded?", opts: ["$25", "$40", "$65", "$50"], ans: 0, exp: "跨篇題：他申請中型（$65），被改分配小型（$40）（第一、三篇），退還差額 65 − 40 = $25。" },
+      { q: "When will Mr. Benoit attend an orientation session?", opts: ["On March 26", "On March 22", "On March 10", "On February 28"], ans: 0, exp: "跨篇題：他勾選 3 月 26 日（第二篇），郵件說說明會確認是他選的日期（第三篇）。" },
+      { q: "According to the e-mail, why was Mr. Benoit assigned a different plot?", opts: ["Plots of the size he requested were in high demand.", "He applied after the deadline.", "He did not pay the full fee.", "He lacks gardening experience."], ans: 0, exp: "Due to high demand for medium plots：中型菜園需求太高。" }
+    ]
+  },
+  {
+    title: "三篇：報導＋備忘錄＋問卷結果表",
+    time: 300,
+    form: "R1",
+    passages: [
+      "Dalton Foods to Introduce Four-Day Workweek\n\nCHESTER (July 8) — Dalton Foods, a maker of frozen meals, will test a four-day workweek at its Chester headquarters beginning September 1. Office employees will work ten hours a day, Monday through Thursday, instead of eight hours a day, five days a week. Factory employees are not included in the trial, which will last six months.\n\nCompany spokesperson Irene Faulk said the change is intended to improve employee satisfaction and reduce commuting costs. \"If the trial succeeds, we will consider expanding it to our other offices,\" she said.",
+      "MEMO\nTo: Chester office staff\nFrom: Human Resources\nDate: August 15\nRe: Four-day workweek trial\n\nAs announced, the trial schedule will begin on September 1. Core hours will be 8:00 A.M. to 6:30 P.M., with a 30-minute lunch break. Employees whose duties require coverage on Fridays, such as customer service staff, will work Tuesday through Friday instead.\n\nA survey about the new schedule will be sent to all participants at the end of each month. Please complete it within one week.",
+      "Survey Results — Four-Day Workweek Trial (Chester office)\n\nMonth | Participants responding | Satisfied or very satisfied\nSeptember | 182 | 74%\nOctober | 176 | 81%\nNovember | 179 | 85%"
+    ],
+    qs: [
+      { q: "What is the purpose of the article?", opts: ["To report on a planned change in working hours", "To announce the opening of a new factory", "To describe a new line of frozen meals", "To explain a change in company leadership"], ans: 0, exp: "報導 Dalton Foods 將試行每週四天工作制，是工作時間的變動。" },
+      { q: "Who is NOT taking part in the trial?", opts: ["Factory employees", "Customer service staff", "Office employees", "Human Resources staff"], ans: 0, exp: "Factory employees are not included in the trial。客服人員也參加，只是改成週二到週五。" },
+      { q: "What is suggested about customer service staff?", opts: ["They do not work on Mondays during the trial.", "They work eight hours a day.", "They are based at the factory.", "They complete a weekly survey."], ans: 0, exp: "備忘錄說需要週五有人值班的員工（例如客服）改成週二到週五上班，所以試行期間週一不上班。問卷是每月一次。" },
+      { q: "According to the survey results, in which month was satisfaction the highest?", opts: ["November", "September", "October", "December"], ans: 0, exp: "表格中十一月的滿意比例最高（85%）。表格沒有十二月的資料。" },
+      { q: "When will the trial most likely end?", opts: ["At the end of February", "At the end of November", "At the end of September", "At the end of December"], ans: 0, exp: "跨篇推算：9 月 1 日開始（第一、二篇），為期六個月（第一篇），所以約在隔年二月底結束。" }
+    ]
   }
 ];

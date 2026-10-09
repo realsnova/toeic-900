@@ -139,7 +139,7 @@ function sanitizeState(d) {
   const PARTS = ["Part 2", "Part 3", "Part 4", "Part 5", "Part 6", "Part 7"];
   d.mocks = (Array.isArray(d.mocks) ? d.mocks : Object.values(obj(d.mocks))).filter(m => m && typeof m === "object").map(m => {
     const out = { date: date(m.date) || "" };
-    if (["full", "listen", "read"].includes(m.mode)) out.mode = m.mode; // 舊紀錄沒有 mode 就維持沒有（顯示為「模擬考」）
+    if (["full", "listen", "read"].includes(m.mode) || /^R\d{1,2}$/.test(m.mode)) out.mode = m.mode; // 舊紀錄沒有 mode 就維持沒有（顯示為「模擬考」）
     ["lR", "lT", "rR", "rT", "lSkip", "secs", "L", "R"].forEach(f => { if (Number.isFinite(m[f])) out[f] = cnt(m[f]); });
     if (m.parts && typeof m.parts === "object") {
       out.parts = {};
@@ -395,11 +395,18 @@ function todayPlan() {
   const mockDue = (d.mockDone || 0) > 0 || daysSinceMock() >= 3; // 今天已考過也要保留這一項，才會顯示「已完成」
   return base.concat([
     mockDue
-      ? { label: "模擬考：閱讀節（限時 22 分鐘）", detail: (d.mockDone || 0) ? "今天已完成" : "每 3 天一次，練時間分配", done: (d.mockDone || 0) >= 1, tab: "mock", est: "25 分" }
+      ? (nextForm() && !(d.mockDone || 0)
+        ? { label: `${nextForm().name}（100 題・75 分鐘）`, detail: "挑一天時間充裕時做，練完整的時間分配與耐力", done: false, tab: "mock", est: "80 分" }
+        : { label: "模擬考：閱讀節（限時 22 分鐘）", detail: (d.mockDone || 0) ? "今天已完成" : "每 3 天一次，練時間分配", done: (d.mockDone || 0) >= 1, tab: "mock", est: "25 分" })
       : { label: "Part 7 限時 2 篇（新制題組優先）", detail: `已完成 ${d.p7} 篇`, done: d.p7 >= 2, tab: "p7", est: "18 分" },
     { label: "聽力 Part 2 五題 + Part 3/4 一組", detail: `P2 ${d.l2} 題 · P3/4 ${d.l34} 組`, done: d.l2 >= 5 && d.l34 >= 1, tab: "listen", est: "12 分" },
     { label: "錯題本全部清零", detail: wrongs ? `還剩 ${wrongs} 題` : "已清空！", done: wrongs === 0, tab: "wrong", est: "10 分" }
   ]);
+}
+// 還沒做過的第一份完整測驗
+function nextForm() {
+  const done = new Set((S.mocks || []).map(m => m && m.mode));
+  return FORMS.find(f => !done.has(f.id)) || null;
 }
 // 距離最近一次模擬考的天數（沒考過回傳很大的數字）
 function daysSinceMock() {
@@ -1309,19 +1316,29 @@ function weakCats() {
 // 抽一輪題：錯題優先，其餘從「沒出過的」裡面抽；沒出過的不足一輪就重置該類 seen 重新輪替
 // （照抄 Mock.draw 的作法）。isWeak 可選，用來把一部分名額留給弱項類別。
 // 回傳的陣列長度最多 n，題庫比 n 小時就自然變短，不會卡住也不會湊不出題。
-function drawRound(seenKey, poolSize, n, wrongIds, isWeak) {
+// 完整閱讀測驗：題目在題庫中以 form 標記（例如 form: "R1"），測驗時依 Part 5 → 6 → 7 的順序出完所有題目
+const FORMS = [
+  { id: "R1", name: "完整閱讀測驗 第 1 回", secs: 75 * 60 }
+];
+// 完整測驗（forms）的題目：保留給完整測驗，一般練習與隨機模考都不抽（答錯後會進錯題本，可以在錯題本重考）
+function isFormItem(type, i) {
+  const arr = { p5: PART5, p6: PART6, p7: PART7 }[type];
+  return !!(arr && arr[i] && arr[i].form);
+}
+function drawRound(seenKey, poolSize, n, wrongIds, isWeak, isHidden) {
   if (!S[seenKey] || typeof S[seenKey] !== "object") S[seenKey] = {};
+  const hidden = i => !!(isHidden && isHidden(i));
   // 錯題優先，且不受 seen 影響——錯題本的題目本來就該重複出現直到掌握
   const ids = shuffle(wrongIds.filter(i => Number.isInteger(i) && i >= 0 && i < poolSize)).slice(0, n);
   const taken = new Set(ids);
   let need = n - ids.length;
   if (need > 0) {
     let fresh = [];
-    for (let i = 0; i < poolSize; i++) if (!S[seenKey][i] && !taken.has(i)) fresh.push(i);
+    for (let i = 0; i < poolSize; i++) if (!S[seenKey][i] && !taken.has(i) && !hidden(i)) fresh.push(i);
     if (fresh.length < need) {
       S[seenKey] = {}; // 題庫輪替一圈，重置後重新洗牌
       fresh = [];
-      for (let i = 0; i < poolSize; i++) if (!taken.has(i)) fresh.push(i);
+      for (let i = 0; i < poolSize; i++) if (!taken.has(i) && !hidden(i)) fresh.push(i);
     }
     // 弱項配額只在「真的有弱項資料」時才生效；沒有弱項時 weak 為空，行為等同原本的純隨機
     const weak = isWeak ? shuffle(fresh.filter(isWeak)) : [];
@@ -1344,7 +1361,7 @@ function startP5() {
   const weak = weakCats();
   const ids = drawRound("p5seen", PART5.length, ROUND_N,
     Object.keys(S.wb.p5).map(Number),
-    weak.size ? (i => weak.has(PART5[i].cat)) : null);
+    weak.size ? (i => weak.has(PART5[i].cat)) : null, i => isFormItem("p5", i));
   save(); // p5seen 已更新
   p5session = { ids, at: 0, right: 0, t0: Date.now() };
   p5Next();
@@ -1391,6 +1408,7 @@ renderers.p6 = function () {
       <p class="muted">每篇 4 格，包含文法、詞彙與句子插入題。</p>
     </div>
     ${PART6.map((p, i) => {
+      if (p.form) return ""; // 完整測驗的篇章不列在一般練習
       const best = S.p6done[i];
       return `<div class="item-row"><div><b>${esc(p.title)}</b></div>
         <div>${best !== undefined ? `<span class="pill ok">最佳 ${esc(best)}/4</span>` : `<span class="pill">未完成</span>`}
@@ -1451,6 +1469,7 @@ renderers.p7 = function () {
       <p class="muted">含單篇、雙篇與三篇整合題。計時器幫你養成 900+ 的答題節奏——超時會變紅但不會中斷作答。</p>
     </div>
     ${PART7.map((p, i) => {
+      if (p.form) return ""; // 完整測驗的題組不列在一般練習
       const best = S.p7done[i];
       return `<div class="item-row"><div><b>${esc(p.title)}</b><br>
         <span class="muted">${p.qs.length} 題 · 建議 ${Math.round(p.time / 60)} 分鐘</span></div>

@@ -3,6 +3,8 @@
 // 作答中不顯示對錯；聽力不可回放；閱讀可旗標、跳題、倒數自動收卷。
 
 const READING_SECONDS = 22 * 60;
+// 完整閱讀測驗的清單 FORMS 定義在 app.js（首頁菜單開機時就要用到）
+const formOf = mode => FORMS.find(f => f.id === mode) || null;
 
 const Mock = {
   s: null, // 進行中的 session
@@ -30,10 +32,10 @@ const Mock = {
     if (!S.mockSeen) S.mockSeen = {};
     if (!S.mockSeen[kind]) S.mockSeen[kind] = {};
     let fresh = [];
-    for (let i = 0; i < poolSize; i++) if (!S.mockSeen[kind][i]) fresh.push(i);
+    for (let i = 0; i < poolSize; i++) if (!S.mockSeen[kind][i] && !isFormItem(kind, i)) fresh.push(i);
     if (fresh.length < n) {
       S.mockSeen[kind] = {}; // 該類題庫輪替一圈，重置
-      fresh = Array.from({ length: poolSize }, (_, i) => i);
+      fresh = Array.from({ length: poolSize }, (_, i) => i).filter(i => !isFormItem(kind, i));
       UI.toast(`${kind.toUpperCase()} 題庫已輪替一圈，重新洗牌`, "info");
     }
     const picked = shuffle(fresh).slice(0, n);
@@ -42,7 +44,29 @@ const Mock = {
   },
 
   /* ---------- 組卷 ---------- */
+  // 完整測驗的卷子：該回的所有題目，依題庫順序
+  buildFormPaper(id) {
+    const paper = { listening: [], reading: [] };
+    PART5.forEach((item, i) => {
+      if (item.form === id) paper.reading.push({ type: "p5", part: "Part 5", id: i, q: item, order: shuffle(item.opts.map((_, k) => k)) });
+    });
+    PART6.forEach((p, pi) => {
+      if (p.form !== id) return;
+      p.blanks.forEach((blank, bi) => paper.reading.push({
+        type: "p6", part: "Part 6", pi, bi, passage: p,
+        q: { q: `空格 [${bi + 1}] 應填入：`, opts: blank.opts, ans: blank.ans, exp: blank.exp },
+        order: shuffle(blank.opts.map((_, k) => k))
+      }));
+    });
+    PART7.forEach((set, si) => {
+      if (set.form !== id) return;
+      set.qs.forEach((q, qi) => paper.reading.push({ type: "p7", part: "Part 7", si, qi, set, q, order: shuffle(q.opts.map((_, k) => k)) }));
+    });
+    return paper;
+  },
+
   buildPaper(mode) {
+    if (formOf(mode)) return Mock.buildFormPaper(mode);
     const paper = { listening: [], reading: [] };
     if (mode !== "read") {
       // 聽力節：P2 ×10
@@ -100,14 +124,14 @@ const Mock = {
       rAnswers: new Array(paper.reading.length).fill(null),
       flags: new Set(),
       rAt: 0,
-      secLeft: READING_SECONDS,
+      secLeft: formOf(mode) ? formOf(mode).secs : READING_SECONDS,
       readTimer: null,
       t0: Date.now(),
       audioFail: new Set(), // 語音沒有播放的聽力題索引：不計分（見 submit）
       finished: false, cancelled: false
     };
     save(); // mockSeen 已更新
-    if (mode === "read") Mock.startReading();
+    if (mode === "read" || formOf(mode)) Mock.startReading();
     else Mock.readyListening();
   },
 
@@ -256,13 +280,19 @@ const Mock = {
     Mock.box().innerHTML = `
       <div class="card">
         <div class="mock-topbar">
-          <span class="pill">📖 閱讀節 · ${esc(it.part)}</span>
+          <span class="pill">📖 ${formOf(s.mode) ? esc(formOf(s.mode).name) : "閱讀節"} · ${esc(it.part)}</span>
           <span class="timer" id="mock-timer">⏱ ${Math.floor(s.secLeft / 60)}:${String(s.secLeft % 60).padStart(2, "0")}</span>
         </div>
-        <div class="qnav">${items.map((_, idx) => {
-          const cls = [s.rAt === idx ? "cur" : "", s.rAnswers[idx] !== null ? "done" : "", s.flags.has(idx) ? "flag" : ""].join(" ");
-          return `<button class="qcell ${cls}" data-jump="${idx}">${idx + 1}</button>`;
-        }).join("")}</div>
+        ${(() => {
+          const grid = `<div class="qnav">${items.map((_, idx) => {
+            const cls = [s.rAt === idx ? "cur" : "", s.rAnswers[idx] !== null ? "done" : "", s.flags.has(idx) ? "flag" : ""].join(" ");
+            return `<button class="qcell ${cls}" data-jump="${idx}">${idx + 1}</button>`;
+          }).join("")}</div>`;
+          // 題數多（完整測驗 100 題）時題號格會佔滿手機畫面，改成可收合，預設收起
+          if (items.length <= 30) return grid;
+          const answered = s.rAnswers.filter(a => a !== null).length;
+          return `<details class="qnav-wrap" ${s.navOpen ? "open" : ""}><summary>題號導覽（已答 ${answered} / ${items.length}${s.flags.size ? `・旗標 ${s.flags.size}` : ""}）</summary>${grid}</details>`;
+        })()}
         ${passageHtml}
         <p class="q-progress">第 ${s.rAt + 1} / ${items.length} 題</p>
         <div class="q-text">${esc(it.q.q || "")}</div>
@@ -280,6 +310,8 @@ const Mock = {
         </div>
       </div>`;
     const box = Mock.box();
+    const navWrap = box.querySelector(".qnav-wrap");
+    if (navWrap) navWrap.addEventListener("toggle", () => { s.navOpen = navWrap.open; });
     box.querySelectorAll(".mock-opt").forEach(btn =>
       btn.addEventListener("click", () => {
         s.rAnswers[s.rAt] = Number(btn.dataset.oi);
@@ -386,7 +418,7 @@ const Mock = {
       .sort((a, b) => a.acc - b.acc).slice(0, 3);
     const pct = (a, b) => b ? Math.round(a / b * 100) : null;
     const sec = (name, a, b) => `<div class="mock-sec"><div class="score">${pct(a, b)}%</div><div class="muted">${name}答對 ${a} / ${b} 題</div></div>`;
-    const hasL = r.mode !== "read", hasR = r.mode !== "listen";
+    const hasL = r.mode === "full" || r.mode === "listen", hasR = r.mode !== "listen";
     const graded = r.lT + r.rT > 0; // 全部題目都因語音沒播放而不計分時，不可顯示「全對」
     Mock.box().innerHTML = `
       <div class="card result-banner">
@@ -416,7 +448,10 @@ const Mock = {
     $("#mock-back").addEventListener("click", () => renderers.mock());
   },
 
-  modeName(mode) { return { full: "雙節模考（短版）", listen: "聽力節", read: "閱讀節" }[mode] || "模擬考"; },
+  modeName(mode) {
+    const f = formOf(mode);
+    return f ? f.name : { full: "雙節模考（短版）", listen: "聽力節", read: "閱讀節" }[mode] || "模擬考";
+  },
 
   // 有原始題數的紀錄才能換算答對率、畫進趨勢圖；更早的版本只存了換算分數，保留但不比較
   hasCounts(m) {
@@ -488,15 +523,26 @@ const Mock = {
           <div class="item-row"><div><b>${esc(m.date)}</b> <span class="pill">${Mock.modeName(m.mode)}</span></div>
           <div>${resultText(m)}</div></div>`).join("")}
       </div>` : ""}`;
+    const formCards = FORMS.map(f => {
+      const last = mocks.filter(m => m.mode === f.id).slice(-1)[0];
+      return `<div class="hub-card" data-mock="${f.id}">
+        <div class="hub-icon">📝</div>
+        <div class="hub-text"><div class="hub-title">${esc(f.name)}</div><div class="hub-sub muted">Part 5 ×30＋Part 6 ×16＋Part 7 ×54，共 100 題 · 限時 ${f.secs / 60} 分鐘 · 題目和正式考試同樣配置${last && Mock.hasCounts(last) ? ` · 上次答對 ${last.rR}/${last.rT}` : " · 尚未作答"}</div></div>
+        <div class="hub-arrow">›</div>
+      </div>`;
+    }).join("");
+    Mock.box().querySelector(".card").insertAdjacentHTML("afterend", formCards);
     Mock.box().querySelectorAll("[data-mock]").forEach(el =>
       el.addEventListener("click", () => {
         const mode = el.dataset.mock;
-        if (mode === "read") ask(mode); else withVoices(() => ask(mode));
+        if (mode === "read" || formOf(mode)) ask(mode); else withVoices(() => ask(mode));
       }));
     const ask = async mode => {
+        const f = formOf(mode);
         const ok = await UI.confirm(
-          mode === "read" ? "閱讀節限時 22 分鐘，時間到自動交卷。準備好就開始！" : "聽力節將自動連續播放、不可暫停或回放（仿真考試）。建議戴上耳機，準備好就開始！",
-          { title: "開始模擬考", okText: "開始" });
+          f ? `${f.name}共 100 題，限時 ${f.secs / 60} 分鐘，和正式考試的閱讀部分相同；時間到自動交卷。建議找一段不會被打擾的時間一次做完。這份測驗的題目不會出現在一般練習中。`
+            : mode === "read" ? "閱讀節限時 22 分鐘，時間到自動交卷。準備好就開始！" : "聽力節將自動連續播放、不可暫停或回放（仿真考試）。建議戴上耳機，準備好就開始！",
+          { title: f ? "開始完整閱讀測驗" : "開始模擬考", okText: "開始" });
         if (ok) Mock.start(mode);
     };
   }

@@ -6,9 +6,9 @@ renderers.practice = function () {
   const cards = [
     { id: "vocab", icon: "📖", title: "單字卡", detail: due ? `${due} 張待複習` : "今日已完成", sub: `已精通 ${mastered} / ${VOCAB.length}` },
     { id: "listen", icon: "🎧", title: "聽力", detail: `今日 P2 ${d.l2} 題・P3/4 ${d.l34} 組`, sub: "Part 2 應答 + Part 3/4 對話短講" },
-    { id: "p5", icon: "📝", title: "Part 5 文法", detail: `今日已完成 ${d.p5} 題`, sub: `題庫共 ${PART5.length} 題` },
-    { id: "p6", icon: "📄", title: "Part 6 段落填空", detail: `今日已完成 ${d.p6} 篇`, sub: `題庫共 ${PART6.length} 篇` },
-    { id: "p7", icon: "📚", title: "Part 7 閱讀", detail: `今日已完成 ${d.p7} 篇`, sub: `題庫共 ${PART7.length} 組` }
+    { id: "p5", icon: "📝", title: "Part 5 文法", detail: `今日已完成 ${d.p5} 題`, sub: `題庫共 ${PART5.filter(q => !q.form).length} 題（另有完整測驗）` },
+    { id: "p6", icon: "📄", title: "Part 6 段落填空", detail: `今日已完成 ${d.p6} 篇`, sub: `題庫共 ${PART6.filter(p => !p.form).length} 篇` },
+    { id: "p7", icon: "📚", title: "Part 7 閱讀", detail: `今日已完成 ${d.p7} 篇`, sub: `題庫共 ${PART7.filter(p => !p.form).length} 組` }
   ];
   $("#tab-practice").innerHTML = `
     <div class="card"><h2>📋 練習</h2><p class="muted">選一項開始，各項進度會自動記錄。</p></div>

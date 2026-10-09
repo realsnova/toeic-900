@@ -499,3 +499,8 @@ main { max-width: 860px; margin: 0 auto; padding: 24px 16px 80px; }
 /* 題目回報（S1） */
 .report-row { text-align: right; margin: -4px 0 8px; }
 .report-btn { font-size: 0.8rem; opacity: 0.85; }
+
+/* 完整測驗：可收合的題號導覽（S2） */
+.qnav-wrap { margin: 8px 0 12px; }
+.qnav-wrap summary { cursor: pointer; font-size: 0.88rem; color: var(--muted); padding: 6px 0; }
+.qnav-wrap[open] summary { margin-bottom: 6px; }

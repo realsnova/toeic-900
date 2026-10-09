@@ -4,12 +4,12 @@ import assert from "node:assert/strict";
 import { loadApp } from "./helpers/load-app.mjs";
 
 const plain = v => JSON.parse(JSON.stringify(v));
+// 目前的內建題數（之後每次加題都會變，測試不寫死數字）
+const { p5: N5, p7: N7 } = plain(loadApp().run("BASE_N"));
 const CJK = /[一-鿿]/;
 
-test("S1-content 新題結構正確：Part 5 共 300 題、Part 7 共 20 組，S1 題目格式與解析規則都符合", () => {
+test("S1-content S1 新題結構正確：Part 5 新題 100 題、Part 7 新制題組 8 組，格式與解析規則都符合", () => {
   const app = loadApp();
-  assert.equal(app.run("BASE_N.p5"), 300);
-  assert.equal(app.run("BASE_N.p7"), 20);
   const p5 = plain(app.run(`PART5.filter(q => q.src === "S1")`));
   assert.equal(p5.length, 100);
   const cats = new Set(plain(app.run("Object.keys(S.cat).concat(PART5.map(q => q.cat))")));
@@ -102,17 +102,17 @@ test("S1-baseN 舊版紀錄升級時，自訂題的錯題本、輪替與最佳�
   };
   const app = loadApp({ storage: { toeic900: JSON.stringify(legacy) } });
   const S = plain(app.run("S"));
-  assert.deepEqual(Object.keys(S.wb.p5).sort(), ["300", "5"]);
-  assert.deepEqual(Object.keys(S.wb.p7).sort(), ["20-0", "3-1"]);
+  assert.deepEqual(Object.keys(S.wb.p5).sort(), [String(N5), "5"].sort());
+  assert.deepEqual(Object.keys(S.wb.p7).sort(), [`${N7}-0`, "3-1"].sort());
   assert.deepEqual(S.wb.p6, { "2-1": { n: 0, last: null } }, "Part 6 內建題數沒變，不搬");
-  assert.deepEqual(S.p5seen, { 5: true, 300: true, 301: true });
-  assert.deepEqual(S.p7done, { 3: 4, 20: 2 });
-  assert.deepEqual(S.mockSeen, { p5: { 199: true, 300: true }, p7: { 20: true } });
+  assert.deepEqual(S.p5seen, { 5: true, [N5]: true, [N5 + 1]: true });
+  assert.deepEqual(S.p7done, { 3: 4, [N7]: 2 });
+  assert.deepEqual(S.mockSeen, { p5: { 199: true, [N5]: true }, p7: { [N7]: true } });
   assert.deepEqual(S.baseN, plain(app.run("BASE_N")));
   // 存檔後再載入一次，不會重複搬
   app.run("save()");
   const again = loadApp({ storage: { toeic900: app.store.get("toeic900") } });
-  assert.deepEqual(Object.keys(plain(again.run("S.wb.p5"))).sort(), ["300", "5"]);
+  assert.deepEqual(Object.keys(plain(again.run("S.wb.p5"))).sort(), [String(N5), "5"].sort());
 });
 
 test("S1-baseN 新使用者的紀錄帶有目前的內建題數；舊版裝置同步上來的紀錄也會搬移", async () => {
@@ -122,13 +122,13 @@ test("S1-baseN 新使用者的紀錄帶有目前的內建題數；舊版裝置�
   const remote = { records: { wb: { p5: { 200: { n: 0, last: null } } } }, updatedAt: 5 };
   app.run(`S.updatedAt = 0; Sync.ref = () => ({ get: async () => ({ val: () => (${JSON.stringify(remote)}) }) });`);
   assert.equal(await app.run("Sync.pullOnStartup(0)"), true);
-  assert.deepEqual(Object.keys(plain(app.run("S.wb.p5"))), ["300"]);
+  assert.deepEqual(Object.keys(plain(app.run("S.wb.p5"))), [String(N5)]);
   // 新版裝置的紀錄（有 baseN）不會再搬
   const app2 = loadApp();
-  const remote2 = { records: { wb: { p5: { 300: { n: 0, last: null } } }, baseN: plain(app2.run("BASE_N")) }, updatedAt: 5 };
+  const remote2 = { records: { wb: { p5: { [N5]: { n: 0, last: null } } }, baseN: plain(app2.run("BASE_N")) }, updatedAt: 5 };
   app2.run(`S.updatedAt = 0; Sync.ref = () => ({ get: async () => ({ val: () => (${JSON.stringify(remote2)}) }) });`);
   await app2.run("Sync.pullOnStartup(0)");
-  assert.deepEqual(Object.keys(plain(app2.run("S.wb.p5"))), ["300"]);
+  assert.deepEqual(Object.keys(plain(app2.run("S.wb.p5"))), [String(N5)]);
 });
 
 /* ---------- 獨立審查（review-s1）後補的案例 ---------- */
@@ -149,12 +149,12 @@ test("review-s1 P3 日期格式錯誤、未來日期、只考聽力節的模考�
 });
 
 test("review-s1 P2-1 baseN 缺某一類或值壞掉時，那一類不搬（避免重複搬移）；完全沒有 baseN 才當作舊版", () => {
-  const partial = { baseN: { p5: 300, p6: 10, p7: "bad", l2: 60 }, wb: { p5: { 300: { n: 0, last: null } }, p7: { "20-0": { n: 0, last: null } } } };
+  const partial = { baseN: { p5: N5, p6: 14, p7: "bad", l2: 60 }, wb: { p5: { [N5]: { n: 0, last: null } }, p7: { [`${N7}-0`]: { n: 0, last: null } } } };
   const app = loadApp({ storage: { toeic900: JSON.stringify(partial) } });
-  assert.deepEqual(Object.keys(plain(app.run("S.wb.p5"))), ["300"]);
-  assert.deepEqual(Object.keys(plain(app.run("S.wb.p7"))), ["20-0"]);
+  assert.deepEqual(Object.keys(plain(app.run("S.wb.p5"))), [String(N5)]);
+  assert.deepEqual(Object.keys(plain(app.run("S.wb.p7"))), [`${N7}-0`]);
   const nul = loadApp({ storage: { toeic900: JSON.stringify({ baseN: null, wb: { p5: { 200: { n: 0, last: null } } } }) } });
-  assert.deepEqual(Object.keys(plain(nul.run("S.wb.p5"))), ["300"], "baseN 為 null 視為舊版紀錄");
+  assert.deepEqual(Object.keys(plain(nul.run("S.wb.p5"))), [String(N5)], "baseN 為 null 視為舊版紀錄");
 });
 
 test("review-s1 P2-2 雲端資料格式錯誤時不套用、本機紀錄不變；wb 不是物件時也不會讓載入失敗", async () => {
@@ -186,8 +186,8 @@ test("review-s1 phase 邊界：剩 3 天與 0 天是考前調整，剩 4 天是�
 
 test("review-s1 P3 回報清單有壞資料時不拋錯；回報會記下是不是自訂題", () => {
   const app = loadApp({ storage: { toeic900_reports: JSON.stringify([null, 5, { type: "p5", key: "1" }]) } });
-  assert.equal(app.run(`addReport({ type: "p5", key: 305, q: "q", opts: [], ans: 0, chosen: 0 }, "x")`), true);
-  const r = plain(app.run("loadReports()")).find(x => x.key === "305");
+  assert.equal(app.run(`addReport({ type: "p5", key: ${N5 + 5}, q: "q", opts: [], ans: 0, chosen: 0 }, "x")`), true);
+  const r = plain(app.run("loadReports()")).find(x => x.key === String(N5 + 5));
   assert.equal(r.custom, true);
   app.run(`addReport({ type: "p5", key: 3, q: "q", opts: [], ans: 0, chosen: 0 }, "y")`);
   assert.equal(plain(app.run("loadReports()")).find(x => x.key === "3").custom, false);
