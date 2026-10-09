@@ -120,8 +120,25 @@ renderers.settings = function () {
       </div>
       <p class="muted">請假幾天後到期卡會一次累積上百張，設上限才做得完。超出的部分會自動留到明天，不會遺失。</p>
     </div>
+    <div class="card">
+      <h2>🚩 題目回報</h2>
+      <div class="item-row">
+        <div>你回報的題目：<b>${loadReports().length}</b> 題 · AI 認為可能有問題：<b>${typeof AI !== "undefined" ? AI.flags().length : 0}</b> 題</div>
+        <div style="display:flex;gap:6px">
+          <button class="btn small secondary" id="report-export">匯出</button>
+          <button class="btn small ghost" id="report-clear">清除我的回報</button>
+        </div>
+      </div>
+      <p class="muted">練習時按「🚩 這題有問題」會記在這台裝置。匯出的檔案交給我（Claude），下一次更新時會逐題確認並修正。</p>
+    </div>
     ${aiSettingsHTML()}`;
   wireAISettings($("#tab-settings"), renderers.settings);
+  $("#report-export").addEventListener("click", exportReports);
+  $("#report-clear").addEventListener("click", () => {
+    if (!confirm("清除你回報的題目清單？建議先匯出。")) return;
+    localStorage.removeItem(REPORT_KEY);
+    renderers.settings();
+  });
   $("#tab-settings").querySelectorAll("[data-theme]").forEach(b =>
     b.addEventListener("click", () => { Theme.set(b.dataset.theme); renderers.settings(); }));
   $("#set-rate").addEventListener("input", (e) => {

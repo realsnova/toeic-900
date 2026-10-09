@@ -178,7 +178,7 @@ test("T-AI-03-1b 只有 ALSO_CORRECT、KEY_WRONG 會被記錄；缺少判定行�
       const f = plain(app.run("AI.flags()[0]"));
       assert.equal(f.id, "p5:0");
       assert.equal(f.verdict, reply.split("\n")[0]);
-      assert.equal(f.v, "1.3.1");
+      assert.equal(f.v, app.run("APP_VERSION"));
       assert.equal(JSON.stringify(f).includes(KEY), false);
     }
     assert.equal(typeof res.body, "string");
@@ -282,8 +282,8 @@ test("T-INV-11 沒有金鑰時不發出任何請求，也不顯示按鈕", async
 /* ---------- AI-06 版本號 ---------- */
 test("T-AI-06-1 版本一致：APP_VERSION、CHANGELOG、?v= 與 ai.js 已載入", () => {
   const app = loadApp();
-  assert.equal(app.run("APP_VERSION"), "1.3.1");
-  assert.equal(app.run("CHANGELOG[0].v"), "1.3.1");
+  assert.equal(app.run("APP_VERSION"), "1.4.0");
+  assert.equal(app.run("CHANGELOG[0].v"), app.run("APP_VERSION"));
   const html = readSource("index.html");
   const vs = new Set((html.match(/\?v=\d+/g) || []));
   assert.equal(vs.size, 1, [...vs].join(","));

@@ -345,5 +345,125 @@ We offer a competitive salary, health benefits, paid time off, and opportunities
       { q: "What is stated about forklift certification?", opts: ["It can be obtained within 60 days of hire", "It is not required", "It must be renewed yearly", "It is provided during training"], ans: 0, exp: "要求持堆高機證照，或 willingness to obtain one within 60 days（願於錄取後 60 天內取得）。" },
       { q: "What are applicants asked to submit?", opts: ["A résumé and cover letter", "Three references", "A portfolio", "A completed test"], ans: 0, exp: "啟事要求透過招募入口提交 résumé and cover letter（履歷與求職信）。" }
     ]
+  },
+  // ---- S1（2026-10-10）：新制題組 8 組（簡訊、線上討論、意圖題、插入句子位置題、5 題多篇題組）----
+  {
+    title: "單篇：簡訊對話（新制・意圖題）",
+    time: 120,
+    src: "S1",
+    passages: [
+      "Karen Liu (9:12 A.M.)\nHi Tom, are you still at the Westfield office? The projector in Conference Room B won't connect to my laptop, and the client arrives at 10.\n\nTom Becker (9:14 A.M.)\nI left about twenty minutes ago. Did you try the adapter in the top drawer of the cabinet?\n\nKaren Liu (9:15 A.M.)\nThat drawer is locked.\n\nTom Becker (9:16 A.M.)\nAh, right. Ask Priya at the front desk. She keeps the spare keys.\n\nKaren Liu (9:17 A.M.)\nWill do. Thanks!"
+    ],
+    qs: [
+      { q: "Why does Ms. Liu contact Mr. Becker?", opts: ["She needs help with some equipment.", "She wants to reschedule a client meeting.", "She is looking for an available conference room.", "She needs directions to the Westfield office."], ans: 0, exp: "Liu 說投影機連不上筆電，客戶十點就到，所以是需要設備方面的協助。她沒有要改會議時間，也沒有在找會議室。" },
+      { q: "At 9:15 A.M., what does Ms. Liu most likely mean when she writes, \"That drawer is locked\"?", opts: ["She cannot get the adapter Mr. Becker mentioned.", "She has already found the adapter.", "She thinks Mr. Becker took the adapter with him.", "She plans to move the meeting to another room."], ans: 0, exp: "意圖題：Becker 建議用抽屜裡的轉接頭，Liu 回答抽屜鎖著，意思是她拿不到那個轉接頭。接著 Becker 才告訴她去找保管備用鑰匙的 Priya。" }
+    ]
+  },
+  {
+    title: "單篇：線上討論（新制・多人聊天）",
+    time: 240,
+    src: "S1",
+    passages: [
+      "Daniel Reyes [2:03 P.M.]\nQuick update on the Lumina launch event. The venue just told me the main hall is double-booked on May 18.\n\nSophie Grant [2:04 P.M.]\nSeriously? We've already printed the invitations.\n\nDaniel Reyes [2:05 P.M.]\nThey've offered us the Garden Pavilion instead, same date, at no extra charge. It holds about 150 people.\n\nMarcus Webb [2:06 P.M.]\nWe have 210 confirmed guests.\n\nDaniel Reyes [2:07 P.M.]\nThat's the problem. The main hall is available on May 25, though.\n\nSophie Grant [2:09 P.M.]\nMoving the date means sending a correction to everyone, but at least the invitations don't list the room.\n\nAiko Tanaka [2:10 P.M.]\nI can handle the correction notices. If we decide by tomorrow, they'll go out on Thursday.\n\nDaniel Reyes [2:11 P.M.]\nLet's go with May 25. I'll confirm with the venue this afternoon."
+    ],
+    qs: [
+      { q: "What problem does Mr. Reyes report?", opts: ["A room has been reserved by two groups for the same day.", "The invitations contain a printing error.", "The venue has raised its rental fee.", "Fewer guests than expected have confirmed."], ans: 0, exp: "double-booked 是同一個場地同一天被重複預訂。場地提供的替代方案還是 no extra charge，所以沒有漲價。" },
+      { q: "At 2:06 P.M., what does Mr. Webb imply when he writes, \"We have 210 confirmed guests\"?", opts: ["The Garden Pavilion is too small for the event.", "More invitations need to be printed.", "The event should still be held on May 18.", "He is pleased with the response to the invitations."], ans: 0, exp: "意圖題：前一則訊息說 Garden Pavilion 只能容納約 150 人，Webb 指出已確認的賓客有 210 人，意思是替代場地太小。Reyes 接著也說 That's the problem。" },
+      { q: "What does Ms. Grant indicate about the invitations?", opts: ["They do not mention the specific room.", "They have not been printed yet.", "They were designed by Ms. Tanaka.", "They were mailed on Thursday."], ans: 0, exp: "Grant 說 at least the invitations don't list the room（至少邀請函上沒寫是哪個廳）。她在 2:04 也說邀請函已經印好了。" },
+      { q: "What will Ms. Tanaka most likely do?", opts: ["Send updated information to the guests", "Confirm the new date with the venue", "Print a new set of invitations", "Look for a larger venue"], ans: 0, exp: "Tanaka 說她來處理更正通知（correction notices），也就是寄出更新後的資訊給賓客。和場地確認是 Reyes 要做的事。" }
+    ]
+  },
+  {
+    title: "單篇：報導（新制・插入句子位置題）",
+    time: 240,
+    src: "S1",
+    passages: [
+      "RIVERTON (June 4) — Halvorsen Industries, a manufacturer of kitchen appliances, will expand its Riverton plant this fall. [1] The $40 million project will add a second assembly line and roughly 180 new jobs.\n\nCompany president Inga Halvorsen said the expansion was driven by strong demand for the company's energy-efficient dishwashers. [2] \"Our current facility has been running at full capacity for over a year,\" she said.\n\nConstruction is scheduled to begin in September and finish the following spring. [3] Hiring for the new positions will start in January, and the company plans to hold a job fair at Riverton Community College. [4]\n\nLocal officials welcomed the news. Mayor Daniel Okoye noted that the plant is already the city's third-largest employer."
+    ],
+    qs: [
+      { q: "What is the article mainly about?", opts: ["The expansion of a manufacturing facility", "The opening of a new college campus", "A change in a company's leadership", "A new line of kitchen appliances"], ans: 0, exp: "整篇報導在說 Halvorsen Industries 擴建 Riverton 工廠：投資金額、原因、時程與招募。" },
+      { q: "Why is Halvorsen Industries expanding?", opts: ["Its products are in high demand.", "It is moving out of its current building.", "It received funding from the city.", "It plans to make a new type of product."], ans: 0, exp: "總裁說擴建的原因是節能洗碗機的需求強勁（strong demand），目前的工廠已滿載運轉一年多。" },
+      { q: "When will the company begin hiring for the new positions?", opts: ["In January", "In June", "In September", "In the spring"], ans: 0, exp: "Hiring for the new positions will start in January。九月是開始施工，春天是完工。" },
+      { q: "In which of the positions marked [1], [2], [3], and [4] does the following sentence best belong? \"Sales of those models rose 35 percent last year alone.\"", opts: ["[2]", "[1]", "[3]", "[4]"], ans: 0, exp: "句中的 those models 要指前面提過的產品。[2] 前一句剛提到節能洗碗機的需求強勁，接著用去年銷售成長 35% 佐證，最連貫。" }
+    ]
+  },
+  {
+    title: "單篇：電子郵件（新制・插入句子位置題）",
+    time: 180,
+    src: "S1",
+    passages: [
+      "To: Rachel Moore <rmoore@brightpath.com>\nFrom: Customer Service <service@deskline.com>\nDate: March 9\nSubject: Order #58213\n\nDear Ms. Moore,\n\nThank you for your recent order of twelve ergonomic office chairs. [1] Unfortunately, the gray fabric you selected is temporarily out of stock, and our supplier does not expect a new shipment until April 2. [2]\n\nIf you would prefer not to wait, we can ship the same chair in charcoal or navy within three business days. [3] Alternatively, you may cancel the order for a full refund.\n\nPlease let us know how you would like to proceed by replying to this e-mail. [4] As an apology for the inconvenience, we have added a 10 percent discount to your order.\n\nSincerely,\nBen Castillo\nDeskline Customer Service"
+    ],
+    qs: [
+      { q: "Why did Mr. Castillo write to Ms. Moore?", opts: ["To explain a delay in filling an order", "To confirm that an order has shipped", "To request payment for an order", "To ask for feedback on a product"], ans: 0, exp: "Castillo 說明她選的灰色布料缺貨，要等到 4 月 2 日才有新貨，也就是訂單會延遲。" },
+      { q: "What is NOT offered to Ms. Moore?", opts: ["Free express shipping", "A different fabric color", "A full refund", "A discount"], ans: 0, exp: "NOT 題：信中提供了換成炭灰或深藍色、取消並全額退款、九折優惠，沒有提到免費快遞。" },
+      { q: "In which of the positions marked [1], [2], [3], and [4] does the following sentence best belong? \"Both colors are made from the same durable material.\"", opts: ["[3]", "[1]", "[2]", "[4]"], ans: 0, exp: "Both colors 要指前面剛提到的兩個顏色。[3] 前一句說可以改出炭灰或深藍色，接著補充兩種顏色材質相同，最合理。" }
+    ]
+  },
+  {
+    title: "雙篇：健身中心公告＋會員來信（新制・5 題）",
+    time: 330,
+    src: "S1",
+    passages: [
+      "PINECREST FITNESS CENTER — Notice to Members\n\nThe indoor pool will be closed from July 8 to July 21 for resurfacing. During this period, members may use the pool at our Eastgate location free of charge by showing their membership card.\n\nAlso beginning July 8, the center will open one hour earlier on weekdays (5:00 A.M.) in response to member requests. Weekend hours will not change.\n\nGroup classes scheduled in the pool area, including Aqua Fit and Swim Basics, will be moved to Eastgate during the closure. Class times remain the same.\n\nQuestions? Contact Member Services at members@pinecrestfit.com.",
+      "To: members@pinecrestfit.com\nFrom: Gloria Nash\nDate: July 2\nSubject: Pool closure\n\nHello,\n\nI take the Swim Basics class every Tuesday and Thursday at 6:30 P.M. I understand the class will meet at Eastgate during the closure, but I don't drive, and Eastgate is not near a bus line. Would it be possible to receive credit for the classes I miss instead?\n\nAlso, I was glad to see the new weekday hours. I've often had to skip my morning workout because the center opened too late for me to exercise before work.\n\nThank you,\nGloria Nash"
+    ],
+    qs: [
+      { q: "What is the main purpose of the notice?", opts: ["To announce temporary changes at a facility", "To introduce a new swimming class", "To advertise a membership discount", "To explain a new fee for members"], ans: 0, exp: "公告說明泳池暫停開放、課程移到另一個據點、平日提早開門，都是設施的變動。" },
+      { q: "According to the notice, what will happen beginning on July 8?", opts: ["The center will open earlier on weekdays.", "The Eastgate location will close.", "Class times will change.", "Members will receive new cards."], ans: 0, exp: "公告說從 7 月 8 日起，平日提早一小時（5:00）開門。課程時間不變（Class times remain the same）。" },
+      { q: "What is suggested about Ms. Nash?", opts: ["She will have difficulty attending her class during the closure.", "She works at the Eastgate location.", "She usually exercises on weekends.", "She plans to cancel her membership."], ans: 0, exp: "Nash 說她不開車，Eastgate 又不在公車路線上，所以泳池關閉期間很難去上課。" },
+      { q: "What time will Ms. Nash's class meet at Eastgate during the closure?", opts: ["6:30 P.M.", "5:00 A.M.", "6:00 A.M.", "7:30 P.M."], ans: 0, exp: "跨篇題：她的 Swim Basics 是 6:30 P.M.（第二篇），公告說課程移到 Eastgate 但時間不變（第一篇），所以仍是 6:30 P.M.。" },
+      { q: "What does Ms. Nash request?", opts: ["Credit for the classes she will miss", "A ride to the Eastgate location", "A copy of the bus schedule", "A refund of her membership fee"], ans: 0, exp: "她問 Would it be possible to receive credit for the classes I miss instead?，要求補償缺席的課程。" }
+    ]
+  },
+  {
+    title: "雙篇：產品網頁＋顧客評論（新制・5 題）",
+    time: 330,
+    src: "S1",
+    passages: [
+      "Brightline Pro Label Printer — $129\n\n• Prints up to 60 labels per minute\n• Connects by USB or Bluetooth\n• Compatible with label rolls from 12 mm to 62 mm wide\n• Two-year warranty; extended three-year warranty available for $25\n\nOrder by 2:00 P.M. for same-day shipping. Free shipping on orders over $150.",
+      "★★★★☆ Reviewed by Owen Clarke, May 14\n\nI bought the Brightline Pro for our small shipping business, along with a pack of 62 mm label rolls, which brought my total over the free shipping minimum. Setup took about ten minutes, and the Bluetooth connection has been reliable. The printer easily keeps up with our daily volume of about 300 packages.\n\nMy only complaint is that the instructions were hard to follow. I had to watch a video online to figure out how to load the rolls correctly. Still, I would recommend this printer to other small businesses."
+    ],
+    qs: [
+      { q: "What is indicated about the label printer?", opts: ["It can be connected without a cable.", "It comes with a three-year warranty.", "It can print labels of any width.", "It ships free with every order."], ans: 0, exp: "網頁寫可以用藍牙連線（Bluetooth），所以不用接線。保固是兩年，三年要另外付 $25；標籤寬度限 12–62 mm；滿 $150 才免運。" },
+      { q: "What is suggested about Mr. Clarke's order?", opts: ["He did not pay for shipping.", "It arrived on the day it was ordered.", "It included an extended warranty.", "It cost exactly $129."], ans: 0, exp: "跨篇題：Clarke 說加買標籤後總額超過免運門檻（第二篇），網頁說滿 $150 免運（第一篇），所以他不用付運費。" },
+      { q: "In the review, the phrase \"keeps up with\" in paragraph 1 is closest in meaning to", opts: ["handles", "follows behind", "stays informed about", "repairs"], ans: 0, exp: "同義字題：The printer easily keeps up with our daily volume 是「應付得了每天約 300 件的量」，最接近 handles。" },
+      { q: "What problem did Mr. Clarke have?", opts: ["He found the instructions unclear.", "The Bluetooth connection was unreliable.", "The labels were the wrong size.", "Setup took longer than expected."], ans: 0, exp: "他唯一的抱怨是說明書很難懂，還得上網看影片才學會裝標籤紙。藍牙連線很穩定，安裝只花十分鐘。" },
+      { q: "What most likely is Mr. Clarke's job?", opts: ["He runs a business that sends packages.", "He repairs office equipment.", "He makes instructional videos.", "He designs product labels."], ans: 0, exp: "他說是為了自己的小型出貨事業（small shipping business）買的，每天要寄約 300 件包裹。" }
+    ]
+  },
+  {
+    title: "三篇：徵才廣告＋求職信＋面試時間表（新制・5 題）",
+    time: 360,
+    src: "S1",
+    passages: [
+      "Corwin Logistics is hiring a Warehouse Operations Supervisor for its Dayton distribution center.\n\nRequirements:\n• At least three years of supervisory experience in a warehouse setting\n• Forklift certification\n• Ability to work rotating weekend shifts\n\nPreferred: experience with inventory management software\n\nApply by October 15 at corwinlogistics.com/careers. Interviews will be held the week of October 20.",
+      "To: Hiring Team <careers@corwinlogistics.com>\nFrom: Malik Hassan\nDate: October 12\nSubject: Application — Warehouse Operations Supervisor\n\nDear Hiring Team,\n\nI have submitted my application for the supervisor position in Dayton. I have managed a team of twelve at Fairmont Supply's warehouse for the past four years, and I have used StockTrack inventory software daily during that time.\n\nI should mention that my forklift certification expired in August. I have registered for a renewal course that ends on October 28 and would be happy to provide the new certificate then.\n\nI am available for an interview any day except October 22, when I will be attending a training session.\n\nSincerely,\nMalik Hassan",
+      "Corwin Logistics — Interview Schedule, Week of October 20 (Dayton)\n\nMonday, Oct. 20 | 10:00 A.M. | Teresa Moy\nTuesday, Oct. 21 | 2:00 P.M. | Malik Hassan\nWednesday, Oct. 22 | 9:30 A.M. | Kevin Park\nThursday, Oct. 23 | 1:00 P.M. | Linda Ferreira\n\nAll interviews are conducted by Operations Manager Julia Brandt."
+    ],
+    qs: [
+      { q: "What is NOT listed as a requirement for the position?", opts: ["Experience with inventory software", "Forklift certification", "Supervisory experience", "Willingness to work some weekends"], ans: 0, exp: "NOT 題：庫存軟體經驗列在 Preferred（加分條件），不是 Requirements。其他三項都是必要條件。" },
+      { q: "What does Mr. Hassan indicate about himself?", opts: ["He does not currently meet one of the requirements.", "He has never used inventory software.", "He supervises more than twenty workers.", "He has worked at Corwin Logistics before."], ans: 0, exp: "跨篇題：廣告要求堆高機證照（第一篇），Hassan 說他的證照八月已過期（第二篇），所以目前不符合其中一項必要條件。他每天使用庫存軟體，管理 12 人。" },
+      { q: "When will Mr. Hassan finish his renewal course?", opts: ["On October 28", "In August", "On October 15", "On October 22"], ans: 0, exp: "信中說 a renewal course that ends on October 28。八月是證照過期的時間；10 月 22 日是他要參加訓練、無法面試的日子。" },
+      { q: "When will Mr. Hassan be interviewed?", opts: ["On Tuesday afternoon", "On Monday morning", "On Wednesday morning", "On Thursday afternoon"], ans: 0, exp: "面試時間表上 Malik Hassan 是 Tuesday, Oct. 21, 2:00 P.M.，也就是週二下午（避開了他無法出席的 10 月 22 日）。" },
+      { q: "Who will most likely interview Mr. Hassan?", opts: ["Julia Brandt", "Teresa Moy", "Kevin Park", "Linda Ferreira"], ans: 0, exp: "時間表最後寫 All interviews are conducted by Operations Manager Julia Brandt。其他三位是應徵者。" }
+    ]
+  },
+  {
+    title: "三篇：內部備忘錄＋報名表＋電子郵件（新制・5 題）",
+    time: 360,
+    src: "S1",
+    passages: [
+      "MEMO\nTo: All staff\nFrom: Human Resources\nDate: September 3\nRe: Professional development workshops\n\nThis fall, Arden Financial will offer three workshops at our headquarters. Employees may attend up to two workshops during work hours; managers must approve all registrations.\n\n• Business Writing — September 24, 9:00 A.M.–12:00 P.M.\n• Data Visualization — October 8, 1:00–4:00 P.M.\n• Negotiation Skills — October 22, 9:00 A.M.–12:00 P.M.\n\nEach workshop is limited to 20 participants. Registration closes one week before each workshop date.",
+      "WORKSHOP REGISTRATION FORM\n\nName: Helen Brooks\nDepartment: Client Accounts\nWorkshop(s): Data Visualization; Negotiation Skills\nManager approval: Samuel Ortega (signed September 12)\nDate submitted: September 12",
+      "To: Helen Brooks\nFrom: Human Resources\nDate: October 2\nSubject: Workshop update\n\nDear Ms. Brooks,\n\nThank you for registering. Unfortunately, the instructor for the Negotiation Skills workshop is no longer available on October 22, so the workshop has been moved to November 5 at the same time. If this date does not work for you, you may switch to Business Writing, which we are offering again on November 12, or withdraw your registration.\n\nYour registration for the other workshop is unchanged.\n\nHuman Resources"
+    ],
+    qs: [
+      { q: "According to the memo, what is required for employees to attend a workshop?", opts: ["Approval from a manager", "Payment of a registration fee", "Completion of an earlier workshop", "A recommendation from a coworker"], ans: 0, exp: "備忘錄說 managers must approve all registrations（所有報名都要主管核准）。" },
+      { q: "What was the last day Ms. Brooks could have registered for the Data Visualization workshop?", opts: ["October 1", "September 24", "October 8", "September 12"], ans: 0, exp: "跨段推算：Data Visualization 是 10 月 8 日，報名在工作坊前一週截止，所以最晚是 10 月 1 日。9 月 12 日是她實際送出報名的日期。" },
+      { q: "Why was the e-mail sent to Ms. Brooks?", opts: ["To inform her of a schedule change", "To confirm her manager's approval", "To tell her that a workshop is full", "To request payment for a workshop"], ans: 0, exp: "信中通知談判技巧工作坊因講師無法出席，從 10 月 22 日改到 11 月 5 日。" },
+      { q: "What time will the Negotiation Skills workshop begin on November 5?", opts: ["9:00 A.M.", "1:00 P.M.", "12:00 P.M.", "4:00 P.M."], ans: 0, exp: "跨篇題：郵件說改到 11 月 5 日、時間不變（at the same time），備忘錄上原本是 9:00 A.M.–12:00 P.M.，所以 9:00 開始。" },
+      { q: "What is indicated about the Data Visualization workshop?", opts: ["Ms. Brooks is still registered for it.", "It has been moved to November.", "It will be taught by a new instructor.", "It is no longer being offered."], ans: 0, exp: "她報名了兩個工作坊（第二篇），郵件說 Your registration for the other workshop is unchanged（第三篇），另一個就是 Data Visualization，所以她仍然是報名狀態。" }
+    ]
   }
 ];

@@ -61,7 +61,8 @@ const Sync = {
       const remoteTime = remote.updatedAt || 0;
       const localNow = S.updatedAt || 0;
       if (remoteTime > base && localNow === base) {
-        S = Object.assign(defaultState(), remote.records);
+        // 舊版裝置推上來的紀錄沒有 baseN：設成 null，讓 sanitizeState 當作 v1.3.x 的內建題數處理
+        S = Object.assign(defaultState(), { baseN: null }, remote.records);
         // 這條路徑不經過 load()，所以要自己做一次型別檢查（含錯題本格式遷移）：
         // 雲端資料任何知道同步代碼的人都能寫入，不檢查就可能把腳本帶進畫面（2026-10-07 資安審查 H1）。
         sanitizeState(S);

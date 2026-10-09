@@ -495,3 +495,7 @@ main { max-width: 860px; margin: 0 auto; padding: 24px 16px 80px; }
 .ai-notes li { margin: 4px 0; }
 .ai-remember { display: flex; gap: 8px; align-items: flex-start; font-size: 0.88rem; margin: 2px 0 8px; cursor: pointer; }
 .ai-remember input { margin-top: 3px; }
+
+/* 題目回報（S1） */
+.report-row { text-align: right; margin: -4px 0 8px; }
+.report-btn { font-size: 0.8rem; opacity: 0.85; }

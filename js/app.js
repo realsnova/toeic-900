@@ -4,6 +4,11 @@ const STORE_KEY = "toeic900";
 // const 在初始化前存取會踩到暫時性死區（TDZ）而整個 App 白屏。
 const WB_TYPES = ["p5", "p6", "p7", "l2", "l34"];
 const WB_MASTER_N = 2; // 錯題要連續答對幾次（且跨天）才算掌握、移出錯題本
+// 內建題數（在 mergeBank() 併入自訂題之前取得）。自訂題接在內建題後面，以索引為鍵；
+// 新版本增加內建題時，自訂題的索引會往後移，錯題本等紀錄要跟著搬（shiftForBuiltinGrowth）。
+// 同樣必須宣告在 `let S = load()` 之前。
+const BASE_N = { p5: PART5.length, p6: PART6.length, p7: PART7.length, l2: PART2.length, l34: PART34.length };
+const LEGACY_BASE_N = { p5: 200, p6: 10, p7: 12, l2: 60, l34: 13 }; // v1.3.x 以前（紀錄裡沒有 baseN）的內建題數
 
 function defaultState() {
   return {
@@ -23,12 +28,13 @@ function defaultState() {
     mocks: [],                // 模擬考歷史 [{date, mode, lR, lT, rR, rT, parts, secs}]（v1.1 以前另有換算分數 L/R，保留不用）
     mockSeen: {},             // 模考出過的題（各類別索引），支撐不重複組卷
     targetScore: null,        // 新手引導設定的目標分數
-    onboarded: false          // 是否已完成（或略過）新手引導
+    onboarded: false,         // 是否已完成（或略過）新手引導
+    baseN: { ...BASE_N }      // 這份紀錄建立或最後遷移時的內建題數（見 shiftForBuiltinGrowth）
   };
 }
-const APP_VERSION = "1.3.1";
+const APP_VERSION = "1.4.0";
 const CHANGELOG = [
-  { v: "1.3.1", d: "2026-10-07", notes: "AI 錯題解析（試用）：在設定頁貼上自己的 Anthropic API 金鑰後，答錯時可以請 AI 說明「我選的為什麼不對」；AI 認為題目可能有兩個正解或答案標錯時會記錄下來，可匯出給人工確認。金鑰預設關掉 App 就清除，不會同步或備份。資安強化：檢查同步與備份資料的格式，修正可能被注入腳本的問題；加入內容安全政策與第三方腳本完整性檢查；自訂同步代碼太短時提醒" },
+  { v: "1.4.0", d: "2026-10-10", notes: "考前衝刺版：新增 Part 5 高難度題 100 題、Part 7 新制題組 8 組（簡訊與線上討論的意圖題、插入句子位置題、5 題的多篇題組）；Part 2 全部重寫干擾選項，不再能靠「選最長的」猜對；修正題庫審查找到的錯題與兩可題；衝刺期每日菜單加入定期模考，考前三天自動減量；練習中可以按「這題有問題」回報。AI 錯題解析（試用）：在設定頁貼上自己的 Anthropic API 金鑰後，答錯時可以請 AI 說明為什麼錯，金鑰預設關掉 App 就清除、不會同步或備份。資安強化：檢查同步與備份資料的格式、加入內容安全政策與第三方腳本完整性檢查、自訂同步代碼太短時提醒" },
   { v: "1.3.0", d: "2026-10-06", notes: "改顯示練習答對率（不再換算未校準的 TOEIC 分數，錯題本重考不計入）；只做錯題本或模考的日子也算連續學習；模考報告分開顯示聽力與閱讀、趨勢圖固定 0–100%；裝置沒有英文語音時先說明、語音沒播放時提示且模考不會卡住；同步代碼改用安全亂數並檢查格式；修正 Part 7 做完最後一題會跳出錯誤提示" },
   { v: "1.1.0", d: "2026-08-09", notes: "學習演算法強化：錯題要連續答對 2 次（跨天）才移除、Part 5 依弱項類別加權出題、Part 5／聽力 Part 2 不重複輪替出題、單字每日複習量上限" },
   { v: "1.0.3", d: "2026-07-12", notes: "驗收稽核：修復考試日期／同步代碼欄位的 XSS 漏洞、深色主題按鈕文字對比度不足、補上頁面 H1 標題" },
@@ -49,6 +55,7 @@ function load() {
     if (raw) {
       const parsed = JSON.parse(raw);
       Object.assign(d, parsed);
+      if (parsed.baseN === undefined) d.baseN = null; // 舊版紀錄：當作 v1.3.x 的內建題數
       // 舊版資料補齊新欄位
       d.wb = Object.assign({ p5: {}, p6: {}, p7: {}, l2: {}, l34: {} }, parsed.wb || {});
       // 錯題本的格式遷移（migrateWb）在下方 sanitizeState() 裡做，要先去掉 Firebase 陣列的空位才遷移
@@ -133,7 +140,27 @@ function sanitizeState(d) {
     }
     return out;
   });
+  shiftForBuiltinGrowth(d);
   return d;
+}
+// 內建題增加時，把自訂題（索引 >= 舊內建題數）的紀錄往後搬，讓錯題本、輪替、最佳成績仍對到同一題。
+// 只處理增加；搬完把 baseN 更新成目前的內建題數，所以重複呼叫不會重複搬。
+function shiftForBuiltinGrowth(d) {
+  const valid = o => o && typeof o === "object" && WB_TYPES.every(t => Number.isInteger(o[t]) && o[t] >= 0);
+  const prev = valid(d.baseN) ? d.baseN : LEGACY_BASE_N;
+  const remap = (obj, f) => { const out = {}; Object.keys(obj || {}).forEach(k => { out[f(k)] = obj[k]; }); return out; };
+  WB_TYPES.forEach(t => {
+    const old = prev[t], delta = BASE_N[t] - old;
+    if (delta <= 0) return;
+    const sh = i => (i >= old ? i + delta : i);
+    const idx = k => (/^\d+$/.test(k) ? String(sh(Number(k))) : k);
+    const pair = k => { const m = /^(\d+)-(\d+)$/.exec(k); return m ? `${sh(Number(m[1]))}-${m[2]}` : k; };
+    d.wb[t] = remap(d.wb[t], t === "p5" || t === "l2" ? idx : pair);
+    const done = { p5: "p5seen", l2: "l2seen", p6: "p6done", p7: "p7done", l34: "l34done" }[t];
+    d[done] = remap(d[done], idx);
+    if (d.mockSeen && d.mockSeen[t]) d.mockSeen[t] = remap(d.mockSeen[t], idx);
+  });
+  d.baseN = { ...BASE_N };
 }
 function save() {
   S.updatedAt = Date.now();
@@ -243,7 +270,7 @@ function importBank(type, text) {
 function aiPrompt(type, n) {
   const schemas = {
     vocab: `[{"w":"單字","pos":"詞性（如 v. / n. / adj.）","zh":"繁體中文意思","ex":"英文例句（商業情境）","exZh":"例句的繁體中文翻譯"}]`,
-    p5: `[{"q":"含 ______ 空格的單句","opts":["正解","誘答1","誘答2","誘答3"],"ans":0,"cat":"從這些類別擇一：詞性、動詞時態、介係詞、連接詞、代名詞、詞彙、比較級、關係詞、分詞、不定詞","exp":"繁體中文詳解"}]`,
+    p5: `[{"q":"含 ______ 空格的單句","opts":["正解","誘答1","誘答2","誘答3"],"ans":0,"cat":"從這些類別擇一：詞性、動詞時態、介係詞、連接詞、代名詞、詞彙、比較級、關係詞、分詞、不定詞與動名詞","exp":"繁體中文詳解"}]`,
     p6: `[{"title":"標題（如 電子郵件：xxx）","text":"含 ___[1]___ 至 ___[4]___ 四個空格的商用文章（email、公告、報導等，用 \\n 換行）","blanks":[{"opts":["正解","誘答1","誘答2","誘答3"],"ans":0,"exp":"繁體中文詳解"}]}]（blanks 恰好 4 個，其中 1 格為句子插入題）`,
     p7: `[{"title":"單篇：xxx 或 雙篇：xxx（標題1＋標題2）","time":建議秒數（單篇180、雙篇240、三篇300）,"passages":["文章1","文章2（雙篇以上才有）"],"qs":[{"q":"問題","opts":["正解","誘答1","誘答2","誘答3"],"ans":0,"exp":"繁體中文詳解"}]}]（每組 3–4 題，多篇題組須含至少 1 題跨篇整合題）`,
     l2: `[{"q":"口說問句或陳述句","opts":["最合適的回應（正解）","誘答1","誘答2"],"ans":0,"exp":"繁體中文詳解，說明陷阱類型（同字陷阱、Yes/No 陷阱、間接回應等）"}]`,
@@ -314,13 +341,17 @@ function daysLeft() {
 }
 function phase() {
   const d = daysLeft();
+  if (d < 0) return { name: "考試已過", icon: "📅", desc: "請在下方更新下一次的考試日期" };
+  if (d <= 3) return { name: "考前調整", icon: "🧘", desc: "減量複習、維持手感、睡飽" };
   if (d > 35) return { name: "基礎期", icon: "🧱", desc: "補齊文法漏洞、建立聽力反應" };
   if (d > 14) return { name: "強化期", icon: "⚙️", desc: "攻克長對話與多篇閱讀" };
   return { name: "衝刺期", icon: "🚀", desc: "限時訓練、錯題清零、穩定節奏" };
 }
 function newPerDay() {
   const base = (typeof Settings !== "undefined" ? Settings.get("newPerDay") : 10) || 10;
-  return phase().name === "衝刺期" ? Math.max(1, Math.round(base / 2)) : base;
+  const ph = phase().name;
+  if (ph === "考前調整") return 0; // 考前三天不學新字，只複習
+  return ph === "衝刺期" ? Math.max(1, Math.round(base / 2)) : base;
 }
 // 到期複習卡的每日上限。請假幾天回來會累積上百張到期卡，一次全端出來只會讓人直接放棄；
 // 截掉的部分因為 due 日期已過，明天本來就會再出現，不需要另外記錄。
@@ -345,11 +376,27 @@ function todayPlan() {
     { label: "Part 7 閱讀 2 篇（多篇優先）", detail: `已完成 ${d.p7} 篇`, done: d.p7 >= 2, tab: "p7", est: "18 分" },
     { label: "錯題本重考 5 題", detail: wrongs ? `錯題本還有 ${wrongs} 題` : "錯題本已清空！", done: wrongs === 0 || (d.wr || 0) >= 5, tab: "wrong", est: "6 分" }
   ]);
-  return base.concat([ // 衝刺期
+  if (ph === "考前調整" || ph === "考試已過") return [
+    { label: "單字複習（不學新字）", detail: due ? `還有 ${due} 張卡片` : "今日完成！", done: due === 0, tab: "vocab", est: "10 分" },
+    { label: "錯題本重考 5 題", detail: wrongs ? `錯題本還有 ${wrongs} 題` : "錯題本已清空！", done: wrongs === 0 || (d.wr || 0) >= 5, tab: "wrong", est: "8 分" },
+    { label: "聽力 Part 3/4 一組（保持耳朵手感）", detail: `已完成 ${d.l34} 組`, done: d.l34 >= 1, tab: "listen", est: "6 分" },
+    { label: "Part 7 限時 1 篇", detail: `已完成 ${d.p7} 篇`, done: d.p7 >= 1, tab: "p7", est: "10 分" }
+  ];
+  // 衝刺期：距離上次模考滿 3 天就排一次閱讀節模考（練時間分配與耐力），其他天練限時題
+  const mockDue = daysSinceMock() >= 3;
+  return base.concat([
+    mockDue
+      ? { label: "模擬考：閱讀節（限時 22 分鐘）", detail: (d.mockDone || 0) ? "今天已完成" : "每 3 天一次，練時間分配", done: (d.mockDone || 0) >= 1, tab: "mock", est: "25 分" }
+      : { label: "Part 7 限時 2 篇（新制題組優先）", detail: `已完成 ${d.p7} 篇`, done: d.p7 >= 2, tab: "p7", est: "18 分" },
     { label: "聽力 Part 2 五題 + Part 3/4 一組", detail: `P2 ${d.l2} 題 · P3/4 ${d.l34} 組`, done: d.l2 >= 5 && d.l34 >= 1, tab: "listen", est: "12 分" },
-    { label: "Part 7 限時 1 篇（多篇）", detail: `已完成 ${d.p7} 篇`, done: d.p7 >= 1, tab: "p7", est: "10 分" },
     { label: "錯題本全部清零", detail: wrongs ? `還剩 ${wrongs} 題` : "已清空！", done: wrongs === 0, tab: "wrong", est: "10 分" }
   ]);
+}
+// 距離最近一次模擬考的天數（沒考過回傳很大的數字）
+function daysSinceMock() {
+  const dates = (S.mocks || []).map(m => m.date).filter(Boolean).sort();
+  if (!dates.length) return 999;
+  return Math.round((new Date(todayStr()) - new Date(dates[dates.length - 1])) / 86400000);
 }
 
 /* ============ 語音合成（聽力播放）============ */
@@ -716,7 +763,9 @@ renderers.home = function () {
 function phaseTips() {
   const p = phase().name;
   if (p === "基礎期") return "700 → 900 的第一步是把 Part 5 各文法類別正確率都拉到 85% 以上（看統計頁找弱項）。聽力 Part 2 專注辨認「間接回應」與同字陷阱——這是中級與高分的分水嶺。單字每天 10 個新字持續累積。";
-  if (p === "強化期") return "把重心移到 Part 3/4（聽力配分最重）與 Part 7 多篇整合題。聽力先看題目再聽音檔、邊聽邊作答；閱讀練習「題目定位法」。錯題本每天清 5 題，別讓它累積。";
+  if (p === "強化期") return "把重心移到 Part 3/4（聽力配分最重）與 Part 7 多篇整合題。聽力先看題目再聽音檔、邊聽邊作答；閱讀練習「題目定位法」。新制題型（簡訊與線上討論的意圖題、插入句子位置題、5 題的多篇題組）要先熟悉，考場上才不會卡住。錯題本每天清 5 題，別讓它累積。";
+  if (p === "考前調整") return "最後三天不學新東西：只複習錯題本和到期單字，每天做一點聽力與閱讀保持手感。確認准考證、身分證件、考場位置與交通時間，前一晚早點睡。考試時閱讀部分 Part 5 約 10 分鐘、Part 6 約 8 分鐘，留 55 分鐘以上給 Part 7；不會的題目先猜一個答案再往下，不要留白。";
+  if (p === "考試已過") return "考試日期已經過了。請在上方的「考試日期」設定下一次的考試，菜單會依剩下的天數重新規劃。";
   return "考前兩週：不再學新內容，專注限時訓練與錯題清零。Part 5/6 全部 20 秒內作答，Part 7 每篇控制在建議時間內。考前一天只複習錯題本與單字，保持狀態。";
 }
 // 累計練習答對率。刻意不換算成 TOEIC 分數：本工具的題目沒有經過等化／校準，
@@ -942,12 +991,51 @@ function renderMCQ(container, item, meta, onDone) {
         <div class="explain">
           ${meta.cat ? `<span class="tag">${esc(meta.cat)}</span><br>` : ""}
           <b>${correct ? "✅ 答對了！" : "❌ 答錯了"}</b> 正解：${esc(item.opts[item.ans])}<br>${esc(item.exp)}
-        </div>${meta.ai ? aiOffer(correct) : ""}`;
+        </div>${meta.ai ? aiOffer(correct) + reportBtnHTML() : ""}`;
       // meta.ai：{type, key, context}，答錯時提供 AI 解析（v1.3.1，只在按下按鈕才呼叫）
-      if (meta.ai && !correct) wireAIBox(container, { ...meta.ai, q: item.q, opts: item.opts, ans: item.ans, exp: item.exp, chosen });
+      const qctx = meta.ai ? { ...meta.ai, q: item.q, opts: item.opts, ans: item.ans, exp: item.exp, chosen } : null;
+      if (qctx && !correct) wireAIBox(container, qctx);
+      if (qctx) wireReport(container, qctx);
       onDone(correct);
     });
   });
+}
+/* ============ 題目回報（spec CNT-07，S1）============
+   練習中覺得題目有問題（兩個答案都對、答案錯、解析看不懂）可以記下來，存在本機、可匯出，
+   下一次發布時人工確認後修正。不進 S，不同步。 */
+const REPORT_KEY = "toeic900_reports";
+const REPORT_MAX = 200;
+function loadReports() {
+  try { const r = JSON.parse(localStorage.getItem(REPORT_KEY) || "[]"); return Array.isArray(r) ? r : []; } catch (e) { return []; }
+}
+function addReport(ctx, note) {
+  const list = loadReports().filter(r => !(r.type === ctx.type && r.key === String(ctx.key)));
+  list.push({ type: ctx.type, key: String(ctx.key), q: ctx.q, opts: ctx.opts, ans: ctx.ans, chosen: ctx.chosen,
+    note: String(note || "").slice(0, 500), at: new Date().toISOString(), v: APP_VERSION });
+  try { localStorage.setItem(REPORT_KEY, JSON.stringify(list.slice(-REPORT_MAX))); return true; } catch (e) { return false; }
+}
+function reportBtnHTML() {
+  return `<div class="report-row"><button class="btn ghost small report-btn" type="button">🚩 這題有問題</button></div>`;
+}
+function wireReport(root, ctx) {
+  const btn = root.querySelector(".report-btn");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    const note = prompt("這題哪裡有問題？（例如：兩個答案都對、答案錯了、解析看不懂）", "");
+    if (note === null) return; // 按取消
+    btn.disabled = true;
+    btn.textContent = addReport(ctx, note) ? "🚩 已記錄，謝謝" : "🚩 無法儲存（儲存空間已滿）";
+  });
+}
+function exportReports() {
+  const data = { app: "toeic900", kind: "question-reports", exported: new Date().toISOString(), version: APP_VERSION,
+    reports: loadReports(), aiFlags: typeof AI !== "undefined" ? AI.flags() : [] };
+  const blob = new Blob([JSON.stringify(data, null, 1)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `toeic-題目回報-${todayStr()}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 // 只有裝置上偵測到 2 種以上腔調時才顯示標籤，避免對只有預設腔調的裝置造成無意義的雜訊
 function accentTag() {
@@ -1081,8 +1169,10 @@ function l2Next() {
           <b>${correct ? "✅ 答對了！" : "❌ 答錯了"}</b> 正解：(${"ABC"[ansPos]})<br>
           <b>Q:</b> ${esc(item.q)}<br>
           ${order.map((oi, p) => `<b>(${"ABC"[p]})</b> ${esc(item.opts[oi])}`).join("<br>")}<br><br>${esc(item.exp)}
-        </div>${aiOffer(correct)}`;
-      if (!correct) wireAIBox(box, { type: "l2", key: id, q: item.q, opts: item.opts, ans: item.ans, exp: item.exp, chosen: order[pos] });
+        </div>${aiOffer(correct)}${reportBtnHTML()}`;
+      const l2ctx = { type: "l2", key: id, q: item.q, opts: item.opts, ans: item.ans, exp: item.exp, chosen: order[pos] };
+      if (!correct) wireAIBox(box, l2ctx);
+      wireReport(box, l2ctx);
       trackListening("Part 2", correct);
       wbMark("l2", id, correct);
       daily().l2++;
@@ -1515,8 +1605,10 @@ function retryWrong(entry) {
         });
         inner.querySelector(".feedback").innerHTML = `<div class="explain">
           <b>${correct ? "✅ 答對了！" : "❌ 答錯了"}</b> 正解：(${"ABC"[ansPos]})<br>
-          <b>Q:</b> ${esc(item.q)}<br>${order.map((oi, p) => `<b>(${"ABC"[p]})</b> ${esc(item.opts[oi])}`).join("<br>")}<br><br>${esc(item.exp)}</div>${aiOffer(correct)}`;
-        if (!correct) wireAIBox(inner, { type: "l2", key: entry.key, q: item.q, opts: item.opts, ans: item.ans, exp: item.exp, chosen: order[pos] });
+          <b>Q:</b> ${esc(item.q)}<br>${order.map((oi, p) => `<b>(${"ABC"[p]})</b> ${esc(item.opts[oi])}`).join("<br>")}<br><br>${esc(item.exp)}</div>${aiOffer(correct)}${reportBtnHTML()}`;
+        const wctx = { type: "l2", key: entry.key, q: item.q, opts: item.opts, ans: item.ans, exp: item.exp, chosen: order[pos] };
+        if (!correct) wireAIBox(inner, wctx);
+        wireReport(inner, wctx);
         // 錯題本重考不呼叫 trackListening：重考的是做過的題，計入會墊高答對率（閱讀也不計，口徑一致）
         finish(correct);
       });
