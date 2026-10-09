@@ -130,3 +130,65 @@ test("S1-baseN 新使用者的紀錄帶有目前的內建題數；舊版裝置�
   await app2.run("Sync.pullOnStartup(0)");
   assert.deepEqual(Object.keys(plain(app2.run("S.wb.p5"))), ["300"]);
 });
+
+/* ---------- 獨立審查（review-s1）後補的案例 ---------- */
+test("review-s1 P1 今天考完模考後，菜單仍保留模考項目並顯示已完成", () => {
+  const app = loadApp();
+  app.run(`S.exam = todayStr(10); S.mocks = [{ date: todayStr(), mode: "read", lR: 0, lT: 0, rR: 20, rT: 27 }]; daily().mockDone = 1;`);
+  const item = plain(app.run("todayPlan()")).find(p => p.tab === "mock");
+  assert.ok(item, "模考項目不可消失");
+  assert.equal(item.done, true);
+  assert.equal(item.detail, "今天已完成");
+});
+
+test("review-s1 P3 日期格式錯誤、未來日期、只考聽力節的模考，不影響閱讀模考的排程", () => {
+  const app = loadApp();
+  app.run(`S.exam = todayStr(10); S.mocks = [{ date: "2026-13-45", mode: "read" }, { date: todayStr(5), mode: "read" }, { date: todayStr(-1), mode: "listen" }];`);
+  assert.equal(app.run("daysSinceMock()"), 999);
+  assert.ok(plain(app.run("todayPlan()")).some(p => p.tab === "mock"));
+});
+
+test("review-s1 P2-1 baseN 缺某一類或值壞掉時，那一類不搬（避免重複搬移）；完全沒有 baseN 才當作舊版", () => {
+  const partial = { baseN: { p5: 300, p6: 10, p7: "bad", l2: 60 }, wb: { p5: { 300: { n: 0, last: null } }, p7: { "20-0": { n: 0, last: null } } } };
+  const app = loadApp({ storage: { toeic900: JSON.stringify(partial) } });
+  assert.deepEqual(Object.keys(plain(app.run("S.wb.p5"))), ["300"]);
+  assert.deepEqual(Object.keys(plain(app.run("S.wb.p7"))), ["20-0"]);
+  const nul = loadApp({ storage: { toeic900: JSON.stringify({ baseN: null, wb: { p5: { 200: { n: 0, last: null } } } }) } });
+  assert.deepEqual(Object.keys(plain(nul.run("S.wb.p5"))), ["300"], "baseN 為 null 視為舊版紀錄");
+});
+
+test("review-s1 P2-2 雲端資料格式錯誤時不套用、本機紀錄不變；wb 不是物件時也不會讓載入失敗", async () => {
+  const app = loadApp();
+  app.run(`S.updatedAt = 0; S.wb.p5 = { 5: { n: 1, last: "2026-10-01" } }; Sync.ref = () => ({ get: async () => ({ val: () => ({ records: { wb: "x", mocks: "y" }, updatedAt: 5 }) }) });`);
+  await app.run("Sync.pullOnStartup(0)");
+  const S = plain(app.run("S"));
+  assert.equal(typeof S.wb, "object");
+  assert.notEqual(S.baseN, null, "不可留下 baseN: null");
+  assert.ok(Array.isArray(S.mocks));
+  const bad = loadApp({ storage: { toeic900: JSON.stringify({ exam: "2026-10-31", wb: "x" }) } });
+  assert.equal(bad.run("S.exam"), "2026-10-31", "wb 壞掉不可讓整份紀錄被清空");
+  assert.deepEqual(plain(bad.run("S.wb.p5")), {});
+});
+
+test("review-s1 P2-3 舊類別名「不定詞」的統計合併到「不定詞與動名詞」", () => {
+  const app = loadApp({ storage: { toeic900: JSON.stringify({ cat: { "不定詞": { r: 3, w: 2 }, "不定詞與動名詞": { r: 1, w: 1 } } }) } });
+  assert.deepEqual(plain(app.run("S.cat")), { "不定詞與動名詞": { r: 4, w: 3 } });
+});
+
+test("review-s1 phase 邊界：剩 3 天與 0 天是考前調整，剩 4 天是衝刺期；考後不學新字", () => {
+  const app = loadApp();
+  for (const [d, name] of [[3, "考前調整"], [0, "考前調整"], [4, "衝刺期"], [14, "衝刺期"], [15, "強化期"], [-1, "考試已過"]]) {
+    app.run(`S.exam = todayStr(${d})`);
+    assert.equal(app.run("phase().name"), name, `剩 ${d} 天`);
+  }
+  assert.equal(app.run("newPerDay()"), 0);
+});
+
+test("review-s1 P3 回報清單有壞資料時不拋錯；回報會記下是不是自訂題", () => {
+  const app = loadApp({ storage: { toeic900_reports: JSON.stringify([null, 5, { type: "p5", key: "1" }]) } });
+  assert.equal(app.run(`addReport({ type: "p5", key: 305, q: "q", opts: [], ans: 0, chosen: 0 }, "x")`), true);
+  const r = plain(app.run("loadReports()")).find(x => x.key === "305");
+  assert.equal(r.custom, true);
+  app.run(`addReport({ type: "p5", key: 3, q: "q", opts: [], ans: 0, chosen: 0 }, "y")`);
+  assert.equal(plain(app.run("loadReports()")).find(x => x.key === "3").custom, false);
+});

@@ -101,6 +101,12 @@ function sanitizeState(d) {
   d.onboarded = d.onboarded === true;
   d.racc = rw(d.racc);
   ["cat", "lcat"].forEach(k => { const out = {}; entries(d[k]).forEach(([c, v]) => { out[c] = rw(v); }); d[k] = out; });
+  // 開發期間曾用「不定詞」當類別名，後來改成「不定詞與動名詞」：合併統計，弱項加權才對得到題目
+  if (d.cat["不定詞"]) {
+    const a = d.cat["不定詞"], b = d.cat["不定詞與動名詞"] || { r: 0, w: 0 };
+    d.cat["不定詞與動名詞"] = { r: a.r + b.r, w: a.w + b.w };
+    delete d.cat["不定詞"];
+  }
   const daily = {};
   entries(d.daily).forEach(([day, v]) => {
     if (!DATE_RE.test(day)) return;
@@ -115,6 +121,7 @@ function sanitizeState(d) {
     vocab[w] = { i: Math.max(0, num(c.i, 0)), e: Math.min(5, Math.max(1.3, num(c.e, 2.5))), due: date(c.due) || todayStr(), n: cnt(c.n) };
   });
   d.vocab = vocab;
+  if (!d.wb || typeof d.wb !== "object") d.wb = {};
   // 錯題本：Firebase 可能把數字鍵存成陣列，空位在 JSON 裡會變成 null；先去掉空位（否則會變成假的錯題），
   // 再做舊格式遷移（true → {n, last}），最後確認日期格式；n 一定是數字（INV-09）
   if (d.wb && typeof d.wb === "object") {
@@ -146,11 +153,13 @@ function sanitizeState(d) {
 // 內建題增加時，把自訂題（索引 >= 舊內建題數）的紀錄往後搬，讓錯題本、輪替、最佳成績仍對到同一題。
 // 只處理增加；搬完把 baseN 更新成目前的內建題數，所以重複呼叫不會重複搬。
 function shiftForBuiltinGrowth(d) {
-  const valid = o => o && typeof o === "object" && WB_TYPES.every(t => Number.isInteger(o[t]) && o[t] >= 0);
-  const prev = valid(d.baseN) ? d.baseN : LEGACY_BASE_N;
+  // 完全沒有 baseN（v1.3 以前的紀錄）才用舊版題數；有 baseN 但缺某一類（例如之後新增的題型）或值壞掉，
+  // 那一類就當作已是目前題數、不搬，避免把已經用新編號寫入的紀錄再搬一次。
+  const hasBase = d.baseN && typeof d.baseN === "object";
+  const prevOf = t => (!hasBase ? LEGACY_BASE_N[t] : Number.isInteger(d.baseN[t]) && d.baseN[t] >= 0 ? d.baseN[t] : BASE_N[t]);
   const remap = (obj, f) => { const out = {}; Object.keys(obj || {}).forEach(k => { out[f(k)] = obj[k]; }); return out; };
   WB_TYPES.forEach(t => {
-    const old = prev[t], delta = BASE_N[t] - old;
+    const old = prevOf(t), delta = BASE_N[t] - old;
     if (delta <= 0) return;
     const sh = i => (i >= old ? i + delta : i);
     const idx = k => (/^\d+$/.test(k) ? String(sh(Number(k))) : k);
@@ -350,7 +359,7 @@ function phase() {
 function newPerDay() {
   const base = (typeof Settings !== "undefined" ? Settings.get("newPerDay") : 10) || 10;
   const ph = phase().name;
-  if (ph === "考前調整") return 0; // 考前三天不學新字，只複習
+  if (ph === "考前調整" || ph === "考試已過") return 0; // 考前三天與考後（還沒設定下一次考試）不學新字，只複習
   return ph === "衝刺期" ? Math.max(1, Math.round(base / 2)) : base;
 }
 // 到期複習卡的每日上限。請假幾天回來會累積上百張到期卡，一次全端出來只會讓人直接放棄；
@@ -383,7 +392,7 @@ function todayPlan() {
     { label: "Part 7 限時 1 篇", detail: `已完成 ${d.p7} 篇`, done: d.p7 >= 1, tab: "p7", est: "10 分" }
   ];
   // 衝刺期：距離上次模考滿 3 天就排一次閱讀節模考（練時間分配與耐力），其他天練限時題
-  const mockDue = daysSinceMock() >= 3;
+  const mockDue = (d.mockDone || 0) > 0 || daysSinceMock() >= 3; // 今天已考過也要保留這一項，才會顯示「已完成」
   return base.concat([
     mockDue
       ? { label: "模擬考：閱讀節（限時 22 分鐘）", detail: (d.mockDone || 0) ? "今天已完成" : "每 3 天一次，練時間分配", done: (d.mockDone || 0) >= 1, tab: "mock", est: "25 分" }
@@ -394,7 +403,9 @@ function todayPlan() {
 }
 // 距離最近一次模擬考的天數（沒考過回傳很大的數字）
 function daysSinceMock() {
-  const dates = (S.mocks || []).map(m => m.date).filter(Boolean).sort();
+  const t = todayStr();
+  const dates = (S.mocks || []).filter(m => m && m.mode !== "listen")
+    .map(m => m.date).filter(x => typeof x === "string" && /^\d{4}-\d{2}-\d{2}$/.test(x) && x <= t && !isNaN(new Date(x))).sort();
   if (!dates.length) return 999;
   return Math.round((new Date(todayStr()) - new Date(dates[dates.length - 1])) / 86400000);
 }
@@ -1009,8 +1020,10 @@ function loadReports() {
   try { const r = JSON.parse(localStorage.getItem(REPORT_KEY) || "[]"); return Array.isArray(r) ? r : []; } catch (e) { return []; }
 }
 function addReport(ctx, note) {
-  const list = loadReports().filter(r => !(r.type === ctx.type && r.key === String(ctx.key)));
-  list.push({ type: ctx.type, key: String(ctx.key), q: ctx.q, opts: ctx.opts, ans: ctx.ans, chosen: ctx.chosen,
+  const list = loadReports().filter(r => r && typeof r === "object" && !(r.type === ctx.type && r.key === String(ctx.key)));
+  const first = Number(String(ctx.key).split("-")[0]);
+  list.push({ type: ctx.type, key: String(ctx.key), custom: first >= (BASE_N[ctx.type] || Infinity),
+    context: ctx.context ? String(ctx.context).slice(0, 120) : undefined, q: ctx.q, opts: ctx.opts, ans: ctx.ans, chosen: ctx.chosen,
     note: String(note || "").slice(0, 500), at: new Date().toISOString(), v: APP_VERSION });
   try { localStorage.setItem(REPORT_KEY, JSON.stringify(list.slice(-REPORT_MAX))); return true; } catch (e) { return false; }
 }
