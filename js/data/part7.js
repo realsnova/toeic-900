@@ -298,7 +298,7 @@ Green Tech Expo Team`
 Guest: Mr. David Ortiz
 Confirmation #: HV-77218
 Check-in: May 12 (3:00 P.M.)  Check-out: May 15 (11:00 A.M.)
-Room: Deluxe King, 2 nights... please note this reservation is for 3 nights.
+Room: Deluxe King — 2 nights
 Rate: $145 per night (breakfast included)
 Note: Free cancellation up to 48 hours before check-in. Airport shuttle available on request for $25 each way.`,
       `To: reservations@harborviewhotel.com
@@ -307,7 +307,7 @@ Subject: Reservation HV-77218
 
 Hello,
 
-I noticed my confirmation lists both "2 nights" and "3 nights," which is confusing. To clarify, I need the room for three nights, checking out on May 15 as stated. Please correct any error so I'm not undercharged or overcharged.
+I noticed my confirmation lists my stay as "2 nights," but my dates, May 12 to May 15, are three nights. To clarify, I need the room for all three nights, checking out on May 15 as stated. Please correct any error so I'm not undercharged or overcharged.
 
 Also, I would like to arrange the airport shuttle for my arrival only, not the return. Finally, is it possible to guarantee an early check-in at around 1:00 P.M.? My flight lands in the morning.
 
@@ -315,7 +315,7 @@ Thank you,
 David Ortiz`
     ],
     qs: [
-      { q: "What is the main reason for Mr. Ortiz's email?", opts: ["To clarify the length of his stay", "To cancel his reservation", "To request a different hotel", "To complain about the breakfast"], ans: 0, exp: "確認信同時寫了 2 晚與 3 晚，Ortiz 寫信澄清他需要住三晚。" },
+      { q: "What is the main reason for Mr. Ortiz's email?", opts: ["To clarify the length of his stay", "To cancel his reservation", "To request a different hotel", "To complain about the breakfast"], ans: 0, exp: "確認信寫 2 晚，但入住與退房日期（5/12–5/15）其實是 3 晚，Ortiz 寫信澄清他需要住三晚。" },
       { q: "How much will Mr. Ortiz pay for his room, excluding extras?", opts: ["$435", "$290", "$145", "$390"], ans: 0, exp: "跨篇計算：確認住三晚，$145 × 3 = $435（早餐已含）。" },
       { q: "What shuttle service does Mr. Ortiz request?", opts: ["One-way for his arrival", "Round-trip", "Return only", "None"], ans: 0, exp: "郵件說 shuttle for my arrival only, not the return（只要抵達單程）。" },
       { q: "What additional request does Mr. Ortiz make?", opts: ["An early check-in", "A late check-out", "A room upgrade", "Extra towels"], ans: 0, exp: "郵件詢問能否保證約下午一點的提前入住（guarantee an early check-in）。" }

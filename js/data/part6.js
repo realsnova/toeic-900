@@ -52,12 +52,12 @@ ___[4]___ If you have questions about the timeline, please contact Facilities Ma
 
 The company will begin hiring baristas and shift managers next month. ___[3]___ interested in applying should visit the company's website for details.
 
-Construction on the first new store is already ___[4]___. It is scheduled to open in early September.`,
+Construction on the first new store is already underway. ___[4]___`,
     blanks: [
       { opts: ["consecutive", "consecutively", "consequent", "considerable"], ans: 0, exp: "for the third consecutive year（連續第三年）為固定搭配，修飾名詞 year 用形容詞 consecutive。" },
       { opts: ["while", "during", "despite", "moreover"], ans: 0, exp: "while + V-ing（同時⋯）：擴張的同時維持品質。during 接名詞；despite 語意不合。" },
       { opts: ["Those", "That", "Them", "Theirs"], ans: 0, exp: "Those interested in... = 有意應徵者（Those who are interested 的簡化）。" },
-      { opts: ["underway", "underground", "undergone", "understated"], ans: 0, exp: "be underway = 進行中。undergone 是 undergo 的過去分詞，主動語態不合。" }
+      { opts: ["It is scheduled to open in early September, with the other two to follow next spring.", "Coffee prices in the region have risen sharply over the past year.", "Ms. Park first learned to roast coffee while working in her parents' café.", "Applicants with previous barista experience will be given priority."], ans: 0, exp: "句子插入題：前一句說第一家新店已經在施工，接著說明它何時開幕、其他兩家何時跟進，最連貫。咖啡價格上漲、創辦人的經歷都和施工進度無關；徵才條件應該放在上一段談招募的地方。" }
     ]
   },
   {
@@ -119,7 +119,7 @@ We look forward to meeting you.
 Best regards,
 Hiring Team, Vertex Media`,
     blanks: [
-      { opts: ["for", "to", "with", "on"], ans: 0, exp: "invite someone for an interview（邀請某人面試）為固定搭配。" },
+      { opts: ["for", "at", "with", "on"], ans: 0, exp: "invite someone for an interview（邀請某人來面試）。at、with、on 都不能和 invite 這樣搭配。" },
       { opts: ["tentatively", "tentative", "tentativeness", "tentativity"], ans: 0, exp: "修飾動詞 scheduled 需用副詞 tentatively（暫定地）。" },
       { opts: ["Details about the presentation topic will be emailed to you separately.", "The position has already been filled.", "Our office is closed on public holidays.", "Thank you for your recent purchase."], ans: 0, exp: "句子插入題：上文提到面試含簡報任務，接「簡報主題細節將另行寄送」最連貫。" },
       { opts: ["accommodate", "accommodation", "accommodating", "accommodated"], ans: 0, exp: "do our best to + 原形動詞 accommodate（配合您的時間）。" }
