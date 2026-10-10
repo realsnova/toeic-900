@@ -1,7 +1,7 @@
 # 02 音檔建置管線，並把現有聽力題全部轉成音檔
 
 Type: task
-Status: claimed（音檔產生中）
+Status: resolved（2026-10-11：1,388 段完成並上線）
 Phase: P0
 Blocked by: —
 

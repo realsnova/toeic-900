@@ -1,7 +1,7 @@
 # 04 音檔播放器與聽力模考模式
 
 Type: task
-Status: claimed（程式與測試完成，待音檔產生完後在瀏覽器實測）
+Status: resolved（2026-10-11 瀏覽器實測通過並上線）
 Phase: P0
 Blocked by: 02（播放器）、03（L1 模考）
 
