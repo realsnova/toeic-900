@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>音檔轉寫比對</title>
+<style>
+  body { font: 15px/1.6 system-ui, "Microsoft JhengHei", sans-serif; margin: 24px; background: #f6f7f6; color: #1d2a2c; }
+  pre { background: #fff; border: 1px solid #d5dddc; padding: 12px; max-height: 70vh; overflow: auto; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<h1>音檔轉寫比對（開發工具，不隨網站發布）</h1>
+<p>用 Whisper（transformers.js，在瀏覽器裡執行）把音檔轉回文字，和工作檔裡的腳本比對字詞錯誤率與數字。</p>
+<p>工作檔 <input id="jobs" value="tools/audio/jobs/samples.json" size="40"> <button id="run">開始</button></p>
+<pre id="log"></pre>
+<script type="module" src="verify.js"></script>
+</body>
+</html>

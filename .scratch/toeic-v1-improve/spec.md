@@ -7,6 +7,7 @@
 > 驗證方法：[verification.md](verification.md)
 > 決策紀錄：[docs/adr/0001-incremental-v1-improvement.md](../../docs/adr/0001-incremental-v1-improvement.md)
 > 來源評估：商業級評估報告 https://claude.ai/artifact/DsPkKCQE3QFBrAJibgPMcM
+> **2026-10-10 更新**：本規格的目標加權上限只有 6.9。要達到商業級（≥7.5）的新計畫在 [../toeic-commercial/spec.md](../toeic-commercial/spec.md)，草案待核准；那份計畫 §2 列出對本規格的改動。
 
 ## 0. 這份規格和其他分支的關係
 

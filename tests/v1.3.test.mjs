@@ -132,6 +132,7 @@ test("T-AUD-01-5/7 沒有英文語音時 withVoices 先說明、不播放；有�
   const speech = fakeSpeech({ voices: [voice("zh-TW")] });
   const app = loadApp({ speech });
   speech.loadVoices([voice("zh-TW")]);
+  app.run("AudioClips.load({})"); // v1.5.0 起內建題有音檔時不需要裝置語音；這裡測沒有音檔的情況
   app.run(`globalThis.__started = 0; globalThis.__asked = 0;
     UI.confirm = () => { __asked++; return new Promise(() => {}); };
     withVoices(() => { __started++; });`);
@@ -146,6 +147,7 @@ test("T-AUD-01-6 選擇仍要嘗試播放後就開始", async () => {
   const speech = fakeSpeech({ voices: [] });
   const app = loadApp({ speech });
   speech.loadVoices([]);
+  app.run("AudioClips.load({})"); // v1.5.0 起內建題有音檔時不需要裝置語音；這裡測沒有音檔的情況
   // 模擬使用者按下「仍要嘗試播放」：UI.confirm 在點擊處理函式內同步呼叫 onOk
   app.run(`globalThis.__started = 0; UI.confirm = (msg, opts) => { opts.onOk(); return Promise.resolve(true); };
     withVoices(() => { __started++; });`);

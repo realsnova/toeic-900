@@ -350,6 +350,9 @@ main { max-width: 860px; margin: 0 auto; padding: 24px 16px 80px; }
   flex-wrap: wrap; gap: 8px; margin-bottom: 14px;
 }
 .mock-audio { text-align: center; padding: 20px 0; }
+.mock-preview { border-top: 1px dashed var(--border); margin-top: 12px; padding-top: 10px; }
+.mock-preview .q-text { margin-top: 8px; }
+.mock-preview ol { margin: 4px 0 12px; padding-left: 1.6em; }
 .mock-audio .wave { font-size: 2.4rem; animation: mockPulse 1.4s ease-in-out infinite; }
 @keyframes mockPulse { 0%,100% { opacity: .55; transform: scale(1); } 50% { opacity: 1; transform: scale(1.12); } }
 .mock-window { margin-top: 14px; }

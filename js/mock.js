@@ -20,7 +20,7 @@ const Mock = {
 
   abandon() {
     if (!Mock.s) return;
-    if (formOf(Mock.s.mode)) Mock.clearProgress();
+    if (formOf(Mock.s.mode) && !isListenForm(formOf(Mock.s.mode))) Mock.clearProgress(); // 聽力測驗沒有暫存，不可刪掉閱讀測驗的進度
     Mock.s.cancelled = true;
     Mock.s.finished = true;
     if (Mock.s.readTimer) { clearInterval(Mock.s.readTimer); }
@@ -63,6 +63,33 @@ const Mock = {
     PART7.forEach((set, si) => {
       if (set.form !== id) return;
       set.qs.forEach((q, qi) => paper.reading.push({ type: "p7", part: "Part 7", si, qi, set, q, order: optionOrder(q.opts) }));
+    });
+    // 完整聽力測驗：Part 2 → Part 3 → Part 4，題號照正式考試（Part 1 待補，所以從 7 開始）。
+    // pre：這一題前要先播的旁白（各 Part 說明、題組開場）；ask：念題目（Part 3/4）。
+    // 旁白的文字與題號必須和 tools/audio/build-jobs.mjs 一致，音檔才對得上。
+    let num = 7, lastPart = null;
+    const narr = (t, pause) => ({ t, s: "N", pause, clip: ClipKey.n(t) });
+    PART2.forEach((item, i) => {
+      if (item.form !== id) return;
+      const order = shuffle(item.opts.map((_, k) => k));
+      paper.listening.push({ type: "l2", part: "Part 2", id: i, ref: item, order, ansPos: order.indexOf(item.ans), num: num++,
+        pre: lastPart === "Part 2" ? null : [narr(ListenScript.directions["Part 2"], 900)] });
+      lastPart = "Part 2";
+    });
+    PART34.forEach((set, si) => {
+      if (set.form !== id) return;
+      const pre = (lastPart === set.type ? [] : [narr(ListenScript.directions[set.type], 900)])
+        .concat([narr(ListenScript.setIntro(set, num, num + set.qs.length - 1), 500)]);
+      lastPart = set.type;
+      set.qs.forEach((q, qi) => {
+        paper.listening.push({
+          type: "l34", part: set.type, si, qi, set, q, num,
+          order: shuffle(q.opts.map((_, k) => k)),
+          audioLead: qi === 0, pre: qi === 0 ? pre : null,
+          ask: narr(ListenScript.question(num, q.q), 0)
+        });
+        num++;
+      });
     });
     return paper;
   },
@@ -145,7 +172,7 @@ const Mock = {
       Mock.s.t0 = Number.isFinite(resume.t0) ? resume.t0 : Date.now();
     }
     save(); // mockSeen 已更新
-    if (mode === "read" || formOf(mode)) Mock.startReading();
+    if (mode === "read" || (formOf(mode) && !isListenForm(formOf(mode)))) Mock.startReading();
     else Mock.readyListening();
   },
 
@@ -156,7 +183,7 @@ const Mock = {
     Mock.box().innerHTML = `
       <div class="card" style="text-align:center">
         <h2>🎧 聽力節</h2>
-        <p class="muted">共 ${s.paper.listening.length} 題，語音會自動連續播放、不可暫停或回放。</p>
+        <p class="muted">共 ${s.paper.listening.length} 題，語音會自動連續播放、不可暫停或回放。${isListenForm(formOf(s.mode)) ? "題號照正式考試從 7 開始（Part 1 待補）。對話播放時可以先看這一組的三個題目。中途離開不會保存進度。" : ""}</p>
         ${ttsNoteHTML()}
         <button class="btn" id="mock-play">▶ 開始播放</button>
       </div>`;
@@ -176,19 +203,28 @@ const Mock = {
       if (!Mock.s || s.cancelled) return;
       const it = items[i];
       const onSilent = () => showSilentHelp(null);
+      const seqOpts = { onSilent, clipRate: 1 }; // 模擬考的音檔一律原速
       hideSilentHelp(); // 上一題的提示不可留到這一題
+      if (it.pre && it.pre.length) {
+        Mock.renderListenItem(i, true);
+        await TTS.seq(it.pre, { clipRate: 1 }); // 旁白沒播出來不影響作答，不提示也不扣題
+        if (Mock.s !== s || s.cancelled) return;
+      }
       if (it.type === "l34" && it.audioLead) {
         Mock.renderListenItem(i, true);
-        const { played, aborted } = await TTS.seq(l34Audio(it.set), { onSilent });
+        const { played, aborted } = await TTS.seq(l34Audio(it.set), seqOpts);
         if (Mock.s !== s || s.cancelled) return;
         // 對話沒有播放，同一組的三題都無從作答
         if (!played && !aborted) items.forEach((x, j) => { if (x.type === "l34" && x.set === it.set) s.audioFail.add(j); });
       }
       Mock.renderListenItem(i, false);
       if (it.type === "l2") {
-        const { played, aborted } = await TTS.seq(l2Audio(it.ref, it.order), { onSilent });
+        const { played, aborted } = await TTS.seq(l2Audio(it.ref, it.order), seqOpts);
         if (Mock.s !== s || s.cancelled) return;
         if (!played && !aborted) s.audioFail.add(i);
+      } else if (it.ask) {
+        await TTS.seq([it.ask], { clipRate: 1 }); // 念題目（題目也顯示在畫面上，沒念出來不影響作答）
+        if (Mock.s !== s || s.cancelled) return;
       }
       // 作答窗：P2 五秒、P3/4 每題八秒；作答後可提前進下一題
       await Mock.answerWindow(i, it.type === "l2" ? 5 : 8);
@@ -198,6 +234,15 @@ const Mock = {
     else Mock.submit();
   },
 
+  // 對話播放時先讓考生看這一組的題目（正式考試的題本上印有題目與選項）
+  previewHTML(it) {
+    if (!it.set || it.type !== "l34") return "";
+    const items = Mock.s.paper.listening.filter(x => x.set === it.set);
+    return `<div class="mock-preview">${items.map(x => `
+      <div class="q-text">${x.num ? `${x.num}. ` : ""}${esc(x.q.q)}</div>
+      <ol class="muted" type="A">${x.order.map(oi => `<li>${esc(x.q.opts[oi])}</li>`).join("")}</ol>`).join("")}</div>`;
+  },
+
   renderListenItem(i, playingLead) {
     const s = Mock.s;
     const it = s.paper.listening[i];
@@ -205,7 +250,7 @@ const Mock = {
     const answered = s.lAnswers.filter(a => a !== null).length;
     let body;
     if (playingLead) {
-      body = `<div class="mock-audio"><div class="wave">🔊</div><p class="muted">正在播放 ${esc(it.part)} 音檔（不可暫停／回放）</p></div>${graphicHTML(it.set)}`;
+      body = `<div class="mock-audio"><div class="wave">🔊</div><p class="muted">正在播放 ${esc(it.part)} 音檔（不可暫停／回放）</p></div>${graphicHTML(it.set)}${Mock.previewHTML(it)}`;
     } else if (it.type === "l2") {
       body = `
         <div class="mock-audio"><div class="wave">🔊</div><p class="muted">聆聽問句與 (A)(B)(C) 三個回應，選出最合適的回應</p></div>
@@ -215,7 +260,7 @@ const Mock = {
     } else {
       body = `
         ${graphicHTML(it.set)}
-        <div class="q-text">${esc(it.q.q)}</div>
+        <div class="q-text">${it.num ? `${it.num}. ` : ""}${esc(it.q.q)}</div>
         <div>
           ${it.order.map((oi, pos) => `<button class="opt mock-opt ${s.lAnswers[i] === oi ? "picked" : ""}" data-oi="${oi}">(${"ABCD"[pos]}) ${esc(it.q.opts[oi])}</button>`).join("")}
         </div>`;
@@ -224,10 +269,10 @@ const Mock = {
       <div class="card">
         <div class="mock-topbar">
           <span class="pill">🎧 聽力節 · ${esc(it.part)}</span>
-          <span class="muted">第 ${i + 1} / ${total} 題 · 已答 ${answered}</span>
+          <span class="muted">${it.num ? `第 ${it.num} 題（${i + 1} / ${total}）` : `第 ${i + 1} / ${total} 題`} · 已答 ${answered}</span>
         </div>
         ${body}
-        ${ttsNoteHTML()}
+        ${ttsNoteHTML(it.type === "l2" ? l2Audio(it.ref, it.order) : l34Audio(it.set))}
         <div id="mock-window" class="mock-window"></div>
       </div>`;
     if (!playingLead) {
@@ -404,7 +449,7 @@ const Mock = {
     s.finished = true;
     if (s.readTimer) clearInterval(s.readTimer);
     TTS.stop();
-    if (formOf(s.mode)) Mock.clearProgress();
+    if (formOf(s.mode) && !isListenForm(formOf(s.mode))) Mock.clearProgress();
 
     // 完全沒有作答（例如開始後就離開、時間到自動交卷）：不計分、不記錄，錯題本與答對率都不動，
     // 這一回完整測驗也不算做過。必須在下面的計分之前結束，聽力題的計分也會寫入錯題本與答對率。
@@ -500,7 +545,8 @@ const Mock = {
       .sort((a, b) => a.acc - b.acc).slice(0, 3);
     const pct = (a, b) => b ? Math.round(a / b * 100) : null;
     const sec = (name, a, b) => `<div class="mock-sec"><div class="score">${pct(a, b)}%</div><div class="muted">${name}答對 ${a} / ${b} 題</div></div>`;
-    const hasL = r.mode === "full" || r.mode === "listen", hasR = r.mode !== "listen";
+    const lf = isListenForm(formOf(r.mode));
+    const hasL = r.mode === "full" || r.mode === "listen" || lf, hasR = r.mode !== "listen" && !lf;
     const graded = r.lT + r.rT > 0; // 全部題目都因語音沒播放而不計分時，不可顯示「全對」
     Mock.box().innerHTML = `
       <div class="card result-banner">
@@ -609,9 +655,13 @@ const Mock = {
       </div>` : ""}`;
     const formCards = FORMS.map(f => {
       const last = mocks.filter(m => m.mode === f.id).slice(-1)[0];
+      const lastText = last && Mock.hasCounts(last)
+        ? ` · 上次答對 ${isListenForm(f) ? `${last.lR}/${last.lT}` : `${last.rR}/${last.rT}`}` : " · 尚未作答";
       return `<div class="hub-card" data-mock="${f.id}">
-        <div class="hub-icon">📝</div>
-        <div class="hub-text"><div class="hub-title">${esc(f.name)}</div><div class="hub-sub muted">Part 5 ×30＋Part 6 ×16＋Part 7 ×54，共 100 題 · 限時 ${f.secs / 60} 分鐘 · 題目和正式考試同樣配置${last && Mock.hasCounts(last) ? ` · 上次答對 ${last.rR}/${last.rT}` : " · 尚未作答"}</div></div>
+        <div class="hub-icon">${isListenForm(f) ? "🎧" : "📝"}</div>
+        <div class="hub-text"><div class="hub-title">${esc(f.name)}</div><div class="hub-sub muted">${isListenForm(f)
+          ? `Part 2 ×25＋Part 3 ×39＋Part 4 ×30，共 94 題 · 約 ${f.mins} 分鐘 · 照正式考試節奏連續播放（Part 1 待補）`
+          : `Part 5 ×30＋Part 6 ×16＋Part 7 ×54，共 100 題 · 限時 ${f.secs / 60} 分鐘 · 題目和正式考試同樣配置`}${lastText}</div></div>
         <div class="hub-arrow">›</div>
       </div>`;
     }).join("");
@@ -639,15 +689,16 @@ const Mock = {
     Mock.box().querySelectorAll("[data-mock]").forEach(el =>
       el.addEventListener("click", () => {
         const mode = el.dataset.mock;
-        if (mode === "read" || formOf(mode)) ask(mode); else withVoices(() => ask(mode));
+        if (mode === "read" || (formOf(mode) && !isListenForm(formOf(mode)))) ask(mode); else withVoices(() => ask(mode));
       }));
     const ask = async mode => {
         const f = formOf(mode);
         const pending = f ? Mock.loadProgress() : null;
         const ok = await UI.confirm(
-          f ? `${pending ? `你有一份「${formOf(pending.mode).name}」還沒做完，開始新的測驗會放棄那一份（已作答的內容不會記錄）。\n\n` : ""}${f.name}共 100 題，限時 ${f.secs / 60} 分鐘，和正式考試的閱讀部分相同；時間到自動交卷。建議找一段不會被打擾的時間一次做完。這份測驗的題目不會出現在一般練習中。`
+          isListenForm(f) ? `${f.name}共 94 題（Part 2–4），約 ${f.mins} 分鐘，照正式考試的節奏連續播放，不能暫停或重播。中途離開不會保存進度，請戴上耳機、找一段不會被打擾的時間一次做完。這份測驗的題目不會出現在一般練習中。`
+          : f ? `${pending ? `你有一份「${formOf(pending.mode).name}」還沒做完，開始新的測驗會放棄那一份（已作答的內容不會記錄）。\n\n` : ""}${f.name}共 100 題，限時 ${f.secs / 60} 分鐘，和正式考試的閱讀部分相同；時間到自動交卷。建議找一段不會被打擾的時間一次做完。這份測驗的題目不會出現在一般練習中。`
             : mode === "read" ? "閱讀節限時 22 分鐘，時間到自動交卷。準備好就開始！" : "聽力節將自動連續播放、不可暫停或回放（仿真考試）。建議戴上耳機，準備好就開始！",
-          { title: f ? "開始完整閱讀測驗" : "開始模擬考", okText: "開始" });
+          { title: isListenForm(f) ? "開始完整聽力測驗" : f ? "開始完整閱讀測驗" : "開始模擬考", okText: "開始" });
         if (ok) Mock.start(mode);
     };
   }

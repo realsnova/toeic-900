@@ -8,7 +8,7 @@ import { webcrypto } from "node:crypto";
 const ROOT = path.resolve(import.meta.dirname, "..", "..");
 const SCRIPTS = [
   "js/ui.js", "js/data/vocab.js", "js/data/part5.js", "js/data/part6.js", "js/data/part7.js",
-  "js/data/listening.js", "js/firebase-config.js", "js/sync.js", "js/ai.js", "js/app.js", "js/mock.js", "js/views.js"
+  "js/data/listening.js", "js/firebase-config.js", "js/sync.js", "js/ai.js", "audio/clips.js", "js/audio.js", "js/app.js", "js/mock.js", "js/views.js"
 ];
 
 // 假 fetch（AI 解析測試用）：記錄每次請求，依 mode 回應。不會連到真實網路。
@@ -78,8 +78,28 @@ export function fakeSpeech({ voices = [], mode = "normal" } = {}) {
 
 export function voice(lang, name = lang) { return { lang, name }; }
 
+// 假 <audio>。mode：ok（觸發 playing、ended）、error（觸發 error）、reject（play() 被瀏覽器拒絕）
+export function fakeAudio({ mode = "ok" } = {}) {
+  const played = [];
+  function A() {
+    const el = this;
+    el.paused = true; el.duration = NaN; el.playbackRate = 1; el.src = "";
+    el.pause = () => { el.paused = true; };
+    el.play = () => {
+      played.push({ src: el.src, rate: el.playbackRate });
+      el.paused = false;
+      if (A.mode === "reject") return Promise.reject(new Error("NotAllowedError"));
+      if (A.mode === "error") { setTimeout(() => el.onerror && el.onerror({}), 0); return Promise.resolve(); }
+      setTimeout(() => { if (el.onplaying) el.onplaying(); setTimeout(() => el.onended && el.onended(), 5); }, 0);
+      return Promise.resolve();
+    };
+  }
+  A.mode = mode; A.played = played;
+  return A;
+}
+
 // 載入整個 App。storage：預先放入 localStorage 的內容；speech：fakeSpeech() 的回傳值；fetch：fakeFetch() 的回傳值
-export function loadApp({ storage = {}, speech = fakeSpeech(), fetch = fakeFetch() } = {}) {
+export function loadApp({ storage = {}, speech = fakeSpeech(), fetch = fakeFetch(), audio = null } = {}) {
   const store = new Map(Object.entries(storage));
   const writes = [];
   const localStorage = {
@@ -116,6 +136,7 @@ export function loadApp({ storage = {}, speech = fakeSpeech(), fetch = fakeFetch
     location: { href: "http://localhost/" },
     history: { pushState() {}, replaceState() {} }
   };
+  if (audio) ctx.Audio = audio; // 假 <audio>（fakeAudio()）；省略時沒有 Audio，音檔一律視為播放失敗
   ctx.window = ctx;
   ctx.self = ctx;
   ctx.top = ctx; // 沒有被框架嵌入

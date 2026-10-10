@@ -1,2 +1,6 @@
 .DS_Store
 Thumbs.db
+# 語音樣本與工作檔（開發用，不提交）
+audio/_samples/
+tools/audio/jobs/
+*.tmp

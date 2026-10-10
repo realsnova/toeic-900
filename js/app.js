@@ -34,8 +34,9 @@ function defaultState() {
     contentV: 2               // 題目內容版本：原地替換題目時遞增，sanitizeState 會清掉指到舊題目的紀錄
   };
 }
-const APP_VERSION = "1.4.1";
+const APP_VERSION = "1.5.0";
 const CHANGELOG = [
+  { v: "1.5.0", d: "2026-10-11", notes: "聽力改用預先產生的神經語音音檔（Kokoro，美式與英式男女聲），不再依賴手機或電腦內建的語音，沒有英文語音的裝置也能練聽力；音檔缺少或播放失敗時自動改用裝置語音，並在畫面上標示。新增完整聽力測驗第 1 回：Part 2–4 共 94 題（Part 1 待補），照正式考試的題號、說明、題組開場與念題目的節奏連續播放，對話播放時可以先看題目。" },
   { v: "1.4.1", d: "2026-10-11", notes: "考前衝刺第二、三波：新增完整閱讀測驗第 2 回（和第 1 回一樣 100 題、75 分鐘）；聽力新增新制題組 10 組（看圖表作答、三人對話、意圖題，圖表會顯示在畫面上，三人對話用不同聲音）與 Part 2 新題 40 題；統計頁可以記錄外部測驗成績；模擬考頁新增考前作答策略（時間分配與技巧）；插入句子位置題的選項改照 [1]～[4] 排列；舊 Part 6 插入題的錯誤選項重寫，不再一眼就能排除；替換和舊題太像的題目。（v1.4.0 已加入完整閱讀測驗第 1 回，100 題、75 分鐘。）" },
   { v: "1.4.0", d: "2026-10-10", notes: "考前衝刺版：新增 Part 5 高難度題 100 題、Part 7 新制題組 8 組（簡訊與線上討論的意圖題、插入句子位置題、5 題的多篇題組）；Part 2 全部重寫干擾選項，不再能靠「選最長的」猜對；修正題庫審查找到的錯題與兩可題；衝刺期每日菜單加入定期模考，考前三天自動減量；練習中可以按「這題有問題」回報。AI 錯題解析（試用）：在設定頁貼上自己的 Anthropic API 金鑰後，答錯時可以請 AI 說明為什麼錯，金鑰預設關掉 App 就清除、不會同步或備份。資安強化：檢查同步與備份資料的格式、加入內容安全政策與第三方腳本完整性檢查、自訂同步代碼太短時提醒" },
   { v: "1.3.0", d: "2026-10-06", notes: "改顯示練習答對率（不再換算未校準的 TOEIC 分數，錯題本重考不計入）；只做錯題本或模考的日子也算連續學習；模考報告分開顯示聽力與閱讀、趨勢圖固定 0–100%；裝置沒有英文語音時先說明、語音沒播放時提示且模考不會卡住；同步代碼改用安全亂數並檢查格式；修正 Part 7 做完最後一題會跳出錯誤提示" },
@@ -146,7 +147,7 @@ function sanitizeState(d) {
     .map(e => ({ date: e.date, src: String(e.src || "").slice(0, 60), L: score(e.L), R: score(e.R) })).slice(-50);
   d.mocks = (Array.isArray(d.mocks) ? d.mocks : Object.values(obj(d.mocks))).filter(m => m && typeof m === "object").map(m => {
     const out = { date: date(m.date) || "" };
-    if (typeof m.mode === "string" && (["full", "listen", "read"].includes(m.mode) || /^R\d{1,2}$/.test(m.mode))) out.mode = m.mode; // 舊紀錄沒有 mode 就維持沒有（顯示為「模擬考」）
+    if (typeof m.mode === "string" && (["full", "listen", "read"].includes(m.mode) || /^[LR]\d{1,2}$/.test(m.mode))) out.mode = m.mode; // 舊紀錄沒有 mode 就維持沒有（顯示為「模擬考」）
     ["lR", "lT", "rR", "rT", "lSkip", "secs", "L", "R"].forEach(f => { if (Number.isFinite(m[f])) out[f] = cnt(m[f]); });
     if (m.parts && typeof m.parts === "object") {
       out.parts = {};
@@ -416,25 +417,32 @@ function todayPlan() {
   // 今天已考過（含閱讀節）也要保留這一項，才會顯示「已完成」；只考聽力節不算
   const readDone = d.readMock || 0;
   const mockDue = readDone > 0 || daysSinceMock() >= 3;
+  const lfToday = (S.mocks || []).find(m => m && m.date === todayStr() && isListenForm(formOf(m.mode)));
   return base.concat([
     mockDue
       ? (nextForm() && !readDone
         ? { label: `${nextForm().name}（100 題・75 分鐘）`, detail: "挑一天時間充裕時做，練完整的時間分配與耐力", done: false, tab: "mock", est: "80 分" }
         : { label: "模擬考：閱讀節（限時 22 分鐘）", detail: readDone ? "今天已完成" : "每 3 天一次，練時間分配", done: readDone >= 1, tab: "mock", est: "25 分" })
       : { label: "Part 7 限時 2 篇（新制題組優先）", detail: `已完成 ${d.p7} 篇`, done: d.p7 >= 2, tab: "p7", est: "18 分" },
-    { label: "聽力 Part 2 五題 + Part 3/4 一組", detail: `P2 ${d.l2} 題 · P3/4 ${d.l34} 組`, done: d.l2 >= 5 && d.l34 >= 1, tab: "listen", est: "12 分" },
+    // 還沒做過完整聽力測驗：不排閱讀模考的日子改排一次（約 40 分鐘）
+    !mockDue && lfToday
+      ? { label: formOf(lfToday.mode).name, detail: "今天已完成", done: true, tab: "mock", est: `${formOf(lfToday.mode).mins} 分` }
+      : !mockDue && nextForm(true)
+      ? { label: `${nextForm(true).name}（約 ${nextForm(true).mins} 分鐘）`, detail: "照正式考試節奏連續播放，練專注力與題目預讀", done: false, tab: "mock", est: `${nextForm(true).mins} 分` }
+      : { label: "聽力 Part 2 五題 + Part 3/4 一組", detail: `P2 ${d.l2} 題 · P3/4 ${d.l34} 組`, done: d.l2 >= 5 && d.l34 >= 1, tab: "listen", est: "12 分" },
     { label: "錯題本全部清零", detail: wrongs ? `還剩 ${wrongs} 題` : "已清空！", done: wrongs === 0, tab: "wrong", est: "10 分" }
   ]);
 }
-// 還沒做過的第一份完整測驗
-function nextForm() {
+// 還沒做過的第一份完整閱讀測驗（listen=true 時找聽力測驗）
+function nextForm(listen = false) {
   const done = new Set((S.mocks || []).map(m => m && m.mode));
-  return FORMS.find(f => !done.has(f.id)) || null;
+  return FORMS.find(f => isListenForm(f) === listen && !done.has(f.id)) || null;
 }
 // 距離最近一次模擬考的天數（沒考過回傳很大的數字）
 function daysSinceMock() {
   const t = todayStr();
-  const dates = (S.mocks || []).filter(m => m && m.mode !== "listen")
+  // 只考聽力（聽力節、完整聽力測驗）不算：這裡排的是閱讀模考
+  const dates = (S.mocks || []).filter(m => m && m.mode !== "listen" && !isListenForm(formOf(m.mode)))
     .map(m => m.date).filter(x => typeof x === "string" && /^\d{4}-\d{2}-\d{2}$/.test(x) && x <= t && !isNaN(new Date(x))).sort();
   if (!dates.length) return 999;
   return Math.round((new Date(todayStr()) - new Date(dates[dates.length - 1])) / 86400000);
@@ -534,8 +542,11 @@ const TTS = {
   // 所以呼叫端必須在 click 處理函式裡直接呼叫，中間不可先 await。
   // opts.onSilent：第一段語音 3 秒內沒有開始時呼叫（顯示「沒有聽到聲音？」）
   // 回傳 Promise<{played}>：played 表示至少有一段語音真的開始播放
+  // 段落可以帶 clip（預先產生的音檔鍵）與 fb（沒有音檔或播放失敗時改念的語音段落，省略時念 p.t）。
+  // opts.clipRate：音檔的播放速度（模擬考固定 1，練習時跟著語速設定）
   async seq(parts, opts = {}) {
-    if (!TTS.ok) { if (opts.onSilent) opts.onSilent(); return { played: false }; }
+    const anyClip = parts.some(p => AudioClips.has(p.clip));
+    if (!TTS.ok && !anyClip) { if (opts.onSilent) opts.onSilent(); return { played: false }; }
     TTS.stop();
     const gen = TTS.gen;
     TTS.currentLang = TTS.chooseLang(); // 整組（一題或一組對話）用同一個腔調，同步且在第一個 await 之前完成
@@ -545,11 +556,32 @@ const TTS = {
     const warnSilent = () => {
       if (!played && !warned && gen === TTS.gen && opts.onSilent) { warned = true; opts.onSilent(); }
     };
-    const silentTimer = setTimeout(warnSilent, TTS_START_TIMEOUT_MS);
+    const silentTimer = setTimeout(warnSilent, anyClip ? AUDIO_START_TIMEOUT_MS + TTS_START_TIMEOUT_MS : TTS_START_TIMEOUT_MS);
+    const onStart = () => { played = true; if (warned) hideSilentHelp(); };
+    const clipRate = opts.clipRate || TTS.rate();
+    // iOS 只允許在點擊當下第一次發聲：第一段是音檔時，同步送出一段無聲的語音解鎖語音合成，
+    // 否則之後音檔缺少或失敗時，改用的裝置語音會被擋下。每次開啟只需要一次。
+    if (anyClip && TTS.ok && !TTS.unlocked) {
+      TTS.unlocked = true;
+      try { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; speechSynthesis.speak(u); } catch (e) { /* 忽略 */ }
+    }
     for (const p of parts) {
       if (gen !== TTS.gen) break;
-      const r = await TTS.speak(p.t, p.s, p.rate, () => { played = true; if (warned) hideSilentHelp(); });
-      if (r.started) played = true;
+      let useSpeech = true;
+      if (AudioClips.has(p.clip)) {
+        const r = await AudioClips.play(p.clip, clipRate);
+        if (r.started) onStart();
+        useSpeech = !!r.failed && !r.aborted && gen === TTS.gen; // 音檔失敗才改念，被停止就不念
+        if (r.failed && typeof console !== "undefined") console.warn("音檔播放失敗，改用裝置語音：", p.clip);
+      }
+      if (useSpeech && TTS.ok) {
+        for (const sp of p.fb || [p]) {
+          if (gen !== TTS.gen) break;
+          const r = await TTS.speak(sp.t, sp.s, sp.rate, onStart);
+          if (r.started) played = true;
+          if (sp !== p && sp.pause && gen === TTS.gen) await new Promise(rs => setTimeout(rs, sp.pause));
+        }
+      }
       if (gen !== TTS.gen) break;
       await new Promise(rs => setTimeout(rs, p.pause == null ? 350 : p.pause));
     }
@@ -559,14 +591,15 @@ const TTS = {
     if (!aborted) TTS.playing = false;
     return { played, aborted };
   },
-  stop() { TTS.gen++; TTS.playing = false; if (TTS.ok) speechSynthesis.cancel(); }
+  stop() { TTS.gen++; TTS.playing = false; AudioClips.stop(); if (TTS.ok) speechSynthesis.cancel(); }
 };
 TTS.init();
 
 // 聽力入口共用的開始前檢查：有英文語音（或清單還在載入）就同步直接開始，保留點擊手勢；
 // 確定沒有英文語音時先說明，使用者選擇仍要嘗試才開始。
 function withVoices(start) {
-  if (TTS.voiceState() !== "none" || TTS.forceTry) { start(); return; }
+  // 內建題目全部都有預先產生的音檔時，不需要裝置的英文語音
+  if (AudioClips.complete || TTS.voiceState() !== "none" || TTS.forceTry) { start(); return; }
   UI.confirm(
     `這台裝置沒有英文語音，聽力題可能沒有聲音，或由其他語言的語音念出英文。<br><br>
      建議改用手機（iPhone、Android 通常內建英文語音），或在電腦安裝英文語音包：
@@ -578,9 +611,14 @@ function withVoices(start) {
     }
   );
 }
-// 聽力畫面的固定標示：讓使用者知道這不是正式考試的真人錄音
-function ttsNoteHTML() {
-  return `<p class="muted tts-note">語音：裝置合成，非真人錄音</p>`;
+// 聽力畫面的固定標示：讓使用者知道這不是正式考試的真人錄音，以及這一題用的是音檔還是裝置語音
+// parts：這一題的播放內容；省略時依整體情況說明
+function ttsNoteHTML(parts) {
+  const src = parts ? audioSource(parts) : (AudioClips.complete ? "all" : AudioClips.ready ? "mixed" : "none");
+  const text = src === "all" ? "語音：預先產生的神經語音（Kokoro），非真人錄音"
+    : src === "mixed" ? "語音：部分為神經語音音檔，部分為裝置合成，非真人錄音"
+    : "語音：裝置合成，非真人錄音";
+  return `<p class="muted tts-note">${text}</p>`;
 }
 // 第一段語音沒有開始時的提示。replay 為 null 表示不能重播（模擬考）
 function showSilentHelp(replay) {
@@ -1085,8 +1123,10 @@ function exportReports() {
   a.click();
   URL.revokeObjectURL(a.href);
 }
-// 只有裝置上偵測到 2 種以上腔調時才顯示標籤，避免對只有預設腔調的裝置造成無意義的雜訊
-function accentTag() {
+// 有音檔時顯示音檔的腔調；裝置語音只有偵測到 2 種以上腔調時才顯示標籤，避免對只有預設腔調的裝置造成無意義的雜訊
+function accentTag(parts) {
+  const clip = parts && parts.map(p => p.clip).find(k => AudioClips.has(k));
+  if (clip) return `<span class="pill accent-pill">🔊 ${{ us: "美式", uk: "英式" }[AudioClips.accent[clip]] || "英語"}</span>`;
   if (typeof Accents === "undefined" || !Accents.ready || Accents.available().length <= 1) return "";
   return `<span class="pill accent-pill">🔊 ${esc(Accents.label(TTS.currentLang))}</span>`;
 }
@@ -1117,7 +1157,7 @@ function trackListening(cat, correct) {
 /* ============ 聽力 ============ */
 renderers.listen = function () {
   const box = $("#tab-listen");
-  if (!TTS.ok) {
+  if (!TTS.ok && !AudioClips.complete) {
     box.innerHTML = `<div class="card"><h2>🎧 聽力訓練</h2><p class="muted">此瀏覽器不支援語音合成（speechSynthesis），請改用 Edge 或 Chrome。</p></div>`;
     return;
   }
@@ -1136,6 +1176,7 @@ renderers.listen = function () {
       <p class="muted">先讀題目再聽音檔（男女聲自動區分），聽完作答，答完可看逐字稿。</p>
     </div>
     ${PART34.map((s, i) => {
+      if (isFormItem("l34", i)) return ""; // 完整聽力測驗的題組只在模擬考出現
       const best = S.l34done[i];
       return `<div class="item-row"><div><span class="pill">${esc(s.type)}</span> <b>${esc(s.title)}</b></div>
         <div>${best !== undefined ? `<span class="pill ok">最佳 ${esc(best)}/${s.qs.length}</span>` : `<span class="pill">未完成</span>`}
@@ -1148,13 +1189,19 @@ renderers.listen = function () {
 
 /* ---- Part 2 ---- */
 let l2s = null;
+// 有音檔時，每個回應用「標號＋句子」一起錄好的音檔（依洗牌後的位置挑 A/B/C 版本）；沒有音檔就用裝置語音分開念
 function l2Audio(item, order) {
-  return [{ t: item.q, s: "N", pause: 700 }].concat(
-    order.map((oi, pos) => [{ t: "ABCD"[pos] + ".", s: "N", pause: 150 }, { t: item.opts[oi], s: "N", pause: 500 }]).flat());
+  return [{ t: item.q, s: "N", pause: 700, clip: ClipKey.q(item.q) }].concat(
+    order.map((oi, pos) => {
+      const L = "ABC"[pos];
+      return { t: item.opts[oi], s: "N", pause: 500, clip: ClipKey.r(L, item.opts[oi]),
+        fb: [{ t: L + ".", s: "N", pause: 150 }, { t: item.opts[oi], s: "N" }] };
+    }));
 }
 function startL2() {
   // Part 2 沒有類別統計，所以只做「已出過」輪替，不做弱項加權
-  const ids = drawRound("l2seen", PART2.length, ROUND_N, Object.keys(S.wb.l2).map(Number), null);
+  const ids = drawRound("l2seen", PART2.length, ROUND_N,
+    Object.keys(S.wb.l2).map(Number).filter(i => !isFormItem("l2", i)), null, i => isFormItem("l2", i));
   save(); // l2seen 已更新
   l2s = { ids, at: 0, right: 0 };
   l2Next();
@@ -1187,7 +1234,7 @@ function l2Next() {
         <div id="l2-accent" style="margin-bottom:8px"></div>
         <button class="btn ghost small" id="l2-replay">▶ 重播</button>
         ${rateQuickHTML()}
-        ${ttsNoteHTML()}
+        ${ttsNoteHTML(l2Audio(item, order))}
       </div>
       <div class="rating-row" id="l2-abc">
         ${order.map((_, pos) => `<button style="background:var(--panel2);border:1px solid var(--border2)" data-pos="${pos}">${"ABC"[pos]}</button>`).join("")}
@@ -1196,7 +1243,7 @@ function l2Next() {
       <div id="l2-nav" style="text-align:right;margin-top:10px"></div>
     </div>`;
   // 這個函式由「開始」或「下一題」的點擊直接呼叫，第一段語音因此在點擊手勢內送出
-  const play = () => { hideSilentHelp(); TTS.seq(l2Audio(item, order), { onSilent: () => showSilentHelp(play) }); $("#l2-accent").innerHTML = accentTag(); };
+  const play = () => { hideSilentHelp(); TTS.seq(l2Audio(item, order), { onSilent: () => showSilentHelp(play) }); $("#l2-accent").innerHTML = accentTag(l2Audio(item, order)); };
   play();
   $("#l2-replay").addEventListener("click", play);
   wireRateQuick(box, play);
@@ -1234,7 +1281,7 @@ function l2Next() {
 
 /* ---- Part 3/4 ---- */
 function l34Audio(set) {
-  return set.turns.map(t => ({ t: t.t, s: t.s, pause: 450 }));
+  return [{ t: "", s: "N", pause: 350, clip: ClipKey.c(set.turns), fb: set.turns.map(t => ({ t: t.t, s: t.s, pause: 450 })) }];
 }
 function startL34(si) {
   const set = PART34[si];
@@ -1267,12 +1314,12 @@ function startL34(si) {
         ${waveHTML()}
         <div id="l34-accent" style="margin:4px 0 8px;text-align:center"></div>
         ${rateQuickHTML()}
-        ${ttsNoteHTML()}
+        ${ttsNoteHTML(l34Audio(set))}
         ${graphicHTML(set)}
         <div id="l34-q"></div>
         <div id="l34-nav" style="text-align:right"></div>
       </div>`;
-    const playL34 = () => { hideSilentHelp(); TTS.seq(l34Audio(set), { onSilent: () => showSilentHelp(playL34) }); $("#l34-accent").innerHTML = accentTag(); };
+    const playL34 = () => { hideSilentHelp(); TTS.seq(l34Audio(set), { onSilent: () => showSilentHelp(playL34) }); $("#l34-accent").innerHTML = accentTag(l34Audio(set)); };
     if (state.at === 0) playL34();
     $("#l34-replay").addEventListener("click", playL34);
     wireRateQuick(box, playL34);
@@ -1353,11 +1400,14 @@ function weakCats() {
 // 完整閱讀測驗：題目在題庫中以 form 標記（例如 form: "R1"），測驗時依 Part 5 → 6 → 7 的順序出完所有題目
 const FORMS = [
   { id: "R1", name: "完整閱讀測驗 第 1 回", secs: 75 * 60 },
-  { id: "R2", name: "完整閱讀測驗 第 2 回", secs: 75 * 60 }
+  { id: "R2", name: "完整閱讀測驗 第 2 回", secs: 75 * 60 },
+  // 聽力測驗沒有倒數：跟著音檔節奏進行（Part 1 待補，所以是 94 題）
+  { id: "L1", name: "完整聽力測驗 第 1 回", kind: "listen", mins: 40 }
 ];
+const isListenForm = f => !!f && f.kind === "listen";
 // 完整測驗（forms）的題目：保留給完整測驗，一般練習與隨機模考都不抽（答錯後會進錯題本，可以在錯題本重考）
 function isFormItem(type, i) {
-  const arr = { p5: PART5, p6: PART6, p7: PART7 }[type];
+  const arr = { p5: PART5, p6: PART6, p7: PART7, l2: PART2, l34: PART34 }[type];
   return !!(arr && i < BASE_N[type] && arr[i] && arr[i].form);
 }
 function drawRound(seenKey, poolSize, n, wrongIds, isWeak, isHidden) {
@@ -1651,7 +1701,7 @@ function retryWrong(entry) {
     const inner = $("#wq-inner");
     inner.innerHTML = `
       <div style="text-align:center;padding:12px"><div style="font-size:2rem">🔊</div>
-        <button class="btn ghost small" id="wq-replay">▶ 重播</button>${ttsNoteHTML()}</div>
+        <button class="btn ghost small" id="wq-replay">▶ 重播</button>${ttsNoteHTML(l2Audio(item, order))}</div>
       <div class="rating-row" id="wq-abc">
         ${order.map((_, pos) => `<button style="background:var(--panel2);border:1px solid var(--border2)" data-pos="${pos}">${"ABC"[pos]}</button>`).join("")}
       </div>
@@ -1698,7 +1748,7 @@ function retryWrong(entry) {
     item = PART34[si].qs[qi];
     audio = PART34[si];
     meta.ai.context = aiTranscript(audio);
-    passageHtml = `<div style="text-align:center;padding:8px"><button class="btn ghost small" id="wq-replay">▶ 重播音檔</button>${ttsNoteHTML()}</div>${graphicHTML(audio)}`;
+    passageHtml = `<div style="text-align:center;padding:8px"><button class="btn ghost small" id="wq-replay">▶ 重播音檔</button>${ttsNoteHTML(l34Audio(audio))}</div>${graphicHTML(audio)}`;
   } else {
     const [si, qi] = entry.key.split("-").map(Number);
     item = PART7[si].qs[qi];

@@ -72,7 +72,8 @@ test("S1-phase 衝刺期每 3 天排一次閱讀節模考，其他天練 Part 7 
   assert.ok(plain(app.run("todayPlan()")).some(p => p.tab === "mock"), "沒考過模考時要排");
   app.run(`S.mocks = [{ date: todayStr(-1), mode: "read", lR: 0, lT: 0, rR: 20, rT: 27 }];`);
   const plan = plain(app.run("todayPlan()"));
-  assert.equal(plan.some(p => p.tab === "mock"), false, "昨天才考過，今天不排");
+  // v1.5.0：不排閱讀模考的日子，可能改排完整聽力測驗（也在模擬考分頁），所以只檢查閱讀模考
+  assert.equal(plan.some(p => p.tab === "mock" && !/聽力測驗/.test(p.label)), false, "昨天才考過，今天不排");
   assert.ok(plan.some(p => p.tab === "p7"));
   app.run(`S.mocks = [{ date: todayStr(-3), mode: "read", lR: 0, lT: 0, rR: 20, rT: 27 }];`);
   assert.ok(plain(app.run("todayPlan()")).some(p => p.tab === "mock"), "滿 3 天要排");

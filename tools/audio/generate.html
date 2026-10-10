@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>音檔產生器</title>
+<style>
+  body { font: 15px/1.6 system-ui, "Microsoft JhengHei", sans-serif; margin: 24px; background: #f6f7f6; color: #1d2a2c; }
+  pre { background: #fff; border: 1px solid #d5dddc; padding: 12px; max-height: 60vh; overflow: auto; white-space: pre-wrap; }
+  button, select, input { font: inherit; }
+</style>
+</head>
+<body>
+<h1>音檔產生器（開發工具，不隨網站發布）</h1>
+<p>在瀏覽器裡用 Kokoro-82M（kokoro-js）產生語音，編碼成 MP3 後寫回 <code>audio/</code>。電腦不需要安裝任何程式；模型會下載到瀏覽器快取。</p>
+<p>
+  工作檔 <input id="jobs" value="tools/audio/jobs/samples.json" size="40">
+  位元率 <select id="kbps"><option>32</option><option selected>40</option><option>48</option><option>64</option></select> kbps
+  <button id="run">開始</button>
+</p>
+<pre id="log"></pre>
+<script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js" crossorigin="anonymous"></script>
+<script type="module" src="generate.js"></script>
+</body>
+</html>

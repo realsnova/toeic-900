@@ -1,0 +1,1673 @@
+{
+ "part2": [
+  {
+   "q": "Who's going to lead the training session on Monday?",
+   "opts": [
+    "Rachel volunteered, I believe.",
+    "It starts at nine o'clock in Room B.",
+    "The train leaves from platform four."
+   ],
+   "ans": 0,
+   "exp": "Who 問誰主持訓練，答「我記得是 Rachel 自願了」。「It starts at nine」答的是時間；「The train leaves…」用 training／train 的音近陷阱。",
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "q": "When will the renovations to the lobby be finished?",
+   "opts": [
+    "The contractor hasn't given us a date yet.",
+    "Yes, the lobby looks brighter.",
+    "On the first floor near the main entrance."
+   ],
+   "ans": 0,
+   "exp": "When 問何時完工，間接回答「承包商還沒給日期」。疑問詞問句不能用 Yes 回答；「On the first floor…」答的是地點。",
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "q": "Where did you put the signed contracts?",
+   "opts": [
+    "Ms. Tanaka took them to the legal department.",
+    "I signed up for the workshop last week.",
+    "Because the terms were revised."
+   ],
+   "ans": 0,
+   "exp": "Where 問合約放哪裡，答「Tanaka 女士拿去法務部了」。「I signed up…」用 sign 做同字陷阱；「Because…」答的是原因。",
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "q": "Why hasn't the shipment from Denver arrived yet?",
+   "opts": [
+    "There was a snowstorm on the highway.",
+    "About two hundred boxes of paper.",
+    "I'd like to ship it overnight, if possible."
+   ],
+   "ans": 0,
+   "exp": "Why 問貨為什麼還沒到，答「高速公路上有暴風雪」。「About two hundred boxes」答的是數量；「ship it overnight」用 shipment／ship 做同字根陷阱。",
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "q": "How often do you back up the client files?",
+   "opts": [
+    "Every night, automatically.",
+    "Yes, I'll be right back after lunch.",
+    "About three hundred clients."
+   ],
+   "ans": 0,
+   "exp": "How often 問頻率，答「每晚自動備份」。「I'll be right back」用 back 做同字陷阱，而且疑問詞問句不能用 Yes；「three hundred clients」答的是數量。",
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "q": "What did the board decide about the merger?",
+   "opts": [
+    "They're postponing the vote until next quarter.",
+    "Yes, I was a little bored during it.",
+    "On the top floor of the building."
+   ],
+   "ans": 0,
+   "exp": "What 問董事會的決定，答「他們把表決延到下一季」。「bored」和 board 同音陷阱；「On the top floor…」答的是地點。",
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "q": "Have you had a chance to review the budget proposal?",
+   "opts": [
+    "I'm just finishing it now.",
+    "Yes, the view from the office is great.",
+    "A fifty percent chance of rain."
+   ],
+   "ans": 0,
+   "exp": "問有沒有看過預算提案，答「我正在看完」。「the view…」用 review／view 的音近陷阱；「chance of rain」用 chance 做同字陷阱。",
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "q": "Is the cafeteria open on weekends?",
+   "opts": [
+    "Only on Saturday mornings.",
+    "The salad bar was very popular.",
+    "No, I'll open the window."
+   ],
+   "ans": 0,
+   "exp": "問餐廳週末有沒有開，答「只有週六上午」。「salad bar」只是相關聯想；「open the window」用 open 做同字陷阱。",
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "q": "Didn't Mr. Patel already approve the design?",
+   "opts": [
+    "He wants to see one more version first.",
+    "A designer from Milan.",
+    "I'd appreciate a reply by the end of the day on Friday."
+   ],
+   "ans": 0,
+   "exp": "否定問句確認 Patel 先生是否已核准設計，答「他想先再看一個版本」（＝還沒核准）。「A designer…」用 design／designer 做同字根陷阱；「I'd appreciate a reply…」和問題無關。",
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "q": "Aren't you presenting at the conference in Seoul?",
+   "opts": [
+    "My manager decided to go instead.",
+    "It's a present for my colleague.",
+    "It was in a big hall."
+   ],
+   "ans": 0,
+   "exp": "否定問句確認對方是否要在首爾的會議上簡報，答「我的主管決定改由他去」。「present」是同字不同義的陷阱（禮物）；「It was in a big hall」時態不合，而且答的是地點。",
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "q": "You've worked with this supplier before, haven't you?",
+   "opts": [
+    "Only on a couple of small orders.",
+    "Supplies are kept in the cabinet by the door.",
+    "No, the printer isn't working."
+   ],
+   "ans": 0,
+   "exp": "附加問句確認是否和這家供應商合作過，答「只合作過幾筆小訂單」。「Supplies」用 supplier／supplies 做同字根陷阱；「isn't working」用 work 做同字陷阱。",
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "q": "The quarterly report is due tomorrow, isn't it?",
+   "opts": [
+    "It's been pushed back to Friday.",
+    "I reported it to the help desk this morning.",
+    "Due to the heavy traffic."
+   ],
+   "ans": 0,
+   "exp": "附加問句確認報告是不是明天到期，答「已經延到週五了」。「reported」用 report 做同字陷阱；「Due to…」用 due 做同字不同義陷阱。",
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "q": "Would you rather meet in person or over video?",
+   "opts": [
+    "Whichever is easier for your team.",
+    "Yes, I'd rather not.",
+    "I watched the training video yesterday afternoon."
+   ],
+   "ans": 0,
+   "exp": "選擇疑問句，答「看你們團隊哪個方便」是常見的不直接選擇的正解。選擇疑問句不能用 Yes 回答；「watched the video」用 video 做同字陷阱。",
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "q": "Should we hire a caterer or order from the café downstairs?",
+   "opts": [
+    "The café's prices are more reasonable.",
+    "We hired three new interns for the summer.",
+    "The elevator downstairs is out of order today."
+   ],
+   "ans": 0,
+   "exp": "選擇疑問句，答「那家咖啡店的價格比較合理」，間接選擇咖啡店。「hired」用 hire 做同字陷阱；「The elevator downstairs…」只重複 downstairs，沒有回答要選哪一個。",
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "q": "The printer on the third floor is jammed again.",
+   "opts": [
+    "I'll call the technician right away.",
+    "Please print twenty copies for the meeting.",
+    "On the third floor of the annex."
+   ],
+   "ans": 0,
+   "exp": "陳述句說印表機又卡紙，回應「我馬上找技術人員」。「print」用 printer／print 做同字根陷阱；「On the third floor…」重複題目字詞。",
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "q": "I can't find the keys to the storage room.",
+   "opts": [
+    "Have you checked with the security desk?",
+    "The key points of the presentation.",
+    "We need more storage space."
+   ],
+   "ans": 0,
+   "exp": "陳述句說找不到儲藏室鑰匙，以問句回應「你問過保全櫃台了嗎？」。「key points」是同字不同義陷阱；「storage space」重複題目字詞。",
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "q": "Could you send me the agenda before the meeting?",
+   "opts": [
+    "I'll e-mail it to everyone this afternoon.",
+    "The meeting went very well.",
+    "She's a travel agent."
+   ],
+   "ans": 0,
+   "exp": "請求寄議程，答「我今天下午會寄給大家」。「The meeting went very well」時態不合；「agent」和 agenda 的音近陷阱。",
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "q": "Why don't I drive you to the airport tomorrow?",
+   "opts": [
+    "Thanks, but I've already booked a taxi.",
+    "Because the flight was delayed by two hours.",
+    "The airport is being expanded this year to add a terminal."
+   ],
+   "ans": 0,
+   "exp": "Why don't I… 是主動提議（我載你去機場吧），答「謝謝，但我已經叫了計程車」。「Because…」把提議誤當成問原因；「The airport is being expanded」只重複 airport。",
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "q": "How much will it cost to repair the air conditioner?",
+   "opts": [
+    "It might be cheaper to replace it.",
+    "It's been unusually cold all week, hasn't it?",
+    "Twenty degrees, I think."
+   ],
+   "ans": 0,
+   "exp": "How much 問修冷氣的費用，間接回答「換新的可能比較便宜」（暗示修理很貴）。「cold」「Twenty degrees」都是由冷氣聯想的陷阱。",
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "q": "Which hotel are the clients staying at?",
+   "opts": [
+    "Let me check their itinerary.",
+    "For three nights.",
+    "Yes, they're staying for lunch."
+   ],
+   "ans": 0,
+   "exp": "Which 問客戶住哪家飯店，答「我查一下他們的行程表」。「For three nights」答的是住多久；疑問詞問句不能用 Yes，而且 staying 是同字陷阱。",
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "q": "Where's the nearest place to buy stamps?",
+   "opts": [
+    "There's a post office across the street.",
+    "Stamp it with the official company seal, please.",
+    "About fifty cents each, or a dollar for international mail."
+   ],
+   "ans": 0,
+   "exp": "Where 問哪裡買郵票，答「對街有郵局」。「Stamp it…」是同字不同義（蓋章）；「fifty cents each」答的是價格。",
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "q": "Who approved the overtime for the weekend shift?",
+   "opts": [
+    "Nobody has, as far as I know.",
+    "Over the weekend, mostly.",
+    "The night shift starts at six in the evening."
+   ],
+   "ans": 0,
+   "exp": "Who 問誰核准加班，答「據我所知還沒有人核准」。「Over the weekend」重複題目字詞；「The shift starts at six」答的是時間。",
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "q": "Do you know if the new software is compatible with our system?",
+   "opts": [
+    "The IT team is testing it now.",
+    "No, I haven't met him yet.",
+    "It comes in a larger box."
+   ],
+   "ans": 0,
+   "exp": "問新軟體和系統是否相容，答「IT 團隊正在測試」（＝還不知道，正在確認）。「I haven't met him」把 know 誤解成認識某人；「a larger box」和相容性無關。",
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "q": "The client wants the samples by Thursday.",
+   "opts": [
+    "That doesn't give us much time.",
+    "Several free samples were handed out at the fair.",
+    "On Thursday evenings."
+   ],
+   "ans": 0,
+   "exp": "陳述客戶週四前要樣品，回應「那我們時間不多」。「free samples」重複 samples；「On Thursday evenings」重複 Thursday。",
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "q": "When is the new branch manager starting?",
+   "opts": [
+    "Hasn't the announcement been made yet?",
+    "At the main branch downtown, near the station.",
+    "He managed the old branch quite well, I heard."
+   ],
+   "ans": 0,
+   "exp": "When 問新分行經理何時上任，以反問回應「公告還沒發嗎？」。「At the main branch」答的是地點；「managed」用 manager／manage 做同字根陷阱。",
+   "src": "L1",
+   "form": "L1"
+  }
+ ],
+ "part34": [
+  {
+   "type": "Part 3",
+   "title": "對話：追加午餐訂單",
+   "acc": "us",
+   "turns": [
+    {
+     "s": "W",
+     "t": "Hi, this is Monica Ruiz from Harlow Consulting. I placed a lunch order with you yesterday for our client workshop on Thursday."
+    },
+    {
+     "s": "M",
+     "t": "Yes, Ms. Ruiz, I have it right here. Sandwich platters for twenty-five people, delivered at noon."
+    },
+    {
+     "s": "W",
+     "t": "That's the one. We've just found out that eight more people will be attending, so I need to increase the order. Is that still possible?"
+    },
+    {
+     "s": "M",
+     "t": "Sure, but since it's a larger order, our kitchen will need you to confirm it by ten o'clock tomorrow morning."
+    },
+    {
+     "s": "W",
+     "t": "No problem. Also, a few of the new attendees don't eat meat."
+    },
+    {
+     "s": "M",
+     "t": "Then I'd suggest adding our grilled vegetable platter. I'll e-mail you an updated invoice this afternoon."
+    }
+   ],
+   "qs": [
+    {
+     "q": "Why is the woman calling?",
+     "opts": [
+      "To change the size of an order",
+      "To cancel a workshop",
+      "To complain about a delivery",
+      "To ask about openings at the company"
+     ],
+     "ans": 0,
+     "exp": "女士說多了八個人參加，need to increase the order（要追加訂單）。工作坊沒有取消；沒有抱怨送貨。"
+    },
+    {
+     "q": "What does the man say the kitchen needs?",
+     "opts": [
+      "Confirmation by a certain time",
+      "A larger delivery vehicle",
+      "Payment in advance",
+      "A list of attendees' names"
+     ],
+     "ans": 0,
+     "exp": "男士說廚房需要她在明天早上十點前確認（confirm it by ten o'clock tomorrow morning）。沒有提到預付或名單。"
+    },
+    {
+     "q": "What does the man recommend?",
+     "opts": [
+      "Adding a vegetarian option",
+      "Changing the delivery time",
+      "Reducing the number of platters",
+      "Picking up the order in person"
+     ],
+     "ans": 0,
+     "exp": "女士說有人不吃肉，男士建議加點烤蔬菜拼盤（grilled vegetable platter）＝素食選項。"
+    }
+   ],
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "type": "Part 3",
+   "title": "對話：行銷助理招募",
+   "acc": "uk",
+   "turns": [
+    {
+     "s": "M",
+     "t": "Priya, have you finished going through the applications for the marketing assistant position?"
+    },
+    {
+     "s": "W",
+     "t": "Almost. We've had over sixty, but only about ten have the design experience we asked for."
+    },
+    {
+     "s": "M",
+     "t": "That's fewer than I expected. When do you think we can start interviewing?"
+    },
+    {
+     "s": "W",
+     "t": "Probably next Wednesday. The problem is that Mr. Hughes will be at the Glasgow office all that week, and he wanted to sit in on the interviews."
+    },
+    {
+     "s": "M",
+     "t": "Couldn't he join by video call?"
+    },
+    {
+     "s": "W",
+     "t": "Good idea. I'll ask his assistant whether he'd be available for that."
+    }
+   ],
+   "qs": [
+    {
+     "q": "What are the speakers mainly discussing?",
+     "opts": [
+      "Filling a job vacancy",
+      "Designing an advertisement",
+      "Opening a new office",
+      "Planning a business trip"
+     ],
+     "ans": 0,
+     "exp": "整段在談 marketing assistant 職缺的應徵者與面試安排＝填補職缺。design 只是應徵條件；Glasgow 辦公室已經存在。"
+    },
+    {
+     "q": "What problem does the woman mention?",
+     "opts": [
+      "A colleague will be away",
+      "A deadline has passed",
+      "Some applications were lost",
+      "A room is unavailable"
+     ],
+     "ans": 0,
+     "exp": "女士說 Hughes 先生那整週都在 Glasgow 辦公室，但他想參加面試＝同事不在。"
+    },
+    {
+     "q": "What will the woman probably do next?",
+     "opts": [
+      "Contact an assistant",
+      "Reschedule some interviews",
+      "Post a new job advertisement",
+      "Travel to Glasgow"
+     ],
+     "ans": 0,
+     "exp": "最後她說 I'll ask his assistant（我會問他的助理）他能不能用視訊參加。"
+    }
+   ],
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "type": "Part 3",
+   "title": "對話：飯店房間暖氣故障（三人對話）",
+   "acc": "us",
+   "turns": [
+    {
+     "s": "W",
+     "t": "Excuse me. I'm in room 512, and the heater in my room doesn't seem to be working. It's quite cold."
+    },
+    {
+     "s": "M",
+     "t": "I'm very sorry about that, Ms. Chen. Our maintenance supervisor, Carlos, is actually right here. Carlos?"
+    },
+    {
+     "s": "M2",
+     "t": "Hi. It's probably the thermostat. Several units on the fifth floor were reset after this morning's power outage."
+    },
+    {
+     "s": "W",
+     "t": "Will it take long to fix? I have a video conference in about an hour."
+    },
+    {
+     "s": "M2",
+     "t": "It should only take a few minutes, but if you'd prefer not to be disturbed, I can come by after your call."
+    },
+    {
+     "s": "M",
+     "t": "And for the inconvenience, Ms. Chen, please enjoy a complimentary breakfast tomorrow morning."
+    }
+   ],
+   "qs": [
+    {
+     "q": "Where most likely are the speakers?",
+     "opts": [
+      "At a hotel",
+      "At an electronics store",
+      "At a conference center",
+      "At a real estate agency"
+     ],
+     "ans": 0,
+     "exp": "女士說她住 room 512，櫃台人員以招待隔天早餐（complimentary breakfast）致歉，可知在飯店。video conference 只是她之後的行程。"
+    },
+    {
+     "q": "According to Carlos, what caused the problem?",
+     "opts": [
+      "A power outage",
+      "A broken window",
+      "An outdated heating system",
+      "A mistake by a guest"
+     ],
+     "ans": 0,
+     "exp": "維修主管 Carlos 說五樓有幾間的溫控器在今早停電（power outage）後被重設了。"
+    },
+    {
+     "q": "What does the front desk clerk offer the woman?",
+     "opts": [
+      "A free meal",
+      "A different room",
+      "A partial refund",
+      "A late checkout"
+     ],
+     "ans": 0,
+     "exp": "櫃台人員說 complimentary breakfast（免費早餐）＝免費的一餐。"
+    }
+   ],
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "type": "Part 3",
+   "title": "對話：刪減文具支出（意圖題）",
+   "acc": "uk",
+   "turns": [
+    {
+     "s": "W",
+     "t": "Kevin, did you see the e-mail from accounting? They want every department to cut supply spending by fifteen percent."
+    },
+    {
+     "s": "M",
+     "t": "I did. I was thinking we could stop ordering printed brochures and send digital versions to clients instead."
+    },
+    {
+     "s": "W",
+     "t": "Hmm, a lot of our older clients still prefer paper copies."
+    },
+    {
+     "s": "M",
+     "t": "That's true. What if we only print brochures for the clients who ask for them?"
+    },
+    {
+     "s": "W",
+     "t": "That could work. Let's put together some figures for Thursday's meeting so we can show how much we'd save."
+    }
+   ],
+   "qs": [
+    {
+     "q": "What did the accounting department ask for?",
+     "opts": [
+      "Lower spending on supplies",
+      "Updated client contact details",
+      "A list of brochure designs",
+      "Faster processing of invoices"
+     ],
+     "ans": 0,
+     "exp": "會計部要求各部門把 supply spending（用品支出）減少 15%。"
+    },
+    {
+     "q": "Why does the woman say, \"a lot of our older clients still prefer paper copies\"?",
+     "opts": [
+      "To express a concern about a suggestion",
+      "To explain why sales have increased",
+      "To recommend hiring more staff",
+      "To request a larger printing budget"
+     ],
+     "ans": 0,
+     "exp": "意圖題：男士提議改寄電子版型錄，女士說很多老客戶還是喜歡紙本＝對這個提議表示顧慮；男士接著修正為「只印給有要求的客戶」。"
+    },
+    {
+     "q": "What will the speakers prepare for the meeting?",
+     "opts": [
+      "Cost estimates",
+      "A client survey",
+      "New brochure samples",
+      "A staff schedule"
+     ],
+     "ans": 0,
+     "exp": "女士說 put together some figures… show how much we'd save（整理數字，說明能省多少）＝費用估算。"
+    }
+   ],
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "type": "Part 3",
+   "title": "對話：租車換車型",
+   "acc": "us",
+   "turns": [
+    {
+     "s": "M",
+     "t": "Hi, I reserved a compact car for three days under the name Owen Price."
+    },
+    {
+     "s": "W",
+     "t": "Let me look that up. Yes, Mr. Price. Unfortunately, all of our compact cars were returned late today, so none of them are ready yet."
+    },
+    {
+     "s": "M",
+     "t": "Oh no. I have to be in Springfield for a sales meeting by two o'clock."
+    },
+    {
+     "s": "W",
+     "t": "I can give you a midsize sedan instead at no extra charge. It's parked right outside."
+    },
+    {
+     "s": "M",
+     "t": "That would be great, thanks."
+    },
+    {
+     "s": "W",
+     "t": "Just remember that the tank needs to be full when you return it, or there's a refueling fee."
+    }
+   ],
+   "qs": [
+    {
+     "q": "What problem does the woman mention?",
+     "opts": [
+      "The requested car is not available",
+      "A reservation was canceled by mistake",
+      "A payment did not go through",
+      "The parking area is closed"
+     ],
+     "ans": 0,
+     "exp": "女士說小型車今天都晚還、還沒準備好＝預訂的車型沒有車。預約本身還在，沒有取消。"
+    },
+    {
+     "q": "Why is the man in a hurry?",
+     "opts": [
+      "He has a meeting to attend",
+      "His flight is about to leave",
+      "He needs to pick up a client",
+      "A store is about to close"
+     ],
+     "ans": 0,
+     "exp": "男士說兩點前要到 Springfield 開業務會議。"
+    },
+    {
+     "q": "What does the woman remind the man to do?",
+     "opts": [
+      "Refill the fuel tank",
+      "Return the keys to the counter",
+      "Keep the receipt",
+      "Check the tire pressure"
+     ],
+     "ans": 0,
+     "exp": "女士提醒還車時油箱要加滿（the tank needs to be full），否則要付加油費。"
+    }
+   ],
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "type": "Part 3",
+   "title": "對話：公司志工日（三人對話）",
+   "acc": "uk",
+   "turns": [
+    {
+     "s": "W",
+     "t": "Thanks for meeting with us, Ahmed. Lucy and I are organising the company's volunteer day at Riverside Park next month."
+    },
+    {
+     "s": "M",
+     "t": "Happy to help. The parks department usually supplies gloves and rubbish bags for groups like yours."
+    },
+    {
+     "s": "W2",
+     "t": "That's great. We're expecting around fifty employees. Is there anything else we'd need to arrange?"
+    },
+    {
+     "s": "M",
+     "t": "Just transport. Parking near the river is limited at weekends, so a lot of groups hire a coach."
+    },
+    {
+     "s": "W",
+     "t": "Lucy, could you get some quotes from coach companies?"
+    },
+    {
+     "s": "W2",
+     "t": "Sure. I'll ring a few this afternoon."
+    }
+   ],
+   "qs": [
+    {
+     "q": "What are the speakers planning?",
+     "opts": [
+      "A community service event",
+      "A company picnic",
+      "A sports competition",
+      "A park renovation"
+     ],
+     "ans": 0,
+     "exp": "公司在公園辦 volunteer day（志工日），會發手套和垃圾袋＝社區服務活動。"
+    },
+    {
+     "q": "According to the man, what does the parks department provide?",
+     "opts": [
+      "Cleaning supplies",
+      "Free parking passes",
+      "Lunch for volunteers",
+      "A guided tour"
+     ],
+     "ans": 0,
+     "exp": "公園處會提供 gloves and rubbish bags（手套和垃圾袋）＝清潔用品。他也說停車位有限，所以不是免費停車證。"
+    },
+    {
+     "q": "What will Lucy do this afternoon?",
+     "opts": [
+      "Contact bus companies",
+      "Reserve a parking area",
+      "Send an e-mail to employees",
+      "Visit the park"
+     ],
+     "ans": 0,
+     "exp": "Lucy 說 I'll ring a few（打電話給幾家）遊覽車公司（coach companies，英式用語＝bus）要報價。"
+    }
+   ],
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "type": "Part 3",
+   "title": "對話：應用程式提前上線（意圖題）",
+   "acc": "us",
+   "turns": [
+    {
+     "s": "M",
+     "t": "Grace, the client just called. They want the mobile app update released this Friday instead of next Tuesday."
+    },
+    {
+     "s": "W",
+     "t": "This Friday? We still haven't finished testing the payment feature."
+    },
+    {
+     "s": "M",
+     "t": "I know. Could we release everything except the payment feature and add it later?"
+    },
+    {
+     "s": "W",
+     "t": "Maybe. But the client's announcement says the new version includes faster payments."
+    },
+    {
+     "s": "M",
+     "t": "Then I'll call them back and explain the situation. Can you estimate how long the remaining tests will take?"
+    },
+    {
+     "s": "W",
+     "t": "Give me an hour, and I'll have a number for you."
+    }
+   ],
+   "qs": [
+    {
+     "q": "What does the client want to do?",
+     "opts": [
+      "Move up a release date",
+      "Add more features",
+      "Change the app's design",
+      "Lower the project budget"
+     ],
+     "ans": 0,
+     "exp": "客戶要把更新從下週二提前到這週五發布＝提前發布日期。"
+    },
+    {
+     "q": "Why does the woman say, \"the client's announcement says the new version includes faster payments\"?",
+     "opts": [
+      "To point out a problem with the man's idea",
+      "To praise the client's marketing team",
+      "To suggest that testing is finished",
+      "To explain why sales have increased"
+     ],
+     "ans": 0,
+     "exp": "意圖題：男士提議先發布、付款功能之後再加；女士指出客戶已經公告新版有更快的付款功能＝這個做法行不通。男士因此決定回電說明。"
+    },
+    {
+     "q": "What does the man ask the woman for?",
+     "opts": [
+      "A time estimate",
+      "A copy of the announcement",
+      "The client's phone number",
+      "A list of features"
+     ],
+     "ans": 0,
+     "exp": "男士問 how long the remaining tests will take（剩下的測試要多久）＝時間估計。"
+    }
+   ],
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "type": "Part 3",
+   "title": "對話：參觀辦公室租賃",
+   "acc": "uk",
+   "turns": [
+    {
+     "s": "W",
+     "t": "Mr. Dawson, thanks for showing me the office space. It's much bigger than our current one."
+    },
+    {
+     "s": "M",
+     "t": "It is. And all the furniture you see here is included in the rent."
+    },
+    {
+     "s": "W",
+     "t": "That's a nice bonus. My only concern is the location. Most of our staff take the train to work, and the nearest station is quite far."
+    },
+    {
+     "s": "M",
+     "t": "Actually, the city is adding a new bus route along this street from June. There'll be a stop right outside."
+    },
+    {
+     "s": "W",
+     "t": "Oh, that would make a big difference. Could you send me a copy of the lease so I can go over it with my partners?"
+    }
+   ],
+   "qs": [
+    {
+     "q": "Who most likely is the man?",
+     "opts": [
+      "A real estate agent",
+      "A furniture salesperson",
+      "A bus driver",
+      "A city official"
+     ],
+     "ans": 0,
+     "exp": "男士帶女士看辦公室、說明租金包含家具、之後要寄租約＝房地產仲介。"
+    },
+    {
+     "q": "What is the woman concerned about?",
+     "opts": [
+      "Access to public transportation",
+      "The cost of the rent",
+      "The size of the office",
+      "The condition of the furniture"
+     ],
+     "ans": 0,
+     "exp": "她說員工多搭火車上班，但最近的車站很遠＝大眾運輸是否方便。她說空間比現在大，是優點不是顧慮。"
+    },
+    {
+     "q": "What does the woman request?",
+     "opts": [
+      "A copy of a contract",
+      "A tour of another building",
+      "A discount on the rent",
+      "A bus schedule"
+     ],
+     "ans": 0,
+     "exp": "她請男士寄 a copy of the lease（租約）＝合約副本。"
+    }
+   ],
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "type": "Part 3",
+   "title": "對話：新書簽名會",
+   "acc": "us",
+   "turns": [
+    {
+     "s": "W",
+     "t": "Hi, Daniel. Is everything ready for tonight's book signing with Elena Marsh?"
+    },
+    {
+     "s": "M",
+     "t": "Almost. The chairs are set up, but the shipment of her new novel hasn't arrived yet."
+    },
+    {
+     "s": "W",
+     "t": "That's a problem. Most people will want to buy a copy to get it signed."
+    },
+    {
+     "s": "M",
+     "t": "The distributor said the truck would be here by five. If not, I can pick up some copies from our Westfield branch."
+    },
+    {
+     "s": "W",
+     "t": "Good. And let's put a sign at the entrance about tonight's event. We might attract some walk-in customers."
+    }
+   ],
+   "qs": [
+    {
+     "q": "What event is taking place tonight?",
+     "opts": [
+      "An author appearance",
+      "A store opening",
+      "A writing workshop",
+      "A book club meeting"
+     ],
+     "ans": 0,
+     "exp": "今晚是作家 Elena Marsh 的 book signing（簽書會）＝作家到場活動。"
+    },
+    {
+     "q": "What problem does the man mention?",
+     "opts": [
+      "Some merchandise has not been delivered",
+      "Some chairs are missing",
+      "An author has canceled",
+      "A delivery truck has broken down on the way"
+     ],
+     "ans": 0,
+     "exp": "男士說她新小說的貨還沒到＝商品還沒送達。椅子已經擺好；卡車只說五點前會到，沒有故障。"
+    },
+    {
+     "q": "What does the woman suggest doing?",
+     "opts": [
+      "Posting a notice",
+      "Calling the distributor",
+      "Moving the event to another branch",
+      "Offering discounts"
+     ],
+     "ans": 0,
+     "exp": "女士說在入口放一個告示（put a sign at the entrance）＝張貼公告，吸引路過的客人。"
+    }
+   ],
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "type": "Part 3",
+   "title": "對話：物流研討會（意圖題）",
+   "acc": "uk",
+   "turns": [
+    {
+     "s": "M",
+     "t": "Hannah, are you going to the logistics conference in Rotterdam this year?"
+    },
+    {
+     "s": "W",
+     "t": "I'd like to, but the registration fee has gone up to six hundred euros, and our travel budget is almost used up."
+    },
+    {
+     "s": "M",
+     "t": "Well, they're looking for speakers, and speakers attend for free."
+    },
+    {
+     "s": "W",
+     "t": "Really? I did lead our warehouse automation project last spring."
+    },
+    {
+     "s": "M",
+     "t": "Exactly. You should submit a proposal. The deadline's the end of this week."
+    },
+    {
+     "s": "W",
+     "t": "I'll start on it tonight."
+    }
+   ],
+   "qs": [
+    {
+     "q": "What is the woman worried about?",
+     "opts": [
+      "The cost of attending an event",
+      "The length of a trip",
+      "A project deadline",
+      "The location of a warehouse"
+     ],
+     "ans": 0,
+     "exp": "女士說報名費漲到六百歐元，差旅預算也快用完＝擔心參加的費用。"
+    },
+    {
+     "q": "Why does the man say, \"they're looking for speakers\"?",
+     "opts": [
+      "To suggest a way to avoid a fee",
+      "To explain why an event was postponed",
+      "To ask the woman to recommend someone",
+      "To complain about the conference schedule"
+     ],
+     "ans": 0,
+     "exp": "意圖題：他接著說 speakers attend for free（講者免費參加），所以是在建議她用當講者的方式免掉報名費。"
+    },
+    {
+     "q": "What will the woman probably do tonight?",
+     "opts": [
+      "Work on a proposal",
+      "Book a flight",
+      "Register for a conference",
+      "Review a budget"
+     ],
+     "ans": 0,
+     "exp": "男士建議她投稿，她說 I'll start on it tonight＝今晚開始寫提案。"
+    }
+   ],
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "type": "Part 3",
+   "title": "對話：機場接駁車（圖表題）",
+   "acc": "us",
+   "turns": [
+    {
+     "s": "W",
+     "t": "Hi, I need to get downtown for a nine-fifteen meeting at the Carlton Building. Which shuttle should I take?"
+    },
+    {
+     "s": "M",
+     "t": "The Carlton Building is about a ten-minute walk from the last stop, so you'd want to arrive by nine at the latest."
+    },
+    {
+     "s": "W",
+     "t": "Then the eight-fifteen should work. Oh, wait. My colleague said traffic is heavy this morning because of road construction."
+    },
+    {
+     "s": "M",
+     "t": "That's right. Because of the construction, every bus is running about twenty minutes late, so I'd take the one before that."
+    },
+    {
+     "s": "W",
+     "t": "Thanks. Where can I buy a ticket?"
+    },
+    {
+     "s": "M",
+     "t": "You can pay the driver directly, but it's two dollars cheaper if you use the machine next to the door."
+    }
+   ],
+   "qs": [
+    {
+     "q": "Why is the woman going downtown?",
+     "opts": [
+      "To attend a meeting",
+      "To catch a flight",
+      "To visit a construction site",
+      "To meet a colleague for lunch"
+     ],
+     "ans": 0,
+     "exp": "女士說要去市中心 Carlton 大樓參加九點十五分的會議。"
+    },
+    {
+     "q": "Look at the graphic. What time will the woman's shuttle depart?",
+     "opts": [
+      "7:45 A.M.",
+      "7:15 A.M.",
+      "8:15 A.M.",
+      "8:45 A.M."
+     ],
+     "ans": 0,
+     "exp": "圖表題：她原本想搭 8:15，但每班車都晚約二十分鐘，男士建議搭前一班。時刻表上 8:15 的前一班是 7:45（晚二十分鐘約 8:50 到，來得及）。"
+    },
+    {
+     "q": "According to the man, how can the woman save money?",
+     "opts": [
+      "By using a ticket machine",
+      "By buying a round-trip ticket",
+      "By paying the driver directly",
+      "By showing a company ID"
+     ],
+     "ans": 0,
+     "exp": "男士說用門邊的售票機（the machine next to the door）買票便宜兩美元；直接付給司機是比較貴的方式。"
+    }
+   ],
+   "graphic": "AIRPORT SHUTTLE TO DOWNTOWN\nDeparts ...... Arrives\n7:15 A.M. .... 8:00 A.M.\n7:45 A.M. .... 8:30 A.M.\n8:15 A.M. .... 9:00 A.M.\n8:45 A.M. .... 9:30 A.M.",
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "type": "Part 3",
+   "title": "對話：預約會議室（圖表題）",
+   "acc": "uk",
+   "turns": [
+    {
+     "s": "M",
+     "t": "Fiona, I need to book a room for the budget review on Monday. There'll be twelve of us."
+    },
+    {
+     "s": "W",
+     "t": "Let me check the online calendar. The Delta room is taken all day for the board meeting."
+    },
+    {
+     "s": "M",
+     "t": "What about the others?"
+    },
+    {
+     "s": "W",
+     "t": "The Birch room's free, and it seats exactly twelve."
+    },
+    {
+     "s": "M",
+     "t": "Hmm, I'll be showing slides, though, so I'll need a projector."
+    },
+    {
+     "s": "W",
+     "t": "Then this one is the only other room that's big enough. I'll reserve it for you now."
+    }
+   ],
+   "qs": [
+    {
+     "q": "What will take place on Monday?",
+     "opts": [
+      "A budget review",
+      "A board election",
+      "A training session",
+      "A product demonstration"
+     ],
+     "ans": 0,
+     "exp": "男士要為週一的 budget review（預算檢討）訂會議室。board meeting 是占用 Delta 室的另一場會議，不是選舉。"
+    },
+    {
+     "q": "Look at the graphic. Which room will the woman reserve?",
+     "opts": [
+      "Cedar",
+      "Azure",
+      "Birch",
+      "Delta"
+     ],
+     "ans": 0,
+     "exp": "圖表題：需要 12 個座位又要有投影機。Delta 已被占用；Birch 沒有投影機；Azure 只有 8 席。剩下 Cedar（14 席、有投影機）。"
+    },
+    {
+     "q": "What does the man say he will do at the meeting?",
+     "opts": [
+      "Show a presentation",
+      "Introduce a new employee",
+      "Distribute a report",
+      "Lead a discussion on hiring"
+     ],
+     "ans": 0,
+     "exp": "男士說 I'll be showing slides＝要放投影片簡報。"
+    }
+   ],
+   "graphic": "MEETING ROOMS: 4th Floor\nRoom ..... Seats .. Projector\nAzure .... 8 ...... Yes\nBirch .... 12 ..... No\nCedar .... 14 ..... Yes\nDelta .... 20 ..... Yes",
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "type": "Part 3",
+   "title": "對話：網站流量（圖表題）",
+   "acc": "us",
+   "turns": [
+    {
+     "s": "W",
+     "t": "Theo, I've been looking at our website numbers for the first four months of the year."
+    },
+    {
+     "s": "M",
+     "t": "Anything interesting?"
+    },
+    {
+     "s": "W",
+     "t": "Well, visits dropped sharply in the month we switched hosting companies. The site was down for almost three days."
+    },
+    {
+     "s": "M",
+     "t": "Right, I remember the complaints. But the following month was our best so far."
+    },
+    {
+     "s": "W",
+     "t": "That was because of the spring promotion. I'd like to run a similar one this summer."
+    },
+    {
+     "s": "M",
+     "t": "Good idea. Why don't you draft a proposal and share it with the marketing director?"
+    }
+   ],
+   "qs": [
+    {
+     "q": "What are the speakers mainly discussing?",
+     "opts": [
+      "Website traffic",
+      "Customer complaints",
+      "A hiring plan",
+      "Monthly sales targets"
+     ],
+     "ans": 0,
+     "exp": "整段在談前四個月的網站造訪數（website numbers / visits）＝網站流量。客訴只是順帶提到。"
+    },
+    {
+     "q": "Look at the graphic. In which month did the company change hosting companies?",
+     "opts": [
+      "March",
+      "January",
+      "February",
+      "April"
+     ],
+     "ans": 0,
+     "exp": "圖表題：換主機商那個月造訪數大跌，而且下個月是最好的一個月。表上最低的是 March（9,800），下個月 April（18,200）是最高。"
+    },
+    {
+     "q": "What does the man suggest the woman do?",
+     "opts": [
+      "Prepare a proposal",
+      "Contact the hosting company",
+      "Hire a web designer",
+      "Extend a promotion"
+     ],
+     "ans": 0,
+     "exp": "男士說 draft a proposal（擬一份提案）給行銷總監。她想在夏天辦類似的促銷，不是延長原來的促銷。"
+    }
+   ],
+   "graphic": "MONTHLY WEBSITE VISITORS\nJanuary ...... 12,000\nFebruary ..... 15,500\nMarch ........ 9,800\nApril ........ 18,200",
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "type": "Part 4",
+   "title": "短講：辦公用品訂單語音留言",
+   "acc": "uk",
+   "ng": "W",
+   "turns": [
+    {
+     "s": "N",
+     "t": "Hello, this is Sandra calling from Brightline Office Supply about your order of twelve ergonomic chairs. Unfortunately, the manufacturer has run out of the grey fabric you selected, and it won't be available again until the end of next month. We do have the same chair in black, which we could deliver this Thursday. If you'd like to switch colours, please call me back on 555-0193 before five o'clock today so I can update the delivery schedule. And to make up for the inconvenience, we'll take ten percent off your total."
+    }
+   ],
+   "qs": [
+    {
+     "q": "What is the purpose of the message?",
+     "opts": [
+      "To report a problem with an order",
+      "To confirm a delivery address for an order",
+      "To advertise a new product",
+      "To request a payment"
+     ],
+     "ans": 0,
+     "exp": "留言說顧客選的灰色布料缺貨，要到下個月底才有＝訂單出了問題。"
+    },
+    {
+     "q": "What does the speaker ask the listener to do before five o'clock?",
+     "opts": [
+      "Return a call",
+      "Choose a delivery date",
+      "Visit a showroom",
+      "Sign a contract"
+     ],
+     "ans": 0,
+     "exp": "please call me back… before five o'clock today（今天五點前回電）。送貨日是她提出的週四，不需要對方選。"
+    },
+    {
+     "q": "What does the speaker offer?",
+     "opts": [
+      "A discount",
+      "Free delivery",
+      "An extended warranty",
+      "A fabric sample"
+     ],
+     "ans": 0,
+     "exp": "we'll take ten percent off your total（總價打九折）＝折扣。"
+    }
+   ],
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "type": "Part 4",
+   "title": "短講：工廠新設備宣布（意圖題）",
+   "acc": "us",
+   "ng": "M",
+   "turns": [
+    {
+     "s": "N",
+     "t": "Attention, all production staff. As you know, the new packaging machines were installed on line three last weekend. Starting Monday, everyone working on that line will need to complete a two-hour safety training session before operating the equipment. Sessions will be held every morning this week in the break room. Now, I know some of you feel the old machines worked just fine. But the new ones can pack twice as many boxes per hour. Please sign up for a session with your shift supervisor by Wednesday."
+    }
+   ],
+   "qs": [
+    {
+     "q": "Where most likely does the announcement take place?",
+     "opts": [
+      "At a factory",
+      "At a shipping office",
+      "At a supermarket",
+      "At an electronics store"
+     ],
+     "ans": 0,
+     "exp": "對象是 production staff（生產線員工），提到 line three 的包裝機＝工廠。"
+    },
+    {
+     "q": "Why does the speaker say, \"the new ones can pack twice as many boxes per hour\"?",
+     "opts": [
+      "To justify a change",
+      "To correct an error in a report",
+      "To ask staff to work faster",
+      "To announce a sales goal"
+     ],
+     "ans": 0,
+     "exp": "意圖題：他先承認有人覺得舊機器沒問題，再說新機器每小時能包兩倍的箱子＝說明換機器的理由。不是要員工加快速度。"
+    },
+    {
+     "q": "What are listeners asked to do by Wednesday?",
+     "opts": [
+      "Register for a training session",
+      "Test the new equipment",
+      "Submit a work schedule",
+      "Clean the break room"
+     ],
+     "ans": 0,
+     "exp": "Please sign up for a session… by Wednesday（週三前報名訓練課程）。"
+    }
+   ],
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "type": "Part 4",
+   "title": "短講：古宅導覽開場",
+   "acc": "uk",
+   "ng": "W",
+   "turns": [
+    {
+     "s": "N",
+     "t": "Welcome to Ashford Manor. My name is Julia, and I'll be your guide this afternoon. The house was built in 1782 by a wealthy wool merchant, and it has been restored to look just as it did then. We'll begin in the library, which holds more than four thousand books, and then we'll visit the gardens. Before we start, I'll ask you to leave any large bags in the lockers by the entrance, since some of the hallways are quite narrow. Our tour will finish at the gift shop, where you can show today's ticket to get fifteen percent off."
+    }
+   ],
+   "qs": [
+    {
+     "q": "Who most likely is the speaker?",
+     "opts": [
+      "A tour guide",
+      "A librarian",
+      "A gardener",
+      "A history teacher"
+     ],
+     "ans": 0,
+     "exp": "I'll be your guide this afternoon＝導覽員。圖書室和花園只是參觀地點。"
+    },
+    {
+     "q": "Why are listeners asked to leave their bags?",
+     "opts": [
+      "Some hallways are narrow",
+      "Bags may damage paintings",
+      "Security rules have changed",
+      "The tour includes a garden walk"
+     ],
+     "ans": 0,
+     "exp": "since some of the hallways are quite narrow（有些走廊很窄），所以請大家把大包包放置物櫃。"
+    },
+    {
+     "q": "How can listeners receive a discount?",
+     "opts": [
+      "By showing their ticket",
+      "By joining a membership program",
+      "By booking online",
+      "By visiting on a weekday"
+     ],
+     "ans": 0,
+     "exp": "在禮品店 show today's ticket（出示今天的門票）可打 85 折。"
+    }
+   ],
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "type": "Part 4",
+   "title": "短講：共享單車擴大新聞",
+   "acc": "us",
+   "ng": "M",
+   "turns": [
+    {
+     "s": "N",
+     "t": "In local news, the city announced today that its bike-share program will expand to the east side neighborhoods by September. Thirty new stations will be added, mostly near train stations and shopping areas. City officials say the program has been more popular than expected, with over two hundred thousand rides last year. However, some residents are concerned that the new stations will take away street parking. A public meeting to discuss the plan will be held next Tuesday evening at the community center on Hale Street."
+    }
+   ],
+   "qs": [
+    {
+     "q": "What is the news report mainly about?",
+     "opts": [
+      "The expansion of a transportation program",
+      "The opening of a train station",
+      "A new shopping area",
+      "Changes to parking fees for downtown residents"
+     ],
+     "ans": 0,
+     "exp": "新聞說共享單車計畫（bike-share program）將擴大到東區＝交通計畫擴大。火車站和購物區只是新站點的位置。"
+    },
+    {
+     "q": "What concern do some residents have?",
+     "opts": [
+      "Losing parking spaces",
+      "Higher taxes",
+      "Increased traffic noise",
+      "Unsafe bike lanes"
+     ],
+     "ans": 0,
+     "exp": "有些居民擔心新站點會 take away street parking（占用路邊停車位）。"
+    },
+    {
+     "q": "What will happen next Tuesday?",
+     "opts": [
+      "A public meeting will be held",
+      "New stations will open",
+      "A community center will be renovated",
+      "Bike rental prices will change"
+     ],
+     "ans": 0,
+     "exp": "下週二晚上在社區中心舉行 public meeting（公聽會）。"
+    }
+   ],
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "type": "Part 4",
+   "title": "短講：客服滿意度會議（意圖題）",
+   "acc": "uk",
+   "ng": "W",
+   "turns": [
+    {
+     "s": "N",
+     "t": "Before we finish, I want to give you an update on the customer service survey. Overall satisfaction rose to eighty-four percent this quarter, which is our highest score yet. The most common complaint was still the waiting time on our phone line. Now, we've hired four new representatives, but they won't start until next month. So for the next few weeks, I'm asking each team leader to cover the phones for one hour a day. I know that's a lot to ask. I'll send round a sign-up sheet this afternoon so you can choose a time slot that suits you."
+    }
+   ],
+   "qs": [
+    {
+     "q": "What does the speaker say about the survey results?",
+     "opts": [
+      "Satisfaction has reached a record high",
+      "Fewer customers responded this time",
+      "Complaints about prices have increased",
+      "The results will be published online"
+     ],
+     "ans": 0,
+     "exp": "滿意度升到 84%，which is our highest score yet（歷來最高）＝創新高。最常見的抱怨是電話等候時間，不是價格。"
+    },
+    {
+     "q": "Why does the speaker say, \"I know that's a lot to ask\"?",
+     "opts": [
+      "To acknowledge an extra burden",
+      "To apologize for a late report",
+      "To reject a suggestion",
+      "To explain a hiring decision"
+     ],
+     "ans": 0,
+     "exp": "意圖題：她剛要求每位組長每天多接一小時電話，接著說「我知道這個要求不小」＝體諒這是額外的負擔。"
+    },
+    {
+     "q": "What will the speaker send this afternoon?",
+     "opts": [
+      "A sign-up sheet",
+      "A survey form",
+      "A list of new employees",
+      "A training schedule"
+     ],
+     "ans": 0,
+     "exp": "I'll send round a sign-up sheet this afternoon（今天下午發登記表）。"
+    }
+   ],
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "type": "Part 4",
+   "title": "短講：共享辦公空間廣告",
+   "acc": "us",
+   "ng": "M",
+   "turns": [
+    {
+     "s": "N",
+     "t": "Tired of working at your kitchen table? At Hub Twelve, you'll find a quiet, comfortable place to get your work done, right in the heart of downtown. Our members enjoy high-speed internet, private phone booths, and free coffee all day. Need to meet a client? Book one of our meeting rooms by the hour through our mobile app. And this month only, new members who sign up for a six-month plan will get their first month free. Visit hubtwelve.com to schedule a tour."
+    }
+   ],
+   "qs": [
+    {
+     "q": "What is being advertised?",
+     "opts": [
+      "A shared office space",
+      "A coffee shop",
+      "A mobile phone plan",
+      "An internet provider"
+     ],
+     "ans": 0,
+     "exp": "廣告說在市中心提供安靜的工作場所，有網路、電話亭、會議室＝共享辦公空間。咖啡和網路只是附加服務。"
+    },
+    {
+     "q": "According to the speaker, how can meeting rooms be reserved?",
+     "opts": [
+      "Through an app",
+      "By calling the front desk",
+      "On the company website",
+      "In person at the reception desk"
+     ],
+     "ans": 0,
+     "exp": "Book one of our meeting rooms… through our mobile app（用手機 App 預約）。網站是用來預約參觀的。"
+    },
+    {
+     "q": "What special offer is available this month?",
+     "opts": [
+      "A free month of membership",
+      "A free coffee machine",
+      "A discounted phone booth",
+      "A free private office"
+     ],
+     "ans": 0,
+     "exp": "本月簽六個月方案的新會員 first month free（第一個月免費）。"
+    }
+   ],
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "type": "Part 4",
+   "title": "短講：年度餐會介紹講者",
+   "acc": "uk",
+   "ng": "W",
+   "turns": [
+    {
+     "s": "N",
+     "t": "Good evening, and thank you all for coming to the Northfield Business Association's annual dinner. It's my pleasure to introduce tonight's speaker, Dr. Martin Cole. Dr. Cole founded GreenPath, a company that helps restaurants reduce food waste, and in just five years, it has grown to serve over a thousand clients across the country. Tonight he'll be sharing how small businesses can cut costs by becoming more environmentally friendly. After his talk, he'll be signing copies of his book in the lobby. Please join me in welcoming Dr. Cole."
+    }
+   ],
+   "qs": [
+    {
+     "q": "Where is the talk most likely taking place?",
+     "opts": [
+      "At a business dinner",
+      "At a restaurant opening",
+      "At a university lecture",
+      "At a bookstore"
+     ],
+     "ans": 0,
+     "exp": "開頭說歡迎來到商業協會的 annual dinner（年度餐會）。"
+    },
+    {
+     "q": "What does Dr. Cole's company do?",
+     "opts": [
+      "Help businesses reduce waste",
+      "Deliver food to restaurants",
+      "Train new chefs",
+      "Publish business books"
+     ],
+     "ans": 0,
+     "exp": "GreenPath 幫助餐廳減少食物浪費（helps restaurants reduce food waste）。"
+    },
+    {
+     "q": "What will Dr. Cole do after his talk?",
+     "opts": [
+      "Sign books",
+      "Answer questions",
+      "Present an award",
+      "Lead a tour"
+     ],
+     "ans": 0,
+     "exp": "After his talk, he'll be signing copies of his book（演講後簽書）。"
+    }
+   ],
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "type": "Part 4",
+   "title": "短講：旅行社回電（意圖題）",
+   "acc": "us",
+   "ng": "M",
+   "turns": [
+    {
+     "s": "N",
+     "t": "Hi, Ms. Alvarez, this is Neil from Coastline Travel returning your call about the group trip to Lisbon in May. You asked whether we could add a day trip to Sintra. I checked with our local partner, and they can arrange it on the fourth day, but it would add about eighty euros per person. Now, your group's budget is fairly tight. Another option is the free walking tour of the old city, which is already included in your package. Let me know which you'd prefer, and I'll update the itinerary. I'm in the office until six today."
+    }
+   ],
+   "qs": [
+    {
+     "q": "What is the main purpose of the call?",
+     "opts": [
+      "To respond to an inquiry about a trip",
+      "To confirm a flight reservation to Lisbon",
+      "To request a payment",
+      "To recommend a hotel"
+     ],
+     "ans": 0,
+     "exp": "returning your call about the group trip（回覆對方詢問的團體旅遊）＝回應詢問。"
+    },
+    {
+     "q": "Why does the speaker say, \"your group's budget is fairly tight\"?",
+     "opts": [
+      "To suggest an alternative option",
+      "To ask for a larger deposit",
+      "To explain why a trip was canceled",
+      "To complain about a late payment"
+     ],
+     "ans": 0,
+     "exp": "意圖題：他先說加一日遊每人多八十歐元，提到預算很緊之後，馬上介紹已包含在行程裡的免費徒步導覽＝建議另一個選擇。"
+    },
+    {
+     "q": "What does the speaker say about the walking tour?",
+     "opts": [
+      "It is already included",
+      "It must be booked in advance",
+      "It takes place on the fourth day",
+      "It costs eighty euros"
+     ],
+     "ans": 0,
+     "exp": "the free walking tour… which is already included in your package（已包含在套裝行程中）。第四天和八十歐元是 Sintra 一日遊的條件。"
+    }
+   ],
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "type": "Part 4",
+   "title": "短講：研討會議程異動（圖表題）",
+   "acc": "uk",
+   "ng": "W",
+   "turns": [
+    {
+     "s": "N",
+     "t": "Good morning, everyone, and welcome to the second day of the Retail Leaders Conference. Before we begin, I have a quick announcement about this afternoon's sessions in Room 2. Unfortunately, Ms. Brooks's flight was delayed, and she won't arrive until this evening. So her session will be replaced by a panel discussion on online customer service. The rest of the programme will run as scheduled. Also, lunch will be served on the terrace today, since the main dining hall is being prepared for tonight's awards banquet."
+    }
+   ],
+   "qs": [
+    {
+     "q": "What problem does the speaker mention?",
+     "opts": [
+      "A presenter's travel has been delayed",
+      "A room has been double-booked",
+      "A projector is not working",
+      "A session has run over time"
+     ],
+     "ans": 0,
+     "exp": "Ms. Brooks's flight was delayed（Brooks 女士的班機延誤），今晚才會到。"
+    },
+    {
+     "q": "Look at the graphic. What time will the panel discussion begin?",
+     "opts": [
+      "1:00",
+      "10:00",
+      "11:00",
+      "2:00"
+     ],
+     "ans": 0,
+     "exp": "圖表題：座談會取代 Brooks 女士的場次。議程表上 Brooks 的 Social Media 場次在 1:00。"
+    },
+    {
+     "q": "Why will lunch be served on the terrace?",
+     "opts": [
+      "The dining hall is being prepared for an event",
+      "The weather is pleasant",
+      "The terrace has more seating",
+      "The dining hall is under renovation"
+     ],
+     "ans": 0,
+     "exp": "since the main dining hall is being prepared for tonight's awards banquet（主餐廳正在為今晚的頒獎晚宴布置）。不是在整修。"
+    }
+   ],
+   "graphic": "CONFERENCE PROGRAMME: Room 2\n10:00  Marketing Trends (Novak)\n11:00  Customer Loyalty (Singh)\n1:00   Social Media (Brooks)\n2:00   Pricing (Ortega)",
+   "src": "L1",
+   "form": "L1"
+  },
+  {
+   "type": "Part 4",
+   "title": "短講：健身房會員方案留言（圖表題）",
+   "acc": "us",
+   "ng": "M",
+   "turns": [
+    {
+     "s": "N",
+     "t": "Hi, this message is for Jessica Lin. This is Victor from Riverside Fitness. You stopped by yesterday and asked about a membership that includes the pool, but you mentioned you weren't interested in group classes. Well, I've got good news. Starting next week, we're running a special on that plan: the first three months will be half price. And if you sign up before Sunday, we'll also give you a free one-hour session with a personal trainer. Just bring a photo ID when you come in."
+    }
+   ],
+   "qs": [
+    {
+     "q": "Why is the speaker calling?",
+     "opts": [
+      "To tell the listener about a special offer",
+      "To confirm a class reservation",
+      "To remind the listener about a payment",
+      "To reschedule a training session"
+     ],
+     "ans": 0,
+     "exp": "他說 I've got good news… running a special（有優惠方案），通知對方。"
+    },
+    {
+     "q": "Look at the graphic. How much does the plan the speaker mentions normally cost per month?",
+     "opts": [
+      "$45",
+      "$30",
+      "$60",
+      "$95"
+     ],
+     "ans": 0,
+     "exp": "圖表題：她要含游泳池、但不要團體課的方案。Basic 不含泳池；Premium 和 Family 含課程；所以是 Plus，每月 $45。"
+    },
+    {
+     "q": "What must the listener bring?",
+     "opts": [
+      "Photo identification",
+      "A swimsuit",
+      "A membership card",
+      "A credit card"
+     ],
+     "ans": 0,
+     "exp": "Just bring a photo ID（帶有照片的證件）。"
+    }
+   ],
+   "graphic": "RIVERSIDE FITNESS (per month)\nBasic    $30  Gym only\nPlus     $45  Gym, Pool\nPremium  $60  Gym, Pool, Classes\nFamily   $95  Premium for 4",
+   "src": "L1",
+   "form": "L1"
+  }
+ ]
+}
