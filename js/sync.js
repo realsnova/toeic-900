@@ -65,7 +65,7 @@ const Sync = {
         // 這條路徑不經過 load()，所以要自己做一次型別檢查（含錯題本格式遷移與內建題增加的搬移）：
         // 雲端資料任何知道同步代碼的人都能寫入，不檢查就可能把腳本帶進畫面（2026-10-07 資安審查 H1）。
         // 先在暫存物件上做，失敗就丟出例外、不套用，本機的 S 保持原樣。
-        const next = sanitizeState(Object.assign(defaultState(), { baseN: null }, remote.records));
+        const next = sanitizeState(Object.assign(defaultState(), { baseN: null, contentV: 0 }, remote.records));
         S = next;
         localStorage.setItem(STORE_KEY, JSON.stringify(S));
         if (remote.bank) saveBank(Object.assign(emptyBank(), remote.bank));

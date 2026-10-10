@@ -49,7 +49,7 @@ test("form-R1 測驗題目不會出現在一般 Part 5 練習與隨機模考中"
   assert.equal(reading.some(Boolean), false);
 });
 
-test("form-R1 測驗交卷後：答錯的題目進錯題本，紀錄的模式是 R1，報告不顯示聽力", () => {
+test("form-R1 測驗交卷後：成績照 100 題計算，沒作答的題目不進錯題本，紀錄的模式是 R1", () => {
   const app = loadApp();
   app.run(`Mock.start("R1"); Mock.s.rAnswers = Mock.s.rAnswers.map((_, i) => i < 50 ? Mock.s.paper.reading[i].q.ans : null); Mock.submit();`);
   const last = plain(app.run("S.mocks[S.mocks.length - 1]"));
@@ -57,7 +57,8 @@ test("form-R1 測驗交卷後：答錯的題目進錯題本，紀錄的模式是
   assert.equal(last.rT, 100);
   assert.equal(last.rR, 50);
   assert.equal(last.lT, 0);
-  assert.ok(app.run("Object.keys(S.wb.p7).length") > 0, "沒答的 Part 7 題進錯題本");
+  assert.equal(app.run("Object.keys(S.wb.p7).length"), 0, "沒作答的題目不進錯題本（v1.4.1）");
+  assert.deepEqual(plain(app.run("S.racc")), { r: 50, w: 0 }, "累計答對率只算有作答的題目");
   assert.equal(app.run(`Mock.modeName("R1")`), "完整閱讀測驗 第 1 回");
   // 存檔後重新載入，模式 R1 不會被當成不合法的值清掉
   const again = loadApp({ storage: { toeic900: app.store.get("toeic900") } });

@@ -30,7 +30,8 @@ function defaultState() {
     targetScore: null,        // 新手引導設定的目標分數
     onboarded: false,         // 是否已完成（或略過）新手引導
     ext: [],                  // 外部測驗成績 [{date, src, L, R}]：使用者自己輸入，L/R 為 0–495，0 代表沒考該部分
-    baseN: { ...BASE_N }      // 這份紀錄建立或最後遷移時的內建題數（見 shiftForBuiltinGrowth）
+    baseN: { ...BASE_N },     // 這份紀錄建立或最後遷移時的內建題數（見 shiftForBuiltinGrowth）
+    contentV: 2               // 題目內容版本：原地替換題目時遞增，sanitizeState 會清掉指到舊題目的紀錄
   };
 }
 const APP_VERSION = "1.4.1";
@@ -58,6 +59,7 @@ function load() {
       const parsed = JSON.parse(raw);
       Object.assign(d, parsed);
       if (parsed.baseN === undefined) d.baseN = null; // 舊版紀錄：當作 v1.3.x 的內建題數
+      if (parsed.contentV === undefined) d.contentV = 0; // 舊版紀錄：還沒做過題目替換的清理
       // 舊版資料補齊新欄位
       d.wb = Object.assign({ p5: {}, p6: {}, p7: {}, l2: {}, l34: {} }, parsed.wb || {});
       // 錯題本的格式遷移（migrateWb）在下方 sanitizeState() 裡做，要先去掉 Firebase 陣列的空位才遷移
@@ -113,7 +115,7 @@ function sanitizeState(d) {
   entries(d.daily).forEach(([day, v]) => {
     if (!DATE_RE.test(day)) return;
     const o = {};
-    ["v", "p5", "p6", "p7", "l2", "l34", "newV", "wr", "mockDone"].forEach(f => { if (obj(v)[f] !== undefined) o[f] = cnt(v[f]); });
+    ["v", "p5", "p6", "p7", "l2", "l34", "newV", "wr", "mockDone", "readMock"].forEach(f => { if (obj(v)[f] !== undefined) o[f] = cnt(v[f]); });
     daily[day] = o;
   });
   d.daily = daily;
@@ -144,7 +146,7 @@ function sanitizeState(d) {
     .map(e => ({ date: e.date, src: String(e.src || "").slice(0, 60), L: score(e.L), R: score(e.R) })).slice(-50);
   d.mocks = (Array.isArray(d.mocks) ? d.mocks : Object.values(obj(d.mocks))).filter(m => m && typeof m === "object").map(m => {
     const out = { date: date(m.date) || "" };
-    if (["full", "listen", "read"].includes(m.mode) || /^R\d{1,2}$/.test(m.mode)) out.mode = m.mode; // 舊紀錄沒有 mode 就維持沒有（顯示為「模擬考」）
+    if (typeof m.mode === "string" && (["full", "listen", "read"].includes(m.mode) || /^R\d{1,2}$/.test(m.mode))) out.mode = m.mode; // 舊紀錄沒有 mode 就維持沒有（顯示為「模擬考」）
     ["lR", "lT", "rR", "rT", "lSkip", "secs", "L", "R"].forEach(f => { if (Number.isFinite(m[f])) out[f] = cnt(m[f]); });
     if (m.parts && typeof m.parts === "object") {
       out.parts = {};
@@ -153,6 +155,11 @@ function sanitizeState(d) {
     return out;
   });
   shiftForBuiltinGrowth(d);
+  // v1.4.1 原地替換了 6 題 Part 5（題號 107、174、200 與第 1 回測驗的 3 題）：舊的錯題本紀錄會指到新題目，刪除
+  if (!(d.contentV >= 2)) {
+    [106, 173, 199, 302, 311, 322].forEach(i => { delete d.wb.p5[i]; });
+    d.contentV = 2;
+  }
   return d;
 }
 // 內建題增加時，把自訂題（索引 >= 舊內建題數）的紀錄往後搬，讓錯題本、輪替、最佳成績仍對到同一題。
@@ -193,6 +200,7 @@ function loadBank() {
       const b = Object.assign(emptyBank(), JSON.parse(raw));
       Object.keys(emptyBank()).forEach(k => {
         b[k] = (Array.isArray(b[k]) ? b[k] : Object.values(b[k] || {})).filter(it => it && validateItem(k, it));
+        b[k].forEach(it => { delete it.form; }); // 完整測驗的標記只屬於內建題
       });
       return b;
     }
@@ -321,7 +329,7 @@ function daily() {
   const t = todayStr();
   if (!S.daily[t]) S.daily[t] = {};
   const d = S.daily[t];
-  ["v", "p5", "p6", "p7", "l2", "l34", "newV", "wr", "mockDone"].forEach(k => { if (typeof d[k] !== "number") d[k] = 0; });
+  ["v", "p5", "p6", "p7", "l2", "l34", "newV", "wr", "mockDone", "readMock"].forEach(k => { if (typeof d[k] !== "number") d[k] = 0; });
   return d;
 }
 // 一天內所有學習活動的總量，連續天數與熱圖都用它判斷「這天有沒有學習」。
@@ -404,12 +412,14 @@ function todayPlan() {
     { label: "Part 7 限時 1 篇", detail: `已完成 ${d.p7} 篇`, done: d.p7 >= 1, tab: "p7", est: "10 分" }
   ];
   // 衝刺期：距離上次模考滿 3 天就排一次閱讀節模考（練時間分配與耐力），其他天練限時題
-  const mockDue = (d.mockDone || 0) > 0 || daysSinceMock() >= 3; // 今天已考過也要保留這一項，才會顯示「已完成」
+  // 今天已考過（含閱讀節）也要保留這一項，才會顯示「已完成」；只考聽力節不算
+  const readDone = d.readMock || 0;
+  const mockDue = readDone > 0 || daysSinceMock() >= 3;
   return base.concat([
     mockDue
-      ? (nextForm() && !(d.mockDone || 0)
+      ? (nextForm() && !readDone
         ? { label: `${nextForm().name}（100 題・75 分鐘）`, detail: "挑一天時間充裕時做，練完整的時間分配與耐力", done: false, tab: "mock", est: "80 分" }
-        : { label: "模擬考：閱讀節（限時 22 分鐘）", detail: (d.mockDone || 0) ? "今天已完成" : "每 3 天一次，練時間分配", done: (d.mockDone || 0) >= 1, tab: "mock", est: "25 分" })
+        : { label: "模擬考：閱讀節（限時 22 分鐘）", detail: readDone ? "今天已完成" : "每 3 天一次，練時間分配", done: readDone >= 1, tab: "mock", est: "25 分" })
       : { label: "Part 7 限時 2 篇（新制題組優先）", detail: `已完成 ${d.p7} 篇`, done: d.p7 >= 2, tab: "p7", est: "18 分" },
     { label: "聽力 Part 2 五題 + Part 3/4 一組", detail: `P2 ${d.l2} 題 · P3/4 ${d.l34} 組`, done: d.l2 >= 5 && d.l34 >= 1, tab: "listen", est: "12 分" },
     { label: "錯題本全部清零", detail: wrongs ? `還剩 ${wrongs} 題` : "已清空！", done: wrongs === 0, tab: "wrong", est: "10 分" }
@@ -1304,7 +1314,7 @@ function p5Menu() {
   $("#tab-p5").innerHTML = `
     <div class="card">
       <h2>📝 Part 5 單句文法快攻</h2>
-      <p class="muted">每輪 10 題，附中文詳解。目標：每題 20 秒內作答。題庫共 ${PART5.length} 題，答錯自動進入錯題本。</p>
+      <p class="muted">每輪 10 題，附中文詳解。目標：每題 20 秒內作答。題庫共 ${PART5.filter((q, i) => !isFormItem("p5", i)).length} 題，答錯自動進入錯題本。</p>
       <br><button class="btn" id="p5-start">開始 10 題挑戰</button>
     </div>
     <div class="card"><h3>各類別正確率</h3>${catBars()}</div>`;
@@ -1347,7 +1357,7 @@ const FORMS = [
 // 完整測驗（forms）的題目：保留給完整測驗，一般練習與隨機模考都不抽（答錯後會進錯題本，可以在錯題本重考）
 function isFormItem(type, i) {
   const arr = { p5: PART5, p6: PART6, p7: PART7 }[type];
-  return !!(arr && arr[i] && arr[i].form);
+  return !!(arr && i < BASE_N[type] && arr[i] && arr[i].form);
 }
 function drawRound(seenKey, poolSize, n, wrongIds, isWeak, isHidden) {
   if (!S[seenKey] || typeof S[seenKey] !== "object") S[seenKey] = {};
@@ -1384,7 +1394,7 @@ function drawRound(seenKey, poolSize, n, wrongIds, isWeak, isHidden) {
 function startP5() {
   const weak = weakCats();
   const ids = drawRound("p5seen", PART5.length, ROUND_N,
-    Object.keys(S.wb.p5).map(Number),
+    Object.keys(S.wb.p5).map(Number).filter(i => !isFormItem("p5", i)),
     weak.size ? (i => weak.has(PART5[i].cat)) : null, i => isFormItem("p5", i));
   save(); // p5seen 已更新
   p5session = { ids, at: 0, right: 0, t0: Date.now() };

@@ -4,6 +4,7 @@
 
 const READING_SECONDS = 22 * 60;
 // 完整閱讀測驗的清單 FORMS 定義在 app.js（首頁菜單開機時就要用到）
+const FORM_PROGRESS_KEY = "toeic900_form_progress";
 const formOf = mode => FORMS.find(f => f.id === mode) || null;
 
 const Mock = {
@@ -19,6 +20,7 @@ const Mock = {
 
   abandon() {
     if (!Mock.s) return;
+    if (formOf(Mock.s.mode)) Mock.clearProgress();
     Mock.s.cancelled = true;
     Mock.s.finished = true;
     if (Mock.s.readTimer) { clearInterval(Mock.s.readTimer); }
@@ -116,7 +118,8 @@ const Mock = {
   },
 
   /* ---------- 啟動 ---------- */
-  start(mode) { // mode: full | listen | read
+  start(mode, resume) { // mode: full | listen | read | R1…；resume：完整測驗的暫存進度
+    if (Mock.inProgress()) return; // 連點兩次開始：第二次忽略，避免留下第二個計時器
     const paper = Mock.buildPaper(mode);
     Mock.s = {
       mode, paper,
@@ -130,6 +133,13 @@ const Mock = {
       audioFail: new Set(), // 語音沒有播放的聽力題索引：不計分（見 submit）
       finished: false, cancelled: false
     };
+    if (resume) {
+      // 完整測驗的作答以「原始選項索引」存，選項重新洗牌也對得上
+      Mock.s.rAnswers = Mock.s.rAnswers.map((_, i) => (Number.isInteger(resume.answers[i]) ? resume.answers[i] : null));
+      Mock.s.flags = new Set((resume.flags || []).filter(i => Number.isInteger(i)));
+      Mock.s.deadline = resume.deadline;
+      Mock.s.t0 = resume.t0 || Date.now();
+    }
     save(); // mockSeen 已更新
     if (mode === "read" || formOf(mode)) Mock.startReading();
     else Mock.readyListening();
@@ -249,21 +259,51 @@ const Mock = {
   },
 
   /* ---------- 閱讀節（題號導航、旗標、倒數） ---------- */
+  // 剩餘秒數由截止時間算出：瀏覽器在背景會放慢或暫停計時器，不能靠每秒減一
+  timeLeft(s) { return Math.max(0, Math.ceil((s.deadline - Date.now()) / 1000)); },
   startReading() {
     const s = Mock.s;
     s.phase = "reading";
-    s.readTimer = setInterval(() => {
-      if (!Mock.s || s.cancelled) { clearInterval(s.readTimer); return; }
-      s.secLeft--;
+    if (!s.deadline) s.deadline = Date.now() + s.secLeft * 1000;
+    const tick = () => {
+      if (Mock.s !== s || s.cancelled || s.finished) { clearInterval(s.readTimer); document.removeEventListener("visibilitychange", tick); return; }
+      s.secLeft = Mock.timeLeft(s);
       const el = document.getElementById("mock-timer");
       if (el) {
         el.textContent = `⏱ ${Math.floor(s.secLeft / 60)}:${String(s.secLeft % 60).padStart(2, "0")}`;
         el.classList.toggle("over", s.secLeft <= 120);
       }
-      if (s.secLeft <= 0) { clearInterval(s.readTimer); UI.toast("時間到，自動交卷", "info"); Mock.submit(); }
-    }, 1000);
-    Mock.renderReading();
+      if (s.secLeft <= 0) {
+        clearInterval(s.readTimer);
+        document.removeEventListener("visibilitychange", tick);
+        UI.toast("時間到，自動交卷", "info");
+        Mock.submit();
+      }
+    };
+    s.readTimer = setInterval(tick, 1000);
+    document.addEventListener("visibilitychange", tick); // 回到分頁時立刻更新
+    Mock.saveProgress();
+    tick();
+    if (!s.finished) Mock.renderReading();
   },
+
+  /* ---- 完整測驗的作答進度暫存（P2-2）：重新整理或手機把分頁關掉後可以接著做 ----
+     存在 localStorage 的獨立鍵，不進 S、不同步；交卷或放棄時刪除。 */
+  saveProgress() {
+    const s = Mock.s;
+    if (!s || !formOf(s.mode) || s.finished) return;
+    try {
+      localStorage.setItem(FORM_PROGRESS_KEY, JSON.stringify({ mode: s.mode, answers: s.rAnswers, flags: [...s.flags], deadline: s.deadline, t0: s.t0 }));
+    } catch (e) { /* 存不了就算了，不影響作答 */ }
+  },
+  loadProgress() {
+    try {
+      const p = JSON.parse(localStorage.getItem(FORM_PROGRESS_KEY) || "null");
+      if (p && formOf(p.mode) && Array.isArray(p.answers) && Number.isFinite(p.deadline)) return p;
+    } catch (e) { /* 壞資料視為沒有 */ }
+    return null;
+  },
+  clearProgress() { try { localStorage.removeItem(FORM_PROGRESS_KEY); } catch (e) { /* 忽略 */ } },
 
   renderReading() {
     const s = Mock.s;
@@ -316,6 +356,7 @@ const Mock = {
     box.querySelectorAll(".mock-opt").forEach(btn =>
       btn.addEventListener("click", () => {
         s.rAnswers[s.rAt] = Number(btn.dataset.oi);
+        Mock.saveProgress();
         box.querySelectorAll(".mock-opt").forEach(b => b.classList.remove("picked"));
         btn.classList.add("picked");
         const cell = box.querySelector(`.qcell[data-jump="${s.rAt}"]`);
@@ -325,6 +366,7 @@ const Mock = {
       b.addEventListener("click", () => { s.rAt = Number(b.dataset.jump); Mock.renderReading(); }));
     box.querySelector("#mock-flag").addEventListener("click", () => {
       s.flags.has(s.rAt) ? s.flags.delete(s.rAt) : s.flags.add(s.rAt);
+      Mock.saveProgress();
       Mock.renderReading();
     });
     const prev = box.querySelector("#mock-prev");
@@ -381,14 +423,21 @@ const Mock = {
     });
     // 閱讀
     let rR = 0, rT = 0;
+    let rBlank = 0;
     s.paper.reading.forEach((it, i) => {
       rT++;
       const correct = s.rAnswers[i] === it.q.ans;
       const chosen = s.rAnswers[i] === null ? null : it.q.opts[s.rAnswers[i]];
-      if (it.type === "p5") { wbMark("p5", it.id, !!correct); if (!S.cat[it.q.cat]) S.cat[it.q.cat] = { r: 0, w: 0 }; correct ? S.cat[it.q.cat].r++ : S.cat[it.q.cat].w++; }
-      if (it.type === "p6") { wbMark("p6", `${it.pi}-${it.bi}`, !!correct); }
-      if (it.type === "p7") { wbMark("p7", `${it.si}-${it.qi}`, !!correct); }
-      trackReading(!!correct);
+      // 沒作答（多半是時間不夠）：本次成績算錯，但不進錯題本、不計入累計答對率與類別統計——
+      // 沒看過的題目進錯題本只會淹沒真正答錯的題，也會讓答對率失真
+      if (s.rAnswers[i] === null) {
+        rBlank++;
+      } else {
+        if (it.type === "p5") { wbMark("p5", it.id, !!correct); if (!S.cat[it.q.cat]) S.cat[it.q.cat] = { r: 0, w: 0 }; correct ? S.cat[it.q.cat].r++ : S.cat[it.q.cat].w++; }
+        if (it.type === "p6") { wbMark("p6", `${it.pi}-${it.bi}`, !!correct); }
+        if (it.type === "p7") { wbMark("p7", `${it.si}-${it.qi}`, !!correct); }
+        trackReading(!!correct);
+      }
       bump(it.part, correct);
       if (correct) rR++;
       else wrongs.push({ part: it.part, q: it.q.q, opts: it.q.opts, ans: it.q.ans, exp: it.q.exp, chosen });
@@ -398,12 +447,26 @@ const Mock = {
     const secs = Math.round((Date.now() - s.t0) / 1000);
     hideSilentHelp();
 
+    if (formOf(s.mode)) Mock.clearProgress();
+    // 完全沒有作答（例如開始後就離開、時間到自動交卷）：不記錄這次，也不把這一回標成「做過了」
+    const answeredAny = s.rAnswers.some(a => a !== null) || s.lAnswers.some(a => a !== null);
+    if (!answeredAny) {
+      save();
+      Mock.s = null;
+      Mock.box().innerHTML = `<div class="card result-banner"><h2>這次沒有作答</h2>
+        <p class="muted">沒有任何作答，所以不記錄成績，也不影響錯題本與答對率。${formOf(s.mode) ? "這一回完整測驗之後可以重新開始。" : ""}</p>
+        <br><button class="btn" id="mock-back">回模擬考首頁</button></div>`;
+      document.getElementById("mock-back").addEventListener("click", () => Mock.menu());
+      updateNavBadges();
+      return;
+    }
     if (!S.mocks) S.mocks = [];
     S.mocks.push({ date: todayStr(), mode: s.mode, lR, lT, rR, rT, lSkip, parts, secs });
     const d = daily(); d.mockDone = (d.mockDone || 0) + 1;
+    if (s.mode !== "listen") d.readMock = (d.readMock || 0) + 1;
     save();
     updateNavBadges();
-    Mock.renderReport({ lR, lT, rR, rT, lSkip, parts, wrongs, secs, mode: s.mode });
+    Mock.renderReport({ lR, lT, rR, rT, lSkip, rBlank, parts, wrongs, secs, mode: s.mode });
     Mock.s = null;
   },
 
@@ -429,6 +492,7 @@ const Mock = {
           ${hasR ? sec("閱讀", r.rR, r.rT) : ""}
         </div>
         ${r.lSkip ? `<p class="muted">有 ${r.lSkip} 題聽力因為語音沒有播放，不列入計分。</p>` : ""}
+        ${r.rBlank ? `<p class="muted">閱讀有 ${r.rBlank} 題沒有作答：本次成績算錯，但不放進錯題本，也不計入累計答對率。</p>` : ""}
         <p class="muted">這是本份練習卷的答對率，不是 TOEIC 分數。</p>
       </div>
       <div class="card"><h2>📊 各 Part 正確率</h2>${bars}</div>
@@ -533,7 +597,27 @@ const Mock = {
         <div class="hub-arrow">›</div>
       </div>`;
     }).join("");
-    Mock.box().querySelector(".card").insertAdjacentHTML("afterend", formCards);
+    const prog = Mock.loadProgress();
+    const resumeCard = prog ? `<div class="card" style="border-color:var(--warn)">
+        <b>📝 ${esc(formOf(prog.mode).name)}作答中</b>
+        <p class="muted">${Date.now() < prog.deadline
+          ? `已答 ${prog.answers.filter(a => a !== null).length} / ${prog.answers.length} 題，剩約 ${Math.ceil((prog.deadline - Date.now()) / 60000)} 分鐘（時間在離開期間仍會繼續計算）。`
+          : `時間已經到了，可以用已作答的 ${prog.answers.filter(a => a !== null).length} 題交卷。`}</p>
+        <button class="btn small" id="mock-resume">${Date.now() < prog.deadline ? "繼續作答" : "交卷看成績"}</button>
+        <button class="btn ghost small" id="mock-discard">放棄這次</button>
+      </div>` : "";
+    Mock.box().querySelector(".card").insertAdjacentHTML("afterend", resumeCard + formCards);
+    if (prog) {
+      document.getElementById("mock-resume").addEventListener("click", () => {
+        Mock.start(prog.mode, prog);
+        if (Mock.s && Date.now() >= prog.deadline) Mock.submit();
+      });
+      document.getElementById("mock-discard").addEventListener("click", () => {
+        if (!confirm("放棄這次作答？已作答的內容不會記錄。")) return;
+        Mock.clearProgress();
+        Mock.menu();
+      });
+    }
     Mock.box().querySelectorAll("[data-mock]").forEach(el =>
       el.addEventListener("click", () => {
         const mode = el.dataset.mock;

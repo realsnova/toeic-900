@@ -89,6 +89,7 @@ test("T-AUD-03-4 模考中語音沒播放的聽力題不計分", async () => {
   app.run(`
     Mock.start("listen");
     Mock.s.lAnswers = Mock.s.lAnswers.map(() => null);
+    Mock.s.lAnswers[3] = 0; // 至少作答一題：完全沒作答的模考不記錄（v1.4.1）
     Mock.s.paper.listening.forEach((it, i) => { if (i < 3) Mock.s.audioFail.add(i); });
     globalThis.__before = JSON.stringify(S.lcat);
     Mock.submit();
@@ -267,6 +268,7 @@ test("T-AUD-03-4b 所有聽力題都沒播放時，報告不可顯示全對", ()
     globalThis.$ = () => ({ addEventListener() {} });
     Mock.start("listen");
     Mock.s.paper.listening.forEach((it, i) => Mock.s.audioFail.add(i));
+    Mock.s.lAnswers[0] = 0; // 使用者還是猜了一題：有作答才會產生報告（v1.4.1）
     Mock.submit();`);
   const html = app.run("__html");
   assert.equal(html.includes("全對"), false);

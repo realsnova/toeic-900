@@ -134,7 +134,7 @@ test("S1-baseN 新使用者的紀錄帶有目前的內建題數；舊版裝置�
 /* ---------- 獨立審查（review-s1）後補的案例 ---------- */
 test("review-s1 P1 今天考完模考後，菜單仍保留模考項目並顯示已完成", () => {
   const app = loadApp();
-  app.run(`S.exam = todayStr(10); S.mocks = [{ date: todayStr(), mode: "read", lR: 0, lT: 0, rR: 20, rT: 27 }]; daily().mockDone = 1;`);
+  app.run(`S.exam = todayStr(10); S.mocks = [{ date: todayStr(), mode: "read", lR: 0, lT: 0, rR: 20, rT: 27 }]; daily().mockDone = 1; daily().readMock = 1;`);
   const item = plain(app.run("todayPlan()")).find(p => p.tab === "mock");
   assert.ok(item, "模考項目不可消失");
   assert.equal(item.done, true);
@@ -157,7 +157,7 @@ test("review-s1 P2-1 baseN 缺某一類或值壞掉時，那一類不搬（避�
   assert.deepEqual(Object.keys(plain(nul.run("S.wb.p5"))), [String(N5)], "baseN 為 null 視為舊版紀錄");
 });
 
-test("review-s1 P2-2 雲端資料格式錯誤時不套用、本機紀錄不變；wb 不是物件時也不會讓載入失敗", async () => {
+test("review-s1 P2-2 雲端資料格式錯誤時不會讓載入失敗：錯誤欄位被收斂成安全的值，不會留下 baseN: null", async () => {
   const app = loadApp();
   app.run(`S.updatedAt = 0; S.wb.p5 = { 5: { n: 1, last: "2026-10-01" } }; Sync.ref = () => ({ get: async () => ({ val: () => ({ records: { wb: "x", mocks: "y" }, updatedAt: 5 }) }) });`);
   await app.run("Sync.pullOnStartup(0)");

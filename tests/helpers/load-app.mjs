@@ -100,7 +100,8 @@ export function loadApp({ storage = {}, speech = fakeSpeech(), fetch = fakeFetch
     querySelector: () => fakeEl(),
     querySelectorAll: () => [],
     createElement: () => fakeEl(),
-    addEventListener() {}
+    addEventListener() {},
+    removeEventListener() {}
   };
   const ctx = {
     console, setTimeout, clearTimeout, setInterval, clearInterval, Promise, Date, Math, JSON,
