@@ -134,11 +134,15 @@ const Mock = {
       finished: false, cancelled: false
     };
     if (resume) {
-      // 完整測驗的作答以「原始選項索引」存，選項重新洗牌也對得上
-      Mock.s.rAnswers = Mock.s.rAnswers.map((_, i) => (Number.isInteger(resume.answers[i]) ? resume.answers[i] : null));
-      Mock.s.flags = new Set((resume.flags || []).filter(i => Number.isInteger(i)));
+      // 完整測驗的作答以「原始選項索引」存，選項重新洗牌也對得上；超出範圍的值一律丟掉
+      const n = paper.reading.length;
+      Mock.s.rAnswers = Mock.s.rAnswers.map((_, i) => {
+        const a = resume.answers[i];
+        return Number.isInteger(a) && a >= 0 && a < paper.reading[i].q.opts.length ? a : null;
+      });
+      Mock.s.flags = new Set((Array.isArray(resume.flags) ? resume.flags : []).filter(i => Number.isInteger(i) && i >= 0 && i < n));
       Mock.s.deadline = resume.deadline;
-      Mock.s.t0 = resume.t0 || Date.now();
+      Mock.s.t0 = Number.isFinite(resume.t0) ? resume.t0 : Date.now();
     }
     save(); // mockSeen 已更新
     if (mode === "read" || formOf(mode)) Mock.startReading();
@@ -293,15 +297,27 @@ const Mock = {
     const s = Mock.s;
     if (!s || !formOf(s.mode) || s.finished) return;
     try {
-      localStorage.setItem(FORM_PROGRESS_KEY, JSON.stringify({ mode: s.mode, answers: s.rAnswers, flags: [...s.flags], deadline: s.deadline, t0: s.t0 }));
+      localStorage.setItem(FORM_PROGRESS_KEY, JSON.stringify({ mode: s.mode, sig: Mock.formSig(s.mode), answers: s.rAnswers, flags: [...s.flags], deadline: s.deadline, t0: s.t0 }));
     } catch (e) { /* 存不了就算了，不影響作答 */ }
   },
   loadProgress() {
-    try {
-      const p = JSON.parse(localStorage.getItem(FORM_PROGRESS_KEY) || "null");
-      if (p && formOf(p.mode) && Array.isArray(p.answers) && Number.isFinite(p.deadline)) return p;
-    } catch (e) { /* 壞資料視為沒有 */ }
+    let p = null;
+    try { p = JSON.parse(localStorage.getItem(FORM_PROGRESS_KEY) || "null"); } catch (e) { p = undefined; }
+    if (p === null) return null;
+    if (p && formOf(p.mode) && Array.isArray(p.answers) && Number.isFinite(p.deadline) && p.sig === Mock.formSig(p.mode)) return p;
+    Mock.clearProgress(); // 壞資料、已不存在的測驗、或題目已經更新：無法正確接續，刪除
     return null;
+  },
+  // 測驗題目的指紋：題目更新後，舊的作答進度就不能再對到題號
+  formSig(mode) {
+    const items = [];
+    PART5.forEach((q, i) => { if (q.form === mode) items.push(q.q); });
+    PART6.forEach(p => { if (p.form === mode) items.push(p.text); });
+    PART7.forEach(st => { if (st.form === mode) st.qs.forEach(q => items.push(q.q)); });
+    let h = 0x811c9dc5;
+    const str = items.join("\u0001");
+    for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+    return `${items.length}-${h.toString(16)}`;
   },
   clearProgress() { try { localStorage.removeItem(FORM_PROGRESS_KEY); } catch (e) { /* 忽略 */ } },
 
@@ -388,6 +404,21 @@ const Mock = {
     s.finished = true;
     if (s.readTimer) clearInterval(s.readTimer);
     TTS.stop();
+    if (formOf(s.mode)) Mock.clearProgress();
+
+    // 完全沒有作答（例如開始後就離開、時間到自動交卷）：不計分、不記錄，錯題本與答對率都不動，
+    // 這一回完整測驗也不算做過。必須在下面的計分之前結束，聽力題的計分也會寫入錯題本與答對率。
+    const answeredAny = s.rAnswers.some(a => a !== null) || s.lAnswers.some(a => a !== null);
+    if (!answeredAny) {
+      Mock.s = null;
+      hideSilentHelp();
+      Mock.box().innerHTML = `<div class="card result-banner"><h2>這次沒有作答</h2>
+        <p class="muted">沒有任何作答，所以不記錄成績，也不影響錯題本與答對率。${formOf(s.mode) ? "這一回完整測驗之後可以重新開始。" : ""}</p>
+        <br><button class="btn" id="mock-back">回模擬考首頁</button></div>`;
+      document.getElementById("mock-back").addEventListener("click", () => Mock.menu());
+      updateNavBadges();
+      return;
+    }
 
     const parts = {}; // part -> {r, t}
     const wrongs = []; // {part, q, opts, ans, exp, chosenText}
@@ -447,23 +478,10 @@ const Mock = {
     const secs = Math.round((Date.now() - s.t0) / 1000);
     hideSilentHelp();
 
-    if (formOf(s.mode)) Mock.clearProgress();
-    // 完全沒有作答（例如開始後就離開、時間到自動交卷）：不記錄這次，也不把這一回標成「做過了」
-    const answeredAny = s.rAnswers.some(a => a !== null) || s.lAnswers.some(a => a !== null);
-    if (!answeredAny) {
-      save();
-      Mock.s = null;
-      Mock.box().innerHTML = `<div class="card result-banner"><h2>這次沒有作答</h2>
-        <p class="muted">沒有任何作答，所以不記錄成績，也不影響錯題本與答對率。${formOf(s.mode) ? "這一回完整測驗之後可以重新開始。" : ""}</p>
-        <br><button class="btn" id="mock-back">回模擬考首頁</button></div>`;
-      document.getElementById("mock-back").addEventListener("click", () => Mock.menu());
-      updateNavBadges();
-      return;
-    }
     if (!S.mocks) S.mocks = [];
     S.mocks.push({ date: todayStr(), mode: s.mode, lR, lT, rR, rT, lSkip, parts, secs });
     const d = daily(); d.mockDone = (d.mockDone || 0) + 1;
-    if (s.mode !== "listen") d.readMock = (d.readMock || 0) + 1;
+    if (s.mode !== "listen" && s.rAnswers.some(a => a !== null)) d.readMock = (d.readMock || 0) + 1;
     save();
     updateNavBadges();
     Mock.renderReport({ lR, lT, rR, rT, lSkip, rBlank, parts, wrongs, secs, mode: s.mode });
@@ -499,7 +517,7 @@ const Mock = {
       <div class="card"><h2>🎯 弱項優先加強</h2>
         ${weak.map((w, i) => `<div class="item-row"><div>${i + 1}. <b>${w.p}</b> <span class="muted">正確率 ${Math.round(w.acc * 100)}%</span></div><button class="btn small" data-weak="${partTab[w.p]}">去練習</button></div>`).join("")}
       </div>
-      <div class="card"><h2>❌ 答錯 ${r.wrongs.length} 題（已加入錯題本）</h2>
+      <div class="card"><h2>❌ 答錯 ${r.wrongs.length - (r.rBlank || 0)} 題（已加入錯題本）${r.rBlank ? `・未作答 ${r.rBlank} 題` : ""}</h2>
         ${r.wrongs.length ? r.wrongs.map(w => `
           <details class="mock-wrong">
             <summary><span class="pill">${esc(w.part)}</span> ${esc(w.q.slice(0, 60))}${w.q.length > 60 ? "…" : ""}</summary>
@@ -625,8 +643,9 @@ const Mock = {
       }));
     const ask = async mode => {
         const f = formOf(mode);
+        const pending = f ? Mock.loadProgress() : null;
         const ok = await UI.confirm(
-          f ? `${f.name}共 100 題，限時 ${f.secs / 60} 分鐘，和正式考試的閱讀部分相同；時間到自動交卷。建議找一段不會被打擾的時間一次做完。這份測驗的題目不會出現在一般練習中。`
+          f ? `${pending ? `你有一份「${formOf(pending.mode).name}」還沒做完，開始新的測驗會放棄那一份（已作答的內容不會記錄）。\n\n` : ""}${f.name}共 100 題，限時 ${f.secs / 60} 分鐘，和正式考試的閱讀部分相同；時間到自動交卷。建議找一段不會被打擾的時間一次做完。這份測驗的題目不會出現在一般練習中。`
             : mode === "read" ? "閱讀節限時 22 分鐘，時間到自動交卷。準備好就開始！" : "聽力節將自動連續播放、不可暫停或回放（仿真考試）。建議戴上耳機，準備好就開始！",
           { title: f ? "開始完整閱讀測驗" : "開始模擬考", okText: "開始" });
         if (ok) Mock.start(mode);

@@ -156,7 +156,8 @@ function sanitizeState(d) {
   });
   shiftForBuiltinGrowth(d);
   // v1.4.1 原地替換了 6 題 Part 5（題號 107、174、200 與第 1 回測驗的 3 題）：舊的錯題本紀錄會指到新題目，刪除
-  if (!(d.contentV >= 2)) {
+  if (!Number.isInteger(d.contentV)) d.contentV = 0;
+  if (d.contentV < 2) {
     [106, 173, 199, 302, 311, 322].forEach(i => { delete d.wb.p5[i]; });
     d.contentV = 2;
   }
@@ -1983,7 +1984,9 @@ renderers.stats = function () {
   }));
   $("#reset-all").addEventListener("click", () => {
     if (confirm("確定要清除所有學習紀錄嗎？此操作無法復原。")) {
-      S = defaultState(); save(); switchTab("home");
+      S = defaultState(); save();
+      if (typeof Mock !== "undefined") Mock.clearProgress();
+      switchTab("home");
     }
   });
 };

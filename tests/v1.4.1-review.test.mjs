@@ -94,3 +94,62 @@ test("review-v141 P3 自訂題庫的題目不能帶完整測驗標記；模考�
   assert.equal(app.run("PART5[PART5.length - 1].form"), undefined);
   assert.equal(app.run("'mode' in S.mocks[0]"), false);
 });
+
+/* ---------- 第二次審查（60226db..461f8b8）後補的案例 ---------- */
+test("review-v141b P2 聽力模考完全沒作答：錯題本與聽力答對率都不變", () => {
+  const app = loadApp();
+  app.run(`${captureReport} Mock.start("listen"); Mock.submit();`);
+  assert.equal(app.run("Object.keys(S.wb.l2).length + Object.keys(S.wb.l34).length"), 0);
+  assert.deepEqual(plain(app.run("S.lcat")), {});
+  assert.equal(app.run("(S.mocks || []).length"), 0);
+  assert.match(app.run("__html"), /這次沒有作答/);
+});
+
+test("review-v141b P3-1 繼續作答時：超出範圍的答案與旗標丟掉、時間不是數字時用現在；題目更新後的舊進度不接續", () => {
+  const app = loadApp();
+  app.run(`Mock.start("R1", { mode: "R1", answers: [9, 1, -1, "2"], flags: [3, 999, -2], deadline: Date.now() + 60000, t0: "x" });`);
+  assert.deepEqual(plain(app.run("Mock.s.rAnswers.slice(0, 4)")), [null, 1, null, null]);
+  assert.deepEqual(plain(app.run("[...Mock.s.flags]")), [3]);
+  assert.equal(app.run("Number.isFinite(Mock.s.t0)"), true);
+  app.run("Mock.saveProgress(); Mock.s = null;");
+  assert.ok(app.run("Mock.loadProgress()"), "同一版題目的進度可以讀回");
+  // 模擬題目更新：指紋不同，舊進度被刪除
+  app.run(`localStorage.setItem("toeic900_form_progress", JSON.stringify(Object.assign(JSON.parse(localStorage.getItem("toeic900_form_progress")), { sig: "old" })));`);
+  assert.equal(app.run("Mock.loadProgress()"), null);
+  assert.equal(app.store.has("toeic900_form_progress"), false);
+  // 壞掉的資料、不存在的測驗也一樣刪除
+  app.run(`localStorage.setItem("toeic900_form_progress", "{bad json")`);
+  assert.equal(app.run("Mock.loadProgress()"), null);
+  assert.equal(app.store.has("toeic900_form_progress"), false);
+});
+
+test("review-v141b P3 交卷會刪除作答進度；時間已到的進度可以直接交卷", () => {
+  const app = loadApp();
+  app.run(`${captureReport} Mock.start("R1"); Mock.s.rAnswers[0] = Mock.s.paper.reading[0].q.ans; Mock.saveProgress(); Mock.submit();`);
+  assert.equal(app.store.has("toeic900_form_progress"), false);
+  // 時間已到：用暫存進度重新開始時，startReading 立刻交卷
+  app.run(`${captureReport} Mock.start("R1", { mode: "R1", sig: Mock.formSig("R1"), answers: [Mock.buildPaper("R1").reading[0].q.ans], flags: [], deadline: Date.now() - 1000, t0: Date.now() - 4600000 });`);
+  assert.equal(app.run("Mock.s"), null, "已經自動交卷");
+  assert.equal(app.run("S.mocks.length"), 2);
+});
+
+test("review-v141b P3 雙節模考的閱讀節完全沒作答，不算今天的閱讀模考；報告的錯題本題數不含沒作答的題", () => {
+  const app = loadApp();
+  app.run(`${captureReport} Mock.start("full"); Mock.s.lAnswers[0] = 0; Mock.submit();`);
+  assert.equal(app.run("daily().readMock"), 0);
+  assert.match(app.run("__html"), /未作答 \d+ 題/);
+});
+
+test("review-v141b P3 contentV 不是整數時視為舊版；清除所有學習紀錄也會清掉測驗進度", () => {
+  const app = loadApp({ storage: { toeic900: JSON.stringify({ contentV: [5], wb: { p5: { 106: { n: 0, last: null } } } }) } });
+  assert.deepEqual(plain(app.run("S.wb.p5")), {});
+  assert.equal(app.run("S.contentV"), 2);
+  assert.match(app.run(`renderers.stats.toString()`), /Mock\.clearProgress\(\)/);
+});
+
+test("review-v141b P3 雲端拉下來的舊版紀錄（沒有 contentV）也會清掉被替換題目的錯題紀錄", async () => {
+  const app = loadApp();
+  app.run(`S.updatedAt = 0; Sync.ref = () => ({ get: async () => ({ val: () => ({ records: { wb: { p5: { 199: { n: 0, last: null }, 7: { n: 0, last: null } } } }, updatedAt: 5 }) }) });`);
+  assert.equal(await app.run("Sync.pullOnStartup(0)"), true);
+  assert.deepEqual(Object.keys(plain(app.run("S.wb.p5"))), ["7"]);
+});
