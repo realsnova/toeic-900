@@ -44,13 +44,13 @@ test("REV-B1 舊版裝置整份覆蓋雲端：不會刪掉新版裝置自己的�
   assert.equal(b.run(`Sync.signed(${JSON.stringify(db.data[P])})`), true);
 });
 
-test("REV-B2 紀錄已是新格式（idV 1）但混有舊版寫入的索引鍵：轉成編號，同一題兩種鍵都有時取較晚的", () => {
-  const rec = { idV: 1, wb: { p5: { "p5-0004": { n: 1, last: "2026-10-01" }, 4: { n: 0, last: null, w: "2026-10-05" }, 8: { n: 0, last: null } }, p7: { "3-1": { n: 0, last: null } } },
+test("REV-B2 紀錄已是新格式（idV 1）但混有舊版寫入的索引鍵：轉成編號，同一題兩種鍵都有時用索引鍵那一筆", () => {
+  const rec = { idV: 1, wb: { p5: { "p5-0004": { n: 1, last: "2026-10-01" }, 4: { n: 0, last: null }, 8: { n: 0, last: null } }, p7: { "3-1": { n: 0, last: null } } },
     p6done: { "p6-0002": 2, 2: 3 }, p5seen: { 12: true, "p5-0001": true } };
   const app = loadApp({ storage: { toeic900: JSON.stringify(rec) } });
   const S = plain(app.run("S"));
   assert.deepEqual(Object.keys(S.wb.p5).sort(), ["p5-0004", "p5-0008"]);
-  assert.deepEqual(S.wb.p5["p5-0004"], { n: 0, last: null, w: "2026-10-05" }, "10/05 答錯比 10/01 答對晚");
+  assert.deepEqual(S.wb.p5["p5-0004"], { n: 0, last: null }, "舊版寫的索引鍵比較新（舊版答錯不記日期）");
   assert.deepEqual(Object.keys(S.wb.p7), ["p7-0003_1"]);
   assert.equal(S.p6done["p6-0002"], 3, "最佳成績取較高的");
   assert.deepEqual(Object.keys(S.p5seen).sort(), ["p5-0001", "p5-0012"]);
@@ -139,4 +139,56 @@ test("REV-loop 第一次交易拿到空快取（Firebase 的行為）：同步�
   try { await Promise.race([done, timeout]); } finally { a.run("Sync.ready = false"); } // 失敗時讓迴圈停下來
   assert.ok(a.run("window.__rounds") <= 2, `跑了 ${a.run("window.__rounds")} 輪`);
   assert.equal(a.run("Sync.running"), null);
+});
+
+/* ---------- 第二輪審查 ---------- */
+test("REV2-1 舊版裝置把以前拉到的紀錄原封不動推回來（簽章仍有效但比較舊）：不會刪掉新作答", async () => {
+  const db = fakeDb();
+  const a = device(db);
+  a.run(`S.exam = "2026-10-31"; save();`);
+  await a.run("Sync.syncNow()");
+  const x = plain(db.data[P]); // 舊版裝置 C 此時拉到 X
+  a.run(`wbMark("p5", 7, false); daily().p5 += 5; save();`);
+  await a.run("Sync.syncNow()"); // A 寫入 Y
+  db.data[P] = x; // C 按「立即同步」：原封不動推回 X
+  await a.run("Sync.syncNow()");
+  assert.ok(a.run(`S.wb.p5["p5-0007"]`), "A 的新錯題不可被刪");
+  assert.equal(a.run("daily().p5"), 5);
+  assert.ok(db.data[P].records.wb.p5["p5-0007"]);
+});
+
+test("REV2-2 雲端讀回來的鍵順序和本機不同（Firebase 會排序）：內容沒變就不寫入", async () => {
+  const db = fakeDb();
+  const a = device(db), b = device(db);
+  a.run(`wbMark("p5", 9, false); wbMark("p5", 2, false); S.vocab.zeta = { i: 1, e: 2.5, due: "2026-10-12", n: 1 }; S.vocab.alpha = { i: 1, e: 2.5, due: "2026-10-12", n: 1 }; save();`);
+  await a.run("Sync.syncNow()"); await b.run("Sync.syncNow()"); await a.run("Sync.syncNow()");
+  db.data[P] = firebaseNormalize(db.data[P]);
+  const n = db.writes.length;
+  await a.run("Sync.syncNow()"); await b.run("Sync.syncNow()");
+  assert.equal(db.writes.length, n, "只有順序不同，不應寫入");
+});
+
+test("REV2-2b 兩台裝置各自加的自訂題：同步後順序一致，之後不再互相改寫", async () => {
+  const db = fakeDb();
+  const q = s => ({ q: `Custom ${s} ______ item.`, opts: ["a", "b", "c", "d"], ans: 0, cat: "詞彙", exp: "自訂題詳解內容" });
+  const a = device(db, { toeic900_bank: JSON.stringify({ p5: [q("x")] }) });
+  const b = device(db, { toeic900_bank: JSON.stringify({ p5: [q("y")] }) });
+  await a.run("Sync.syncNow()"); await b.run("Sync.syncNow()"); await a.run("Sync.syncNow()");
+  const order = dev => plain(dev.run("loadBank().p5.map(x => x.q)"));
+  assert.deepEqual(order(a), order(b));
+  const n = db.writes.length;
+  await a.run("Sync.syncNow()"); await b.run("Sync.syncNow()");
+  assert.equal(db.writes.length, n);
+});
+
+test("REV2-3 雲端的舊版紀錄用它自己帶的自訂題庫換算自訂題（兩台裝置自訂題順序不同）", async () => {
+  const db = fakeDb();
+  const q = s => ({ q: `Custom ${s} ______ item.`, opts: ["a", "b", "c", "d"], ans: 0, cat: "詞彙", exp: "自訂題詳解內容" });
+  const app0 = loadApp();
+  const N = app0.run("BASE_N.p5");
+  db.data[P] = { records: { baseN: plain(app0.run("BASE_N")), wb: { p5: { [N]: { n: 0, last: null } } }, updatedAt: 5 }, bank: { p5: [q("x"), q("y")] }, updatedAt: 5 };
+  const a = device(db, { toeic900_bank: JSON.stringify({ p5: [q("y"), q("x")] }) });
+  await a.run("Sync.syncNow()");
+  const xid = a.run(`customId("p5", ${JSON.stringify(q("x"))})`);
+  assert.deepEqual(Object.keys(plain(a.run("S.wb.p5"))), [xid], "舊版寫的是 x");
 });

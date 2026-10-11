@@ -123,13 +123,18 @@ const Merge = (() => {
     });
     out.mocks = list3(b ? b.mocks : null, l.mocks, r.mocks, mockSig);
     out.ext = list3(b ? b.ext : null, l.ext, r.ext, extSig).slice(-50);
-    out.tq = l.tq || r.tq; // 遷移練習佇列只是提示，以本機為準
+    // 只屬於這台裝置的欄位（不上雲端，見 Sync.LOCAL_ONLY）：一律用本機的
+    out.tq = l.tq || { p5: [], l2: [] };
+    // 對不到題目的舊紀錄：雲端不存，只會出現在剛轉換的舊版紀錄裡；兩邊合起來保留，不刪（INV-03）
+    const deep = (x, y) => { const o = Object.assign({}, x); Object.keys(obj(y)).forEach(k => { o[k] = isObj(o[k]) && isObj(y[k]) ? deep(o[k], y[k]) : y[k]; }); return o; };
+    if (isObj(l.legacy) || isObj(r.legacy)) out.legacy = deep(obj(r.legacy), obj(l.legacy)); else delete out.legacy;
     // 版本與轉換標記：兩邊都已經過 sanitizeState，以本機為準
     ["baseN", "contentV", "idV"].forEach(k => { if (l[k] !== undefined) out[k] = l[k]; });
     return out;
   }
 
-  // 自訂題庫：每類是一個陣列，用 keyOf（題目文字）當鍵做三方合併，保留本機的順序、雲端新增的接在後面
+  // 自訂題庫：每類是一個陣列，用 keyOf（題目文字）當鍵做三方合併。順序以雲端為準、本機新增的接在後面：
+  // 兩台裝置各自加過題目時，順序才會收斂成一樣，不會每次同步都互相改寫（v1.7 第二輪審查 2；紀錄用編號，順序不影響紀錄）
   function bank(base, local, remote, keyOf) {
     const out = {};
     const types = new Set([...Object.keys(obj(local)), ...Object.keys(obj(remote))]);
@@ -137,7 +142,7 @@ const Merge = (() => {
       const toMap = a => { const m = {}; (Array.isArray(a) ? a : []).forEach(it => { try { m[keyOf(t, it)] = it; } catch (e) { /* 壞資料略過 */ } }); return m; };
       const lm = toMap(obj(local)[t]), rm = toMap(obj(remote)[t]);
       const m = map3(base ? toMap(obj(base)[t]) : null, lm, rm, keepLocal);
-      const order = [...Object.keys(lm), ...Object.keys(rm).filter(k => !(k in lm))];
+      const order = [...Object.keys(rm), ...Object.keys(lm).filter(k => !(k in rm))];
       out[t] = order.filter(k => k in m).map(k => m[k]);
     });
     return out;

@@ -108,7 +108,7 @@ function load() {
    原則：只收斂型別，不刪除合法的舊版資料（INV-03）。
    注意：load() 在檔案開頭就被呼叫，這裡用到的常數必須是函式內的區域常數或宣告在 `let S = load()` 之前，
    否則會踩到暫時性死區，被 load() 的 catch 當成資料損毀而清空所有紀錄。 */
-function sanitizeState(d) {
+function sanitizeState(d, opts = {}) {
   const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
   const obj = v => (v && typeof v === "object" ? v : {}); // Firebase 會把數字鍵的物件存成陣列，陣列也接受
   const cnt = v => { const n = Number(v); return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0; };
@@ -198,7 +198,7 @@ function sanitizeState(d) {
     d.contentV = 2;
   }
   delete d.wv; // 雲端寫入簽章（js/sync.js），不屬於學習紀錄
-  migrateToIds(d);
+  migrateToIds(d, opts.bank);
   if (d.legacy !== undefined && (!d.legacy || typeof d.legacy !== "object" || Array.isArray(d.legacy))) delete d.legacy;
   return d;
 }
@@ -214,12 +214,14 @@ function customId(t, it) {
 // 把一份紀錄的索引鍵換成固定編號。可以重複執行。
 // idV 已是 1 時只轉換殘留的索引鍵：還沒更新的舊版裝置（v1.6 以前）同步拿到新紀錄後，會用索引寫入新的作答
 // （2026-10-11 獨立審查 B2）；同一題兩種鍵都有時，用合併規則挑一筆。編號鍵和索引鍵的格式不會撞在一起。
-// 自訂題的位置＝內建題數＋在「驗證過的」自訂題庫裡的順序（mergeBank 的併入方式，審查 M1），所以從本機自訂題庫查編號。
+// 自訂題的位置＝內建題數＋在「驗證過的」自訂題庫裡的順序（mergeBank 的併入方式，審查 M1）。
+// 本機紀錄用本機的自訂題庫；雲端讀進來的紀錄用和它一起寫入的自訂題庫（bank 參數），兩台裝置的順序可能不同（第二輪審查 3）。
 // 對不到題目的索引鍵不刪除，原樣收進 d.legacy（App 不讀，INV-03）。
-function migrateToIds(d) {
+function migrateToIds(d, bankOf) {
   const again = d.idV === 1;
   let bank = {};
-  try { bank = JSON.parse(localStorage.getItem("toeic900_bank") || "{}") || {}; } catch (e) { bank = {}; }
+  if (bankOf !== undefined) bank = bankOf && typeof bankOf === "object" ? bankOf : {};
+  else try { bank = JSON.parse(localStorage.getItem("toeic900_bank") || "{}") || {}; } catch (e) { bank = {}; }
   const valid = t => { const a = bank && typeof bank === "object" ? bank[t] : null; return (Array.isArray(a) ? a : Object.values(a || {})).filter(it => it && typeof it === "object" && validateItem(t, it)); };
   const custom = {};
   const idAt = (t, i) => {
@@ -234,8 +236,9 @@ function migrateToIds(d) {
   const legacy = {};
   const keep = (path, k, v) => { let o = legacy; path.forEach(p => { o = o[p] = o[p] || {}; }); o[k] = v; };
   const isIndex = k => /^\d+(-\d+)?$/.test(k);
-  // 同一題同時有編號鍵和索引鍵：錯題本取較晚作答的、最佳成績取較高的、其他保留編號鍵那一筆
-  const wbLater = (a, b) => { const k = e => [e && e.last, e && e.w].filter(Boolean).sort().pop() || ""; return k(b) > k(a) ? b : a; };
+  // 同一題同時有編號鍵和索引鍵：錯題本用索引鍵那一筆（舊版裝置拉到新紀錄之後才寫的，一定比較新；
+  // 舊版答錯時不記日期，不能比日期，第二輪審查 4）、最佳成績取較高的、其他保留編號鍵那一筆
+  const wbLater = (a, b) => b;
   const convert = (obj, f, path, pick) => {
     const out = {};
     Object.keys(obj || {}).forEach(k => { if (again && !isIndex(k)) out[k] = obj[k]; });

@@ -69,7 +69,7 @@ const Sync = {
   // 舊版裝置推上來的紀錄沒有 baseN、idV：設成「舊版」，讓 sanitizeState 做內建題增加的搬移與固定編號轉換。
   clean(data) {
     if (!data || typeof data !== "object" || !data.records) return null;
-    const records = sanitizeState(Object.assign(defaultState(), { baseN: null, contentV: 0, idV: 0 }, data.records));
+    const records = sanitizeState(Object.assign(defaultState(), { baseN: null, contentV: 0, idV: 0 }, data.records), { bank: data.bank || {} });
     const bank = cleanBank(data.bank);
     return { records, bank };
   },
@@ -109,11 +109,24 @@ const Sync = {
     keys.forEach(k => { sorted[k] = out[k]; });
     return sorted;
   },
+  // 只屬於這台裝置、不上雲端的欄位：遷移練習佇列（每台裝置自己的提示）、對不到題目的舊紀錄（每台裝置各自轉換時留下的）。
+  // 上雲端的話，兩台裝置的值不同就會每次同步都互相改寫（第二輪審查後的測試發現）
+  LOCAL_ONLY: ["tq", "legacy"],
+  cloudRecords(records) {
+    const r = Object.assign({}, records);
+    delete r.wv;
+    Sync.LOCAL_ONLY.forEach(k => { delete r[k]; });
+    return r;
+  },
   sign(records, bank) {
-    const r = Object.assign({}, records); delete r.wv;
-    return fnv1a(JSON.stringify(Sync.canon({ records: r, bank: bank || {} }) || {}));
+    return fnv1a(JSON.stringify(Sync.canon({ records: Sync.cloudRecords(records), bank: bank || {} }) || {}));
   },
   signed(node) { return !!(node && node.records && typeof node.records.wv === "string" && node.records.wv === Sync.sign(node.records, node.bank)); },
+  // 內容相同（不管鍵的順序）：Firebase 讀回來的鍵是排序過的，合併結果保留本機的順序（第二輪審查 2）
+  same(a, b) {
+    const c = x => JSON.stringify(Sync.canon({ records: Sync.cloudRecords(x.records), bank: x.bank }));
+    return c(a) === c(b);
+  },
   // 一輪同步：在 Firebase 交易（transaction）裡讀雲端 → 檢查 → 合併 → 有差異才寫回；成功後套用到本機。
   // 交易保證「讀到的」就是「寫入前的最新值」：另一台裝置剛好同時寫入時，Firebase 會用新值重跑合併，兩邊的作答都保留。
   async round() {
@@ -128,16 +141,18 @@ const Sync = {
         try {
           fnErr = null;
           const remote = Sync.clean(cur);
-          // 舊版 App 寫的：用兩方合併（聯集、計數取較大值、錯題保留），不會刪掉本機的作答
-          const trusted = !!remote && Sync.signed(cur);
+          // 舊版 App 寫的：用兩方合併（聯集、計數取較大值、錯題保留），不會刪掉本機的作答。
+          // 簽章對、但比上次同步的那一份舊：是舊版裝置把以前拉到的紀錄原封不動推回來（新版每次寫入都把更新時間設成現在，
+          // 不會倒退），一樣當成舊版寫的（第二輪審查 1）
+          const trusted = !!remote && Sync.signed(cur) && Number(cur.records.updatedAt || 0) >= Number((base && base.records && base.records.updatedAt) || 0);
           // 沒有雲端資料時用本機的副本：Firebase 第一次呼叫常拿本機快取（多半是空的）再用伺服器的值重跑，
           // 下面會改 updatedAt，不能改到開始時的快照，否則「同步中有新作答」的判斷會一直成立而不停同步
           merged = remote ? Sync.merge(trusted ? base : null, local, remote) : JSON.parse(JSON.stringify(local));
           merged.records = sanitizeState(merged.records);
-          if (trusted && Merge.same(merged, remote)) return; // 雲端已經是最新：不寫入
+          if (trusted && Sync.same(merged, remote)) return; // 雲端已經是最新：不寫入
           // 更新時間設成現在：還沒更新的舊版裝置下次開啟時才會拉取合併後的紀錄
           merged.records.updatedAt = Math.max(merged.records.updatedAt || 0, Date.now());
-          return { records: Object.assign({}, merged.records, { wv: Sync.sign(merged.records, merged.bank) }), bank: merged.bank, updatedAt: merged.records.updatedAt };
+          return { records: Object.assign(Sync.cloudRecords(merged.records), { wv: Sync.sign(merged.records, merged.bank) }), bank: merged.bank, updatedAt: merged.records.updatedAt };
         } catch (e) { fnErr = e; return; }
       }, undefined, false);
     } catch (e) {
