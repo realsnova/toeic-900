@@ -1,7 +1,7 @@
 // v1.4.1 程式審查（dfe94b4..60226db）找到的問題：回歸測試
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { loadApp } from "./helpers/load-app.mjs";
+import { fakeDb, loadApp } from "./helpers/load-app.mjs";
 
 const plain = v => JSON.parse(JSON.stringify(v));
 const captureReport = `globalThis.__html = "";
@@ -148,8 +148,8 @@ test("review-v141b P3 contentV 不是整數時視為舊版；清除所有學習�
 });
 
 test("review-v141b P3 雲端拉下來的舊版紀錄（沒有 contentV）也會清掉被替換題目的錯題紀錄", async () => {
-  const app = loadApp();
-  app.run(`S.updatedAt = 0; Sync.ref = () => ({ get: async () => ({ val: () => ({ records: { wb: { p5: { 199: { n: 0, last: null }, 7: { n: 0, last: null } } } }, updatedAt: 5 }) }) });`);
-  assert.equal(await app.run("Sync.pullOnStartup(0)"), true);
-  assert.deepEqual(Object.keys(plain(app.run("S.wb.p5"))), ["7"]);
+  const code = "ab3de-f7gh9"; const db = fakeDb(); db.data["sync/" + code] = { records: { wb: { p5: { 199: { n: 0, last: null }, 7: { n: 0, last: null } } } }, updatedAt: 5 };
+  const app = loadApp({ db, storage: { toeic900_synccode: code } });
+  assert.equal(await app.run("Sync.pullOnStartup()"), true);
+  assert.deepEqual(Object.keys(plain(app.run("S.wb.p5"))), ["p5-0007"]);
 });

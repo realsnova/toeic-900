@@ -242,7 +242,7 @@ test("播放中按重播，舊的播放不再繼續念", async () => {
 test("T-SEC-02-1/2 同步代碼格式、唯一性與安全亂數", () => {
   const app = loadApp();
   const codes = app.run(`Array.from({ length: 10000 }, () => Sync.genCode())`);
-  const re = /^[a-hjkmnp-z2-9]{5}-[a-hjkmnp-z2-9]{5}$/;
+  const re = /^[a-hjkmnp-z2-9]{5}(-[a-hjkmnp-z2-9]{5}){3}$/; // v1.7 起 20 個字元
   assert.ok(codes.every(c => re.test(c)), "格式不符");
   assert.equal(new Set(codes).size, codes.length, "出現重複代碼");
   assert.equal(/Math\.random/.test(readSource("js/sync.js")), false);

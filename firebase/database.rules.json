@@ -2,6 +2,34 @@
   "rules": {
     ".read": false,
     ".write": false,
+    "v2": {
+      "$id": {
+        ".read": "$id.matches(/^[0-9a-f]{32}$/)",
+        ".write": "$id.matches(/^[0-9a-f]{32}$/)",
+        ".validate": "newData.hasChildren(['ct', 'iv', 'z', 'u', 'rev', 'v']) && (data.exists() ? newData.child('rev').val() === data.child('rev').val() + 1 : newData.child('rev').val() === 1)",
+        "ct": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 5000000"
+        },
+        "iv": {
+          ".validate": "newData.isString() && newData.val().length === 16"
+        },
+        "z": {
+          ".validate": "newData.val() === 0 || newData.val() === 1"
+        },
+        "u": {
+          ".validate": "newData.isNumber() && newData.val() <= now + 86400000"
+        },
+        "rev": {
+          ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 1000000000"
+        },
+        "v": {
+          ".validate": "newData.val() === 2"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
     "sync": {
       "$code": {
         ".read": "$code.length >= 4 && $code.length <= 64 && $code.matches(/^[a-z0-9]+(-[a-z0-9]+)*$/)",

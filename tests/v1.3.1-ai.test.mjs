@@ -25,7 +25,7 @@ test("T-AI-01-1 金鑰預設只在 sessionStorage；不在 localStorage、學習
   const payload = app.run("JSON.stringify({ records: S, bank: loadBank() })");
   assert.equal(payload.includes(KEY), false);
   assert.match(readSource("js/app.js"), /records: S, bank: loadBank\(\)/);
-  assert.match(readSource("js/sync.js"), /records: S, bank: loadBank\(\)/);
+  assert.match(readSource("js/sync.js"), /records: JSON\.parse\(JSON\.stringify\(S\)\), bank: loadBank\(\)/);
 });
 
 test("T-AI-01-2 刪除金鑰後不再啟用，儲存內容中沒有金鑰", () => {

@@ -1,7 +1,7 @@
 // 2026-10-07 資安審查（.scratch/toeic-v1-improve/security-review-v1.3.1.md）修正的回歸測試
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { loadApp, readSource } from "./helpers/load-app.mjs";
+import { fakeDb, loadApp, readSource } from "./helpers/load-app.mjs";
 
 const X = '<img src=x onerror="alert(1)">';
 const plain = v => JSON.parse(JSON.stringify(v));
@@ -81,15 +81,15 @@ test("sec-H1-2 合法的舊版資料完整保留（INV-03）", () => {
   assert.deepEqual(S.mocks, legacy.mocks);
 });
 
-test("sec-H1-3 雲端同步拉取的資料也會經過型別檢查", async () => {
-  const app = loadApp();
-  app.run(`S.updatedAt = 0; Sync.ref = () => ({ get: async () => ({ val: () => (${JSON.stringify({ records: EVIL, updatedAt: 5 })}) }) });`);
-  const applied = await app.run("Sync.pullOnStartup(0)");
+test("sec-H1-3 雲端同步拉取的資料也會經過型別檢查（v1.7：舊版明文位置的資料）", async () => {
+  const code = "ab3de-f7gh9"; const db = fakeDb(); db.data["sync/" + code] = { records: EVIL, updatedAt: 5 };
+  const app = loadApp({ db, storage: { toeic900_synccode: code } });
+  const applied = await app.run("Sync.pullOnStartup()");
   assert.equal(applied, true);
   const S = plain(app.run("S"));
   assert.equal("lastBackup" in S, false);
   assert.equal(S.targetScore, null);
-  assert.deepEqual(S.p6done, { 0: 0 });
+  assert.deepEqual(S.p6done, { "p6-0000": 0 });
   assert.equal(app.store.get("toeic900").includes("onerror"), false, "寫回本機的資料不可含 XSS 字串");
 });
 

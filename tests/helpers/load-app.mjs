@@ -8,7 +8,7 @@ import { webcrypto } from "node:crypto";
 const ROOT = path.resolve(import.meta.dirname, "..", "..");
 const SCRIPTS = [
   "js/ui.js", "js/data/vocab.js", "js/data/part5.js", "js/data/part6.js", "js/data/part7.js",
-  "js/data/listening.js", "js/firebase-config.js", "js/sync.js", "js/ai.js", "audio/clips.js", "js/audio.js", "js/app.js", "js/mock.js", "js/views.js"
+  "js/data/listening.js", "js/firebase-config.js", "js/merge.js", "js/sync.js", "js/ai.js", "audio/clips.js", "js/audio.js", "js/app.js", "js/mock.js", "js/views.js"
 ];
 
 // 假 fetch（AI 解析測試用）：記錄每次請求，依 mode 回應。不會連到真實網路。
@@ -98,8 +98,38 @@ export function fakeAudio({ mode = "ok" } = {}) {
   return A;
 }
 
-// 載入整個 App。storage：預先放入 localStorage 的內容；speech：fakeSpeech() 的回傳值；fetch：fakeFetch() 的回傳值
-export function loadApp({ storage = {}, speech = fakeSpeech(), fetch = fakeFetch(), audio = null } = {}) {
+// 假 Firebase Realtime Database（只在記憶體）。v2/ 底下照 firebase/database.rules.json 檢查版本號：
+// 新寫入的 rev 必須是現有 rev + 1（沒有資料時是 1），否則像正式資料庫一樣以 PERMISSION_DENIED 拒絕。
+// beforeSet(path, value)：測試用，在寫入前插入另一台裝置的動作（模擬同時寫入）。
+export function fakeDb() {
+  const data = {};
+  const db = {
+    data, writes: [], beforeSet: null,
+    ref(path) {
+      return {
+        path,
+        get: async () => ({ val: () => (data[path] === undefined ? null : JSON.parse(JSON.stringify(data[path]))) }),
+        set: async v => {
+          if (db.beforeSet) { const f = db.beforeSet; db.beforeSet = null; await f(path, v); }
+          if (path.startsWith("v2/")) {
+            const want = data[path] ? data[path].rev + 1 : 1;
+            if (!v || v.rev !== want || v.v !== 2 || typeof v.ct !== "string" || typeof v.iv !== "string") {
+              const e = new Error("PERMISSION_DENIED: Permission denied"); e.code = "PERMISSION_DENIED"; throw e;
+            }
+          }
+          db.writes.push({ path, v: JSON.parse(JSON.stringify(v)) });
+          data[path] = JSON.parse(JSON.stringify(v));
+        },
+        remove: async () => { delete data[path]; }
+      };
+    }
+  };
+  return db;
+}
+
+// 載入整個 App。storage：預先放入 localStorage 的內容；speech：fakeSpeech() 的回傳值；fetch：fakeFetch() 的回傳值；
+// db：fakeDb() 的回傳值（有給就把雲端同步接上這個假資料庫）
+export function loadApp({ storage = {}, speech = fakeSpeech(), fetch = fakeFetch(), audio = null, db = null } = {}) {
   const store = new Map(Object.entries(storage));
   const writes = [];
   const localStorage = {
@@ -125,7 +155,7 @@ export function loadApp({ storage = {}, speech = fakeSpeech(), fetch = fakeFetch
   };
   const ctx = {
     console, setTimeout, clearTimeout, setInterval, clearInterval, Promise, Date, Math, JSON,
-    crypto: webcrypto,
+    crypto: webcrypto, TextEncoder, TextDecoder, btoa, atob, Blob, Response, CompressionStream, DecompressionStream,
     localStorage, sessionStorage, document, navigator: { clipboard: {}, onLine: true }, fetch, AbortController,
     speechSynthesis: speech,
     SpeechSynthesisUtterance: function (text) { this.text = text; },
@@ -144,6 +174,7 @@ export function loadApp({ storage = {}, speech = fakeSpeech(), fetch = fakeFetch
   for (const f of SCRIPTS) {
     vm.runInContext(fs.readFileSync(path.join(ROOT, f), "utf8"), ctx, { filename: f });
   }
+  if (db) { ctx.__db = db; vm.runInContext("Sync.db = __db; Sync.ready = true;", ctx); }
   return {
     ctx, speech, store, session, writes, fetch,
     run: code => vm.runInContext(code, ctx)

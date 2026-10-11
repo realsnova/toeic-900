@@ -1,7 +1,7 @@
 // v1.4.0（S1 考前衝刺版）的單元測試：新題資料、Part 2 長度偏差、衝刺菜單、題目回報、內建題增加時的紀錄搬移
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { loadApp } from "./helpers/load-app.mjs";
+import { fakeDb, loadApp } from "./helpers/load-app.mjs";
 
 const plain = v => JSON.parse(JSON.stringify(v));
 // 目前的內建題數（之後每次加題都會變，測試不寫死數字）
@@ -126,17 +126,17 @@ test("S1-baseN 舊版紀錄升級時，自訂題的錯題本、輪替與最佳�
 test("S1-baseN 新使用者的紀錄帶有目前的內建題數；舊版裝置同步上來的紀錄也會搬移", async () => {
   const fresh = loadApp();
   assert.deepEqual(plain(fresh.run("S.baseN")), plain(fresh.run("BASE_N")));
-  const app = loadApp();
-  const remote = { records: { wb: { p5: { 200: { n: 0, last: null } } } }, updatedAt: 5 };
-  app.run(`S.updatedAt = 0; Sync.ref = () => ({ get: async () => ({ val: () => (${JSON.stringify(remote)}) }) });`);
-  assert.equal(await app.run("Sync.pullOnStartup(0)"), true);
-  assert.deepEqual(Object.keys(plain(app.run("S.wb.p5"))), [String(N5)]);
+  // v1.7：舊版裝置寫在明文位置的紀錄。沒有自訂題，搬完的位置對不到題目，收進 S.legacy
+  const code = "ab3de-f7gh9"; const db = fakeDb(); db.data["sync/" + code] = { records: { wb: { p5: { 200: { n: 0, last: null } } } }, updatedAt: 5 };
+  const app = loadApp({ db, storage: { toeic900_synccode: code } });
+  assert.equal(await app.run("Sync.pullOnStartup()"), true);
+  assert.deepEqual(Object.keys(plain(app.run("S.legacy.wb.p5"))), [String(N5)]);
   // 新版裝置的紀錄（有 baseN）不會再搬
-  const app2 = loadApp();
-  const remote2 = { records: { wb: { p5: { [N5]: { n: 0, last: null } } }, baseN: plain(app2.run("BASE_N")) }, updatedAt: 5 };
-  app2.run(`S.updatedAt = 0; Sync.ref = () => ({ get: async () => ({ val: () => (${JSON.stringify(remote2)}) }) });`);
-  await app2.run("Sync.pullOnStartup(0)");
-  assert.deepEqual(Object.keys(plain(app2.run("S.wb.p5"))), [String(N5)]);
+  const db2 = fakeDb();
+  db2.data["sync/" + code] = { records: { wb: { p5: { [N5]: { n: 0, last: null } } }, baseN: plain(fresh.run("BASE_N")) }, updatedAt: 5 };
+  const app2 = loadApp({ db: db2, storage: { toeic900_synccode: code } });
+  await app2.run("Sync.pullOnStartup()");
+  assert.deepEqual(Object.keys(plain(app2.run("S.legacy.wb.p5"))), [String(N5)]);
 });
 
 /* ---------- 獨立審查（review-s1）後補的案例 ---------- */
@@ -167,10 +167,14 @@ test("review-s1 P2-1 baseN 缺某一類或值壞掉時，那一類不搬（避�
 });
 
 test("review-s1 P2-2 雲端資料格式錯誤時不會讓載入失敗：錯誤欄位被收斂成安全的值，不會留下 baseN: null", async () => {
-  const app = loadApp();
-  app.run(`S.updatedAt = 0; S.wb.p5 = { 5: { n: 1, last: "2026-10-01" } }; Sync.ref = () => ({ get: async () => ({ val: () => ({ records: { wb: "x", mocks: "y" }, updatedAt: 5 }) }) });`);
-  await app.run("Sync.pullOnStartup(0)");
+  const code = "ab3de-f7gh9", db = fakeDb();
+  db.data["sync/" + code] = { records: { wb: "x", mocks: "y" }, updatedAt: 5 }; // v1.7：舊版明文位置
+  const app = loadApp({ db, storage: { toeic900_synccode: code } });
+  app.run(`S.wb.p5 = { "p5-0005": { n: 1, last: "2026-10-01" } };`);
+  await app.run("Sync.pullOnStartup()");
+  assert.equal(app.run("Sync.lastError"), null, "同步要真的執行成功");
   const S = plain(app.run("S"));
+  assert.deepEqual(Object.keys(S.wb.p5), ["p5-0005"], "本機的錯題不受雲端壞資料影響");
   assert.equal(typeof S.wb, "object");
   assert.notEqual(S.baseN, null, "不可留下 baseN: null");
   assert.ok(Array.isArray(S.mocks));
