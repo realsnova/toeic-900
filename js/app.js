@@ -10,6 +10,7 @@ const WB_MASTER_N = 2; // 錯題要連續答對幾次（且跨天）才算掌握
 const BASE_N = { p5: PART5.length, p6: PART6.length, p7: PART7.length, l2: PART2.length, l34: PART34.length };
 const LEGACY_BASE_N = { p5: 200, p6: 10, p7: 12, l2: 60, l34: 13 }; // v1.3.x 以前（紀錄裡沒有 baseN）的內建題數
 const PRE_ID_BACKUP_KEY = "toeic900_pre_v17_backup"; // 轉換成固定編號之前的原始紀錄（只在本機）
+const TQ_MAX = 10; // 遷移練習佇列的上限（sanitizeState 會用到，必須在 load() 之前）
 // 題目固定編號用到的常數（說明見 migrateToIds）；load() 會用到，必須宣告在 `let S = load()` 之前
 const ID_TYPES = ["p5", "p6", "p7", "l2", "l34"];
 const SET_PARTS = { p6: "blanks", p7: "qs", l34: "qs" };
@@ -21,6 +22,7 @@ function defaultState() {
     updatedAt: 0,              // 最後異動時間戳（雲端同步比對新舊用，不可為 undefined）
     vocab: {},                // word -> {i:間隔天數, due:'YYYY-MM-DD', n:複習次數, s:穩定度, d:難度, l:上次複習日}（v1.7 起 FSRS；e 是舊版的難易係數）
     mastery: {},              // 技能 ID -> {th:能力值, n:作答數, r:答對數, last:'YYYY-MM-DD'}（v1.7，js/engine.js）
+    tq: { p5: [], l2: [] },   // 遷移練習：答錯的技能，下一輪出一道同技能的新題（v1.7）
     cat: {},                  // Part5 類別 -> {r, w}
     lcat: {},                 // 聽力類別（Part 2 / Part 3/4）-> {r, w}
     racc: { r: 0, w: 0 },     // 閱讀累計作答（練習答對率用；錯題本重考不計入）
@@ -154,6 +156,9 @@ function sanitizeState(d) {
     mastery[k] = { th: Math.min(4, Math.max(-4, th)), n: cnt(m.n), r: Math.min(cnt(m.r), cnt(m.n)), last: date(m.last) || "" };
   });
   d.mastery = mastery;
+  const tq = {};
+  ["p5", "l2"].forEach(t => { tq[t] = (Array.isArray(obj(d.tq)[t]) ? obj(d.tq)[t] : []).filter(x => typeof x === "string" && /^[a-z0-9-]{2,20}$/.test(x)).slice(-TQ_MAX); });
+  d.tq = tq;
   if (!d.wb || typeof d.wb !== "object") d.wb = {};
   // 錯題本：Firebase 可能把數字鍵存成陣列，空位在 JSON 裡會變成 null；先去掉空位（否則會變成假的錯題），
   // 再做舊格式遷移（true → {n, last}），最後確認日期格式；n 一定是數字（INV-09）
@@ -329,6 +334,22 @@ function recordSkill(t, k, correct) {
   if (!sk || !SKILL_BY_ID[sk]) return;
   if (!S.mastery) S.mastery = {};
   S.mastery[sk] = Mastery.update(S.mastery[sk], correct, { type: t, today: todayStr() });
+  // 遷移練習：答錯後，下一輪出一道同技能、不同句子的題目，確認學到的是觀念而不是記住這一題
+  if (!correct && (t === "p5" || t === "l2")) {
+    if (!S.tq) S.tq = { p5: [], l2: [] };
+    if (!Array.isArray(S.tq[t])) S.tq[t] = [];
+    S.tq[t].push(sk);
+    S.tq[t] = S.tq[t].slice(-TQ_MAX);
+  }
+}
+// 某個 Part 的弱項技能：作答數夠、掌握度低於 70%，由弱到強
+const WEAK_LEVEL = 0.7;
+function weakSkills(t) {
+  return SKILLS.filter(s => s.part === t)
+    .map(s => ({ id: s.id, m: (S.mastery || {})[s.id] }))
+    .filter(x => Mastery.enough(x.m) && Mastery.level(x.m, t) < WEAK_LEVEL)
+    .sort((a, b) => Mastery.level(a.m, t) - Mastery.level(b.m, t))
+    .map(x => x.id);
 }
 // 執行期的鍵 → 紀錄用的固定編號；已經是編號就原樣傳回；找不到題目時傳回 null
 function recId(t, k) {
@@ -1331,8 +1352,9 @@ function l2Audio(item, order) {
 }
 function startL2() {
   // Part 2 沒有類別統計，所以只做「已出過」輪替，不做弱項加權
+  const ws = new Set(weakSkills("l2"));
   const ids = drawRound("l2seen", PART2.length, ROUND_N,
-    wbKeys("l2").map(Number).filter(i => !isFormItem("l2", i)), null, i => isFormItem("l2", i));
+    wbKeys("l2").map(Number).filter(i => !isFormItem("l2", i)), ws.size ? (i => ws.has(PART2[i].sk)) : null, i => isFormItem("l2", i));
   save(); // l2seen 已更新
   l2s = { ids, at: 0, right: 0 };
   l2Next();
@@ -1551,6 +1573,16 @@ function drawRound(seenKey, poolSize, n, wrongIds, isWeak, isHidden) {
   // 錯題優先，且不受 seen 影響——錯題本的題目本來就該重複出現直到掌握
   const ids = shuffle(wrongIds.filter(i => Number.isInteger(i) && i >= 0 && i < poolSize)).slice(0, n);
   const taken = new Set(ids);
+  // 遷移練習：上一輪答錯的技能，各出一道沒做過的同技能新題（最多 3 題），出過就從佇列移除
+  const queue = type && S.tq && Array.isArray(S.tq[type]) ? S.tq[type] : [];
+  const arr = type ? BANK_ARRAYS()[type] : [];
+  const transfer = [];
+  while (queue.length && ids.length < n && transfer.length < 3) {
+    const sk = queue.shift();
+    const pick = shuffle(Array.from({ length: poolSize }, (_, i) => i)
+      .filter(i => arr[i] && arr[i].sk === sk && !taken.has(i) && !hidden(i) && !seen.has(i)))[0];
+    if (pick !== undefined) { ids.push(pick); taken.add(pick); transfer.push(pick); }
+  }
   let need = n - ids.length;
   if (need > 0) {
     let fresh = [];
@@ -1578,10 +1610,11 @@ function drawRound(seenKey, poolSize, n, wrongIds, isWeak, isHidden) {
   return shuffle(ids);
 }
 function startP5() {
+  const ws = new Set(weakSkills("p5"));
   const weak = weakCats();
+  const isWeak = ws.size ? (i => ws.has(PART5[i].sk)) : weak.size ? (i => weak.has(PART5[i].cat)) : null;
   const ids = drawRound("p5seen", PART5.length, ROUND_N,
-    wbKeys("p5").map(Number).filter(i => !isFormItem("p5", i)),
-    weak.size ? (i => weak.has(PART5[i].cat)) : null, i => isFormItem("p5", i));
+    wbKeys("p5").map(Number).filter(i => !isFormItem("p5", i)), isWeak, i => isFormItem("p5", i));
   save(); // p5seen 已更新
   p5session = { ids, at: 0, right: 0, t0: Date.now() };
   p5Next();
@@ -2113,6 +2146,22 @@ renderers.bank = function () {
 };
 
 /* ============ 統計 ============ */
+// 技能掌握度（v1.7）：每項技能一般難度題目的預估答對率；作答少於 5 題顯示「資料不足」
+function masteryCard() {
+  const PART_NAME = { p5: "Part 5", p6: "Part 6", p7: "Part 7", l2: "聽力 Part 2", l34: "聽力 Part 3/4" };
+  const groups = Object.keys(PART_NAME).map(t => {
+    const rows = SKILLS.filter(s => s.part === t).map(s => {
+      const m = (S.mastery || {})[s.id];
+      if (!Mastery.enough(m)) return `<div class="bar-row"><span class="lbl">${esc(s.name)}</span><div class="bar-track"></div><span class="val muted">資料不足（${m ? m.n : 0} 題）</span></div>`;
+      const pct = Math.round(Mastery.level(m, t) * 100);
+      return `<div class="bar-row"><span class="lbl">${esc(s.name)}</span><div class="bar-track"><div class="bar-fill" style="width:${pct}%${pct < WEAK_LEVEL * 100 ? ";background:var(--warn)" : ""}"></div></div><span class="val">${pct}%（${m.n} 題）</span></div>`;
+    }).join("");
+    return `<h3 style="margin-top:12px">${PART_NAME[t]}</h3>${rows}`;
+  }).join("");
+  return `<div class="card"><h2>🎯 技能掌握度</h2>
+    <p class="muted">依每題的作答更新，數字是「一般難度的題目預估答對率」。低於 70% 的技能會標成橘色，Part 5 與聽力 Part 2 會多出這些技能的題目；答錯的技能下一輪會出一題同技能的新題。</p>
+    <details><summary>展開 36 項技能</summary>${groups}</details></div>`;
+}
 renderers.stats = function () {
   const cards = Object.values(S.vocab);
   const mastered = cards.filter(c => c.i >= 21).length;
@@ -2150,6 +2199,7 @@ renderers.stats = function () {
       <div class="heat">${heat.join("")}</div>
     </div>
     <div class="card"><h2>🎧 聽力各類別正確率</h2>${lBars}</div>
+    ${masteryCard()}
     <div class="card"><h2>🧩 Part 5 各文法類別正確率</h2>${catBars()}</div>
     <div class="card">
       <h2>📖 單字掌握進度</h2>

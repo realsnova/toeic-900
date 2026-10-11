@@ -124,3 +124,28 @@ test("FSRS-5 單字卡評分走 FSRS：記得的卡間隔和預覽一致", () =>
   assert.ok(c.s > 0 && c.d >= 1 && c.l);
   assert.equal(a.run("daily().newV"), 1);
 });
+
+test("TRANSFER-1 答錯後下一輪出一道同技能的新題（不是同一題），出過就移出佇列", () => {
+  const a = loadApp();
+  const i = a.run(`PART5.findIndex(q => !q.form && q.sk === "g-comp")`);
+  a.run(`wbMark("p5", ${i}, false)`);
+  assert.deepEqual(plain(a.run("S.tq.p5")), ["g-comp"]);
+  const ids = plain(a.run(`drawRound("p5seen", PART5.length, 10, [], null, j => isFormItem("p5", j))`));
+  const comp = ids.filter(j => a.run(`PART5[${j}].sk`) === "g-comp" && j !== i);
+  assert.ok(comp.length >= 1, "要有一道同技能的新題");
+  assert.deepEqual(plain(a.run("S.tq.p5")), []);
+});
+
+test("WEAK-1 弱項技能：作答夠多且掌握度低於 70% 才算，由弱到強；Part 5 出題會偏向弱項", () => {
+  const a = loadApp();
+  a.run(`S.mastery = { "g-rel": { th: -2, n: 12, r: 3 }, "g-pos": { th: -1, n: 12, r: 5 }, "g-prep": { th: 2, n: 12, r: 11 }, "g-comp": { th: -3, n: 2, r: 0 } }`);
+  assert.deepEqual(plain(a.run(`weakSkills("p5")`)), ["g-rel", "g-pos"]);
+  let weakCount = 0;
+  for (let k = 0; k < 20; k++) {
+    a.run(`S.p5seen = {}; S.tq = { p5: [], l2: [] }`);
+    const ids = plain(a.run(`drawRound("p5seen", PART5.length, 10, [], j => ["g-rel", "g-pos"].includes(PART5[j].sk), j => isFormItem("p5", j))`));
+    weakCount += ids.filter(j => ["g-rel", "g-pos"].includes(a.run(`PART5[${j}].sk`))).length;
+  }
+  assert.ok(weakCount / 200 >= 0.4, `弱項佔 ${weakCount / 200}`);
+  a.run("renderers.stats()");
+});

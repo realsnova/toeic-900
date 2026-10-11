@@ -122,6 +122,7 @@ const Merge = (() => {
     });
     out.mocks = list3(b ? b.mocks : null, l.mocks, r.mocks, mockSig);
     out.ext = list3(b ? b.ext : null, l.ext, r.ext, extSig).slice(-50);
+    out.tq = l.tq || r.tq; // 遷移練習佇列只是提示，以本機為準
     // 版本與轉換標記：兩邊都已經過 sanitizeState，以本機為準
     ["baseN", "contentV", "idV"].forEach(k => { if (l[k] !== undefined) out[k] = l[k]; });
     return out;
