@@ -94,6 +94,26 @@ const Sync = {
     })();
     return Sync.running;
   },
+  // 寫入簽章：v1.7 起寫進雲端的紀錄帶一個內容雜湊 records.wv。舊版 App（v1.6 以前）會把整份紀錄覆蓋上去，
+  // 內容和簽章就對不上（或沒有簽章）——這時不能用三方合併：舊版的整份覆蓋少了別台裝置的新作答，
+  // 三方合併會把它們當成「被刪掉」而真的刪掉（2026-10-11 獨立審查 B1）。
+  // 雜湊前照 Firebase 的存法正規化（鍵排序、陣列當成以序號為鍵的物件、去掉 null 與空物件），讀回來才算得出同一個值。
+  canon(v) {
+    if (v === null || v === undefined) return undefined;
+    if (typeof v !== "object") return v;
+    const out = {};
+    Object.keys(v).sort().forEach(k => { const c = Sync.canon(v[k]); if (c !== undefined) out[k] = c; });
+    const keys = Object.keys(out).sort();
+    if (!keys.length) return undefined;
+    const sorted = {};
+    keys.forEach(k => { sorted[k] = out[k]; });
+    return sorted;
+  },
+  sign(records, bank) {
+    const r = Object.assign({}, records); delete r.wv;
+    return fnv1a(JSON.stringify(Sync.canon({ records: r, bank: bank || {} }) || {}));
+  },
+  signed(node) { return !!(node && node.records && typeof node.records.wv === "string" && node.records.wv === Sync.sign(node.records, node.bank)); },
   // 一輪同步：在 Firebase 交易（transaction）裡讀雲端 → 檢查 → 合併 → 有差異才寫回；成功後套用到本機。
   // 交易保證「讀到的」就是「寫入前的最新值」：另一台裝置剛好同時寫入時，Firebase 會用新值重跑合併，兩邊的作答都保留。
   async round() {
@@ -101,24 +121,39 @@ const Sync = {
     if (!ref) return false;
     const base = Sync.loadBase();
     const local = { records: JSON.parse(JSON.stringify(S)), bank: loadBank() };
-    let merged = local, readOk = false;
+    let merged = local, fnErr = null;
     try {
       await ref.transaction(cur => {
-        readOk = false;
-        const remote = Sync.clean(cur);
-        readOk = true;
-        merged = remote ? Sync.merge(base, local, remote) : local;
-        merged.records = sanitizeState(merged.records);
-        if (remote && Merge.same(merged, remote)) return; // 雲端已經是最新：不寫入
-        return { records: merged.records, bank: merged.bank, updatedAt: merged.records.updatedAt || Date.now() };
+        // 交易函式裡的例外不一定會傳到外面的 Promise（審查 S2）：自己接住，放棄這次寫入
+        try {
+          fnErr = null;
+          const remote = Sync.clean(cur);
+          // 舊版 App 寫的：用兩方合併（聯集、計數取較大值、錯題保留），不會刪掉本機的作答
+          const trusted = !!remote && Sync.signed(cur);
+          merged = remote ? Sync.merge(trusted ? base : null, local, remote) : local;
+          merged.records = sanitizeState(merged.records);
+          if (trusted && Merge.same(merged, remote)) return; // 雲端已經是最新：不寫入
+          // 更新時間設成現在：還沒更新的舊版裝置下次開啟時才會拉取合併後的紀錄
+          merged.records.updatedAt = Math.max(merged.records.updatedAt || 0, Date.now());
+          return { records: Object.assign({}, merged.records, { wv: Sync.sign(merged.records, merged.bank) }), bank: merged.bank, updatedAt: merged.records.updatedAt };
+        } catch (e) { fnErr = e; return; }
       }, undefined, false);
     } catch (e) {
-      console.warn(readOk ? "雲端同步寫入失敗" : "雲端同步讀取失敗", e);
-      Sync.lastError = readOk ? "write" : "read";
+      console.warn("雲端同步寫入失敗", e);
+      Sync.lastError = "write";
       return false;
     }
-    const changed = !Merge.same(merged.records, local.records) || !Merge.same(merged.bank, local.bank);
-    if (changed) Sync.apply(merged);
+    if (fnErr) { console.warn("雲端同步讀取失敗", fnErr); Sync.lastError = "read"; return false; }
+    // 同步進行中又有新的作答（S 已經不是開始時的那一份，例如離線時交易要等到恢復連線）：
+    // 以開始時的快照為 base，把這段時間的新作答合併進來，再同步一次把它們送上去（審查 B3）
+    const nowRec = JSON.parse(JSON.stringify(S)), nowBank = loadBank();
+    let next = merged;
+    if (!Merge.same(nowRec, local.records) || !Merge.same(nowBank, local.bank)) {
+      next = { records: sanitizeState(Merge.records(local.records, nowRec, merged.records)), bank: Merge.bank(local.bank, nowBank, merged.bank, itemKey) };
+      Sync.again = true;
+    }
+    const changed = !Merge.same(next.records, nowRec) || !Merge.same(next.bank, nowBank);
+    if (changed) Sync.apply(next);
     Sync.saveBase(merged);
     Sync.lastSynced = new Date();
     Sync.lastError = null;

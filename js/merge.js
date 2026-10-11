@@ -74,7 +74,8 @@ const Merge = (() => {
 
   // 陣列（模考紀錄、外部成績）：用內容當鍵做集合合併，再依日期排序
   function list3(b, l, r, sig) {
-    const toMap = a => { const m = {}; (Array.isArray(a) ? a : []).forEach(x => { if (x && typeof x === "object") m[sig(x)] = x; }); return m; };
+    // 同一份清單裡內容完全相同的紀錄（舊版模考沒有秒數，同一天同分數）加上序號，不會被當成同一筆
+    const toMap = a => { const m = {}, seen = {}; (Array.isArray(a) ? a : []).forEach(x => { if (x && typeof x === "object") { const s = sig(x); seen[s] = (seen[s] || 0) + 1; m[s + "#" + seen[s]] = x; } }); return m; };
     const m = map3(b ? toMap(b) : null, toMap(l), toMap(r), keepLocal);
     return Object.values(m).sort((x, y) => String(x.date || "").localeCompare(String(y.date || "")));
   }

@@ -197,6 +197,7 @@ function sanitizeState(d) {
     [106, 173, 199, 302, 311, 322].forEach(i => { delete d.wb.p5[i]; });
     d.contentV = 2;
   }
+  delete d.wv; // 雲端寫入簽章（js/sync.js），不屬於學習紀錄
   migrateToIds(d);
   if (d.legacy !== undefined && (!d.legacy || typeof d.legacy !== "object" || Array.isArray(d.legacy))) delete d.legacy;
   return d;
@@ -210,34 +211,48 @@ function sanitizeState(d) {
 function customId(t, it) {
   try { return `c-${t}-${fnv1a(t + "\n" + itemKey(t, it))}`; } catch (e) { return null; }
 }
-// 把一份紀錄的索引鍵換成固定編號。可以重複執行（idV 已是 1 就跳過）。
-// 自訂題的位置＝內建題數＋在自訂題庫裡的順序（mergeBank 的併入方式），所以從本機自訂題庫查編號。
-// 對不到題目的鍵不刪除，原樣收進 d.legacy（App 不讀，INV-03）。
+// 把一份紀錄的索引鍵換成固定編號。可以重複執行。
+// idV 已是 1 時只轉換殘留的索引鍵：還沒更新的舊版裝置（v1.6 以前）同步拿到新紀錄後，會用索引寫入新的作答
+// （2026-10-11 獨立審查 B2）；同一題兩種鍵都有時，用合併規則挑一筆。編號鍵和索引鍵的格式不會撞在一起。
+// 自訂題的位置＝內建題數＋在「驗證過的」自訂題庫裡的順序（mergeBank 的併入方式，審查 M1），所以從本機自訂題庫查編號。
+// 對不到題目的索引鍵不刪除，原樣收進 d.legacy（App 不讀，INV-03）。
 function migrateToIds(d) {
-  if (d.idV === 1) return d;
+  const again = d.idV === 1;
   let bank = {};
   try { bank = JSON.parse(localStorage.getItem("toeic900_bank") || "{}") || {}; } catch (e) { bank = {}; }
+  const valid = t => { const a = bank && typeof bank === "object" ? bank[t] : null; return (Array.isArray(a) ? a : Object.values(a || {})).filter(it => it && typeof it === "object" && validateItem(t, it)); };
+  const custom = {};
   const idAt = (t, i) => {
     if (!Number.isInteger(i) || i < 0) return null;
     if (i < BASE_N[t]) return builtinId(t, i);
-    const it = Array.isArray(bank[t]) ? bank[t][i - BASE_N[t]] : null;
-    return it && typeof it === "object" ? customId(t, it) : null;
+    if (!custom[t]) custom[t] = valid(t);
+    const it = custom[t][i - BASE_N[t]];
+    return it ? customId(t, it) : null;
   };
   const one = (t, k) => (/^\d+$/.test(k) ? idAt(t, Number(k)) : null);
   const sub = (t, k) => { const m = /^(\d+)-(\d+)$/.exec(k); const s = m && idAt(t, Number(m[1])); return s ? `${s}_${m[2]}` : null; };
   const legacy = {};
   const keep = (path, k, v) => { let o = legacy; path.forEach(p => { o = o[p] = o[p] || {}; }); o[k] = v; };
-  const convert = (obj, f, path) => {
+  const isIndex = k => /^\d+(-\d+)?$/.test(k);
+  // 同一題同時有編號鍵和索引鍵：錯題本取較晚作答的、最佳成績取較高的、其他保留編號鍵那一筆
+  const wbLater = (a, b) => { const k = e => [e && e.last, e && e.w].filter(Boolean).sort().pop() || ""; return k(b) > k(a) ? b : a; };
+  const convert = (obj, f, path, pick) => {
     const out = {};
-    Object.keys(obj || {}).forEach(k => { const id = f(k); if (id) out[id] = obj[k]; else keep(path, k, obj[k]); });
+    Object.keys(obj || {}).forEach(k => { if (again && !isIndex(k)) out[k] = obj[k]; });
+    Object.keys(obj || {}).forEach(k => {
+      if (again && !isIndex(k)) return;
+      const id = f(k);
+      if (!id) keep(path, k, obj[k]);
+      else out[id] = id in out && pick ? pick(out[id], obj[k]) : id in out ? out[id] : obj[k];
+    });
     return out;
   };
   ID_TYPES.forEach(t => {
-    if (d.wb && d.wb[t]) d.wb[t] = convert(d.wb[t], k => (SET_PARTS[t] ? sub(t, k) : one(t, k)), ["wb", t]);
+    if (d.wb && d.wb[t]) d.wb[t] = convert(d.wb[t], k => (SET_PARTS[t] ? sub(t, k) : one(t, k)), ["wb", t], wbLater);
     if (d.mockSeen && d.mockSeen[t]) d.mockSeen[t] = convert(d.mockSeen[t], k => one(t, k), ["mockSeen", t]);
   });
   [["p5seen", "p5"], ["l2seen", "l2"], ["p6done", "p6"], ["p7done", "p7"], ["l34done", "l34"]].forEach(([f, t]) => {
-    if (d[f]) d[f] = convert(d[f], k => one(t, k), [f]);
+    if (d[f]) d[f] = convert(d[f], k => one(t, k), [f], f.endsWith("done") ? (a, b) => Math.max(a, b) : null);
   });
   if (Object.keys(legacy).length) d.legacy = Object.assign(d.legacy && typeof d.legacy === "object" ? d.legacy : {}, legacy);
   d.idV = 1;
@@ -2290,7 +2305,6 @@ async function boot() {
   // 先用本機資料立刻渲染首頁（秒開，不等網路）——避免網路慢時白屏。
   // 記下開機當下的本機時間戳當基準，雲端在背景對帳，只有雲端確實較新且這段時間
   // 使用者沒動過本機時才套用並重繪，兼顧「秒開」與「不蓋掉進度」。
-  const bootLocalTime = S.updatedAt || 0;
   ensureOnboardFlag();
   renderers.home();
   updateNavBadges();
@@ -2298,8 +2312,10 @@ async function boot() {
     Sync.init();
     Sync.pullOnStartup().then(applied => {
       if (applied) {
-        const active = document.querySelector("#nav button.active, #bottomnav button.active")?.dataset.tab || "home";
-        showTab(active);
+        // 只重繪「看資料」的頁面；正在作答的頁面（練習、模考、錯題本重考）不重繪，避免中斷作答與計時（審查 B3）。
+        // 紀錄已經合併好，下次進入那一頁就會看到。
+        const current = tabs.find(t => document.getElementById("tab-" + t)?.classList.contains("active")) || "home";
+        if (["home", "practice", "me", "stats", "bank", "settings"].includes(current)) showTab(current);
         updateNavBadges();
       }
       // 引導的判斷務必等雲端拉取結果出爐後才做，否則裝置 B 帶著同步代碼登入時，

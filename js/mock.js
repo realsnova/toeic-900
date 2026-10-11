@@ -33,15 +33,17 @@ const Mock = {
   draw(kind, poolSize, n) {
     if (!S.mockSeen) S.mockSeen = {};
     if (!S.mockSeen[kind]) S.mockSeen[kind] = {};
+    // 題組類（p6／p7／l34）記題組編號；recId 只接受「題組-小題」，不能用在這裡（2026-10-11 審查 S1）
+    const idOf = i => (SET_PARTS[kind] ? (BANK_ARRAYS()[kind][i] || {}).id : recId(kind, i));
     let fresh = [];
-    for (let i = 0; i < poolSize; i++) if (!S.mockSeen[kind][recId(kind, i)] && !isFormItem(kind, i)) fresh.push(i);
+    for (let i = 0; i < poolSize; i++) if (!S.mockSeen[kind][idOf(i)] && !isFormItem(kind, i)) fresh.push(i);
     if (fresh.length < n) {
       S.mockSeen[kind] = {}; // 該類題庫輪替一圈，重置
       fresh = Array.from({ length: poolSize }, (_, i) => i).filter(i => !isFormItem(kind, i));
       UI.toast(`${kind.toUpperCase()} 題庫已輪替一圈，重新洗牌`, "info");
     }
     const picked = shuffle(fresh).slice(0, n);
-    picked.forEach(i => { const id = recId(kind, i); if (id) S.mockSeen[kind][id] = true; });
+    picked.forEach(i => { const id = idOf(i); if (id) S.mockSeen[kind][id] = true; });
     return picked;
   },
 
