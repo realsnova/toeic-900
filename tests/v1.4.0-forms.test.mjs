@@ -72,6 +72,9 @@ test("form-R1 衝刺期模考日：還有沒做過的完整測驗時優先排；
   let item = plain(app.run("todayPlan()")).find(p => p.tab === "mock");
   assert.match(item.label, /完整閱讀測驗 第 1 回/);
   app.run(`S.mocks = [{ date: todayStr(-8), mode: "R1", lR: 0, lT: 0, rR: 70, rT: 100 }, { date: todayStr(-5), mode: "R2", lR: 0, lT: 0, rR: 72, rT: 100 }];`);
+  // v1.5.1 新增第 3 回：做完前兩回後改排第 3 回
+  assert.equal(app.run("nextForm().id"), "R3");
+  app.run(`S.mocks.push({ date: todayStr(-4), mode: "R3", lR: 0, lT: 0, rR: 75, rT: 100 });`);
   assert.equal(app.run("nextForm()"), null, "所有完整測驗都做過後，不再優先排完整測驗");
   item = plain(app.run("todayPlan()")).find(p => p.tab === "mock");
   assert.match(item.label, /閱讀節/);

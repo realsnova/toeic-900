@@ -173,7 +173,7 @@ test("L1-flow 完整聽力測驗：照順序播放說明、對話、念題目；
   assert.equal(last.mode, "L1");
   assert.equal(last.lT, 94);
   assert.equal(last.rT, 0);
-  assert.equal(app.run("nextForm(true)"), null);
+  assert.equal(app.run("nextForm(true).id"), "L2", "做完第 1 回後改排第 2 回（v1.5.1）");
   assert.ok(!plain(app.run("todayPlan()")).some(p => /完整聽力測驗/.test(p.label) && !p.done), "做過後不再排成待辦（今天顯示已完成）");
 });
 
@@ -208,7 +208,7 @@ test("REVIEW-1 完整聽力測驗的成績重新載入後仍保留（菜單不�
   app.run(`Mock.start("L1"); Mock.s.lAnswers[0] = Mock.s.paper.listening[0].ansPos; Mock.submit();`);
   const again = loadApp({ storage: Object.fromEntries(app.store), audio: fakeAudio() });
   assert.equal(again.run("S.mocks[S.mocks.length - 1].mode"), "L1");
-  assert.equal(again.run("nextForm(true)"), null);
+  assert.equal(again.run("nextForm(true).id"), "L2");
 });
 
 test("REVIEW-2 完整聽力測驗不重置閱讀模考的 3 天週期", () => {
