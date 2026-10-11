@@ -25,7 +25,7 @@
 
 ## 使用者抽檢
 - 抽檢表：[spot-check.md](spot-check.md)（17 題＋20 個單字）
-- 結果：（待使用者回覆）
+- 結果：使用者選擇直接上線（2026-10-11），抽檢改為使用中回報
 - 合併後的重複檢查：新 Part 5 第 "for the duration of" 題和 R1 的 "closed for repairs" 題幹太像 → 改成 "The east parking lot will remain unavailable ______ ..."（正解仍是 for）；lint 加入同樣的檢查。
 
 ## 語音轉寫比對（Whisper base.en，瀏覽器內執行）
