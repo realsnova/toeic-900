@@ -520,3 +520,6 @@ main { max-width: 860px; margin: 0 auto; padding: 24px 16px 80px; }
 .strategy h3 { margin-top: 14px; }
 .strategy ul { margin: 6px 0 0 18px; padding: 0; font-size: 0.93rem; }
 .strategy li { margin: 6px 0; }
+
+/* 每日菜單的原因說明（v1.7） */
+.plan-why { font-size: .85em; margin-top: 2px; }

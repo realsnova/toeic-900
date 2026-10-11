@@ -149,3 +149,14 @@ test("WEAK-1 弱項技能：作答夠多且掌握度低於 70% 才算，由弱�
   assert.ok(weakCount / 200 >= 0.4, `弱項佔 ${weakCount / 200}`);
   a.run("renderers.stats()");
 });
+
+test("PLAN-1 每日菜單的每一項都附原因；有弱項時說出是哪一項、掌握度多少", () => {
+  const a = loadApp();
+  let plan = plain(a.run("todayPlan()"));
+  assert.ok(plan.every(p => typeof p.why === "string" && p.why.length > 5), JSON.stringify(plan.map(p => p.why)));
+  a.run(`S.mastery = { "g-rel": { th: -2, n: 12, r: 3 } }`);
+  plan = plain(a.run("todayPlan()"));
+  const p5 = plan.find(p => p.tab === "p5");
+  assert.match(p5.why, /關係詞掌握度 \d+%（12 題）/);
+  a.run("renderers.home()");
+});

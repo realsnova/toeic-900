@@ -555,7 +555,33 @@ function reviewPerDay() {
   return Number.isFinite(v) && v > 0 ? Math.round(v) : 60;
 }
 // 各階段每日菜單（label, done 判斷, 跳轉分頁, 預估時間）
+// 每日菜單的每一項附一句「為什麼排這個」（v1.7，工作票 16）
+function planWhy(item) {
+  const weakest = parts => {
+    const list = parts.flatMap(t => weakSkills(t).map(id => ({ t, id, m: S.mastery[id] })));
+    list.sort((a, b) => Mastery.level(a.m, a.t) - Mastery.level(b.m, b.t));
+    return list[0];
+  };
+  const say = w => `${SKILL_BY_ID[w.id].name}掌握度 ${Math.round(Mastery.level(w.m, w.t) * 100)}%（${w.m.n} 題），這一輪會多出這類題`;
+  switch (item.tab) {
+    case "vocab": return "依記憶曲線（FSRS），這些單字今天複習最有效率，再晚就容易忘";
+    case "p5": {
+      const w = weakest(["p5"]);
+      if (w) return say(w);
+      if (S.tq && S.tq.p5 && S.tq.p5.length) return `上次答錯的「${SKILL_BY_ID[S.tq.p5[0]] ? SKILL_BY_ID[S.tq.p5[0]].name : ""}」會出一題同技能的新題`;
+      return "還沒有明顯的弱項，維持每天的文法手感";
+    }
+    case "listen": { const w = weakest(["l2", "l34"]); return w ? say(w) : "聽力每天都要接觸，耳朵才不會生疏"; }
+    case "p6": case "p7": { const w = weakest([item.tab]); return w ? say(w).replace("，這一輪會多出這類題", "，挑有這類題的題組") : "閱讀量決定考試時能不能寫完"; }
+    case "wrong": return "錯題要分兩天各答對一次才算學會，這是最有效率的複習";
+    case "mock": return "完整、計時的測驗練的是時間分配和耐力";
+    default: return "";
+  }
+}
 function todayPlan() {
+  return todayPlanItems().map(p => Object.assign(p, { why: planWhy(p) }));
+}
+function todayPlanItems() {
   const d = daily(), ph = phase().name, due = dueCount(), wrongs = wrongCount();
   const base = [
     { label: "單字複習", detail: due ? `還有 ${due} 張卡片` : "今日完成！", done: due === 0, tab: "vocab", est: "15 分" },
@@ -982,7 +1008,8 @@ renderers.home = function () {
       ${plan.map(p => `
         <div class="plan-item ${p.done ? "done" : ""}">
           <div><span class="check">${p.done ? "✅" : "⬜"}</span><b>${p.label}</b>
-            <span class="muted"> · ${esc(p.detail)} · 約 ${p.est}</span></div>
+            <span class="muted"> · ${esc(p.detail)} · 約 ${p.est}</span>
+            ${p.why ? `<div class="muted plan-why">💡 ${esc(p.why)}</div>` : ""}</div>
           <button class="btn small ${p.done ? "secondary" : ""}" data-goto="${p.tab}">${p.done ? "再練" : "開始"}</button>
         </div>`).join("")}
       ${doneCount === plan.length ? `<p style="text-align:center;margin-top:12px">🎉 今日任務全數完成！</p>` : ""}
