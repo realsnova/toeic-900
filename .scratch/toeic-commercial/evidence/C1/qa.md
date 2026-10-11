@@ -27,3 +27,13 @@
 - 抽檢表：[spot-check.md](spot-check.md)（17 題＋20 個單字）
 - 結果：（待使用者回覆）
 - 合併後的重複檢查：新 Part 5 第 "for the duration of" 題和 R1 的 "closed for repairs" 題幹太像 → 改成 "The east parking lot will remain unavailable ______ ..."（正解仍是 for）；lint 加入同樣的檢查。
+
+## 語音轉寫比對（Whisper base.en，瀏覽器內執行）
+- 範圍：`tools/audio/jobs/verify-C1.json`，140 段（80 段題目／對話／獨白＋60 段隨機選項）。
+- 原始平均字元誤差 3.0%；扣掉格式差異（選項字母 "C." 被聽成 "See"、數字寫成阿拉伯數字、人名拼法）後約 1–2%。
+- 兩段長對話（c2c12ba57 50 秒、c0cce72e1 44 秒）整段轉寫缺一截 → 分段重新轉寫，內容完整，是轉寫工具 30 秒分塊合併的問題，音檔沒有被截掉。
+- 人名聽寫差異（Akiko、Ines、Fischer、Nakamura）：轉寫工具的限制，不影響作答。
+- 需要人耳確認的 2 段（語速較快、轉寫有連音）：
+  - r17222281 "B. The higher floors are quieter."（轉寫成 "the high of floors, a quieter"）
+  - r9a95c702 "B. The commute is much easier."（轉寫成 "the commuter much easier"）
+  - 已加進抽檢表；聽不清楚就換聲音重新產生。

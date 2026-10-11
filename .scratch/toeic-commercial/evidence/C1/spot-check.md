@@ -429,3 +429,9 @@ M: E-mail is fine. I'll send you a link to the upload page right now, along with
 20. **legislation** (n.) 法規、立法  
    New legislation requires employers to provide paid sick leave to all workers.  
    新法規要求雇主為所有員工提供帶薪病假。
+
+## 語音（2 段，請用耳朵聽）
+轉寫工具在這兩段聽到連音，請聽聽看是否清楚。聽不清楚就回報，我會換聲音重新產生。
+
+1. [r17222281.mp3](../../../../audio/v1/r17222281.mp3)：應該是 "B. The higher floors are quieter."
+2. [r9a95c702.mp3](../../../../audio/v1/r9a95c702.mp3)：應該是 "B. The commute is much easier."
