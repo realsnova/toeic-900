@@ -1,7 +1,7 @@
 # 13 完整閱讀測驗 R3（100 題）
 
 Type: task
-Status: planned
+Status: resolved（2026-10-11 隨 v1.5.1 上線，4d8ac37）
 Phase: P0 延伸
 Blocked by: 12 的題目寫完（先做聽力）
 

@@ -1,7 +1,7 @@
 # 12 完整聽力測驗 L2（94 題）
 
 Type: task
-Status: claimed（94 題已寫完；盲解中）
+Status: resolved（2026-10-11 隨 v1.5.1 上線，4d8ac37）
 Phase: P0 延伸（2026-10-11 使用者選「1 和 2 一起做」）
 Blocked by: —
 
