@@ -34,14 +34,14 @@ const Mock = {
     if (!S.mockSeen) S.mockSeen = {};
     if (!S.mockSeen[kind]) S.mockSeen[kind] = {};
     let fresh = [];
-    for (let i = 0; i < poolSize; i++) if (!S.mockSeen[kind][i] && !isFormItem(kind, i)) fresh.push(i);
+    for (let i = 0; i < poolSize; i++) if (!S.mockSeen[kind][recId(kind, i)] && !isFormItem(kind, i)) fresh.push(i);
     if (fresh.length < n) {
       S.mockSeen[kind] = {}; // 該類題庫輪替一圈，重置
       fresh = Array.from({ length: poolSize }, (_, i) => i).filter(i => !isFormItem(kind, i));
       UI.toast(`${kind.toUpperCase()} 題庫已輪替一圈，重新洗牌`, "info");
     }
     const picked = shuffle(fresh).slice(0, n);
-    picked.forEach(i => { S.mockSeen[kind][i] = true; });
+    picked.forEach(i => { const id = recId(kind, i); if (id) S.mockSeen[kind][id] = true; });
     return picked;
   },
 

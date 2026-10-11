@@ -36,13 +36,14 @@ test("sec-H1-1 load() 把惡意紀錄的每個欄位都收斂成安全的型別"
   assert.equal(S.vocab.abandon.i, 0);
   assert.equal(S.vocab.abandon.e, 2.5);
   assert.match(S.vocab.abandon.due, /^\d{4}-\d{2}-\d{2}$/);
-  assert.deepEqual(S.wb.p5["3"], { n: 0, last: null });
+  // v1.7 起紀錄以題目固定編號為鍵（INV-13）
+  assert.deepEqual(S.wb.p5["p5-0003"], { n: 0, last: null });
   assert.deepEqual(S.wb.p6, {});
-  assert.deepEqual(S.p6done, { 0: 0 });
-  assert.deepEqual(S.p7done, { 0: 0, 1: 2 });
-  assert.deepEqual(S.p5seen, { 1: true });
+  assert.deepEqual(S.p6done, { "p6-0000": 0 });
+  assert.deepEqual(S.p7done, { "p7-0000": 0, "p7-0001": 2 });
+  assert.deepEqual(S.p5seen, { "p5-0001": true });
   assert.deepEqual(S.l2seen, {});
-  assert.deepEqual(S.mockSeen, { p5: { 1: true } });
+  assert.deepEqual(S.mockSeen, { p5: { "p5-0001": true } });
   assert.equal(S.mocks.length, 1);
   assert.deepEqual(S.mocks[0], { date: "", lT: 4, rR: 3, rT: 5, parts: { "Part 2": { r: 0, t: 2 } } });
   assert.equal(json.includes("onerror"), false, json);
@@ -62,16 +63,21 @@ test("sec-H1-2 合法的舊版資料完整保留（INV-03）", () => {
   };
   const app = loadApp({ storage: { toeic900: JSON.stringify(legacy) } });
   const S = plain(app.run("S"));
-  for (const k of ["exam", "updatedAt", "lastBackup", "targetScore", "onboarded", "racc", "cat", "vocab", "l34done", "l2seen"]) {
+  for (const k of ["exam", "updatedAt", "lastBackup", "targetScore", "onboarded", "racc", "cat", "vocab"]) {
     assert.deepEqual(S[k], legacy[k], k);
   }
   assert.deepEqual(S.daily["2026-10-01"], legacy.daily["2026-10-01"]); // 開機時會另外建立今天的空白紀錄
   assert.deepEqual(S.lcat, { "Part 3-4": { r: 2, w: 1 } }, "原本的 Part 3/4 遷移仍要正常");
-  assert.deepEqual(S.wb.p5, { 3: { n: 0, last: null }, 7: { n: 1, last: "2026-10-01" } });
-  assert.deepEqual(S.wb.p6, { "0-1": { n: 0, last: null } });
-  assert.deepEqual(S.p6done, { 0: 3, 2: 4 }, "Firebase 存成陣列的資料也要能讀");
-  assert.deepEqual(S.p5seen, { 0: true, 2: true });
-  assert.deepEqual(S.mockSeen, { p5: { 0: true, 1: true } });
+  // v1.7 起紀錄以題目固定編號為鍵，內容不變（INV-13）
+  assert.deepEqual(S.wb.p5, { "p5-0003": { n: 0, last: null }, "p5-0007": { n: 1, last: "2026-10-01" } });
+  assert.deepEqual(S.wb.p6, { "p6-0000_1": { n: 0, last: null } });
+  assert.deepEqual(S.p6done, { "p6-0000": 3, "p6-0002": 4 }, "Firebase 存成陣列的資料也要能讀");
+  assert.deepEqual(S.p5seen, { "p5-0000": true, "p5-0002": true });
+  assert.deepEqual(S.mockSeen, { p5: { "p5-0000": true, "p5-0001": true } });
+  assert.deepEqual(S.l34done, { "l34-0000": 3 });
+  assert.deepEqual(S.l2seen, { "l2-0005": true });
+  assert.equal(S.idV, 1);
+  assert.equal("legacy" in S, false, "全部對得到題目，不需要 legacy");
   assert.deepEqual(S.mocks, legacy.mocks);
 });
 
@@ -153,8 +159,9 @@ test("sec-M2 第三方腳本都有 SRI 完整性檢查", () => {
 /* ---------- 獨立審查（review-sec）後補的案例 ---------- */
 test("review-sec P2 Firebase 存成陣列的錯題本，空位不會變成假的錯題", () => {
   const app = loadApp({ storage: { toeic900: JSON.stringify({ wb: { p5: [null, null, { n: 1, last: "2026-10-01" }], l2: [null, true] } }) } });
-  assert.deepEqual(plain(app.run("S.wb.p5")), { 2: { n: 1, last: "2026-10-01" } });
-  assert.deepEqual(plain(app.run("S.wb.l2")), { 1: { n: 0, last: null } });
+  // v1.7 起紀錄以固定編號為鍵（INV-13）
+  assert.deepEqual(plain(app.run("S.wb.p5")), { "p5-0002": { n: 1, last: "2026-10-01" } });
+  assert.deepEqual(plain(app.run("S.wb.l2")), { "l2-0001": { n: 0, last: null } });
   assert.equal(app.run("wrongCount()"), 2);
 });
 
@@ -165,7 +172,9 @@ test("review-sec P3-1 錯題本中指向不存在題目的鍵不顯示、不讓�
   assert.deepEqual(plain(app.run(`wbKeys("p7")`)), []);
   assert.equal(app.run("wrongCount()"), 2);
   app.run("renderers.wrong()"); // 不可拋錯
-  assert.equal(app.run("Object.keys(S.wb.p5).length"), 2, "紀錄本身保留");
+  // 對不到題目的鍵不刪除，轉換時收進 S.legacy（v1.7）
+  assert.deepEqual(Object.keys(plain(app.run("S.wb.p5"))), ["p5-0000"]);
+  assert.equal(Object.keys(plain(app.run("S.legacy.wb.p5"))).length, 1, "紀錄本身保留");
 });
 
 test("review-sec P3-2 沒有 mode 的舊模考紀錄維持沒有 mode", () => {

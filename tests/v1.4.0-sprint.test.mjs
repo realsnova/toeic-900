@@ -93,7 +93,7 @@ test("S1-report 題目回報存在本機（不進 S）、同一題只留最新�
   assert.equal(app.store.get("toeic900").includes("note"), false, "回報不放進學習紀錄");
 });
 
-test("S1-baseN 舊版紀錄升級時，自訂題的錯題本、輪替與最佳成績跟著搬到新的索引", () => {
+test("S1-baseN 舊版紀錄升級時，自訂題的錯題本、輪替與最佳成績對到同一題（v1.7 起轉成固定編號）", () => {
   // v1.3 的紀錄：內建 Part 5 有 200 題、Part 7 有 12 組；索引 200、12 是使用者自己匯入的自訂題
   const legacy = {
     wb: { p5: { 5: { n: 1, last: "2026-10-01" }, 200: { n: 0, last: null } }, p7: { "3-1": { n: 0, last: null }, "12-0": { n: 0, last: null } },
@@ -101,19 +101,26 @@ test("S1-baseN 舊版紀錄升級時，自訂題的錯題本、輪替與最佳�
     p5seen: { 5: true, 200: true, 201: true }, p7done: { 3: 4, 12: 2 }, p6done: { 2: 3 },
     mockSeen: { p5: { 199: true, 200: true }, p7: { 12: true } }
   };
-  const app = loadApp({ storage: { toeic900: JSON.stringify(legacy) } });
+  const p5 = (q, cat = "詞性") => ({ q, opts: ["a", "b", "c", "d"], ans: 0, cat, exp: "測試用的詳解文字。" });
+  const bank = { p5: [p5("Custom one ______ here."), p5("Custom two ______ here.")],
+    p7: [{ title: "自訂題組", time: 60, passages: ["Text."], qs: [{ q: "Why?", opts: ["a", "b", "c", "d"], ans: 0, exp: "測試用的詳解文字。" }] }] };
+  const app = loadApp({ storage: { toeic900: JSON.stringify(legacy), toeic900_bank: JSON.stringify(bank) } });
   const S = plain(app.run("S"));
-  assert.deepEqual(Object.keys(S.wb.p5).sort(), [String(N5), "5"].sort());
-  assert.deepEqual(Object.keys(S.wb.p7).sort(), [`${N7}-0`, "3-1"].sort());
-  assert.deepEqual(S.wb.p6, { "2-1": { n: 0, last: null } }, "Part 6 內建題數沒變，不搬");
-  assert.deepEqual(S.p5seen, { 5: true, [N5]: true, [N5 + 1]: true });
-  assert.deepEqual(S.p7done, { 3: 4, [N7]: 2 });
-  assert.deepEqual(S.mockSeen, { p5: { 199: true, [N5]: true }, p7: { [N7]: true } });
+  const c5 = k => app.run(`recId("p5", ${k})`), c7 = app.run(`PART7[${N7}].id`);
+  assert.match(c5(N5), /^c-p5-[0-9a-f]{8}$/);
+  assert.deepEqual(Object.keys(S.wb.p5).sort(), [c5(N5), "p5-0005"].sort());
+  assert.deepEqual(Object.keys(S.wb.p7).sort(), [`${c7}_0`, "p7-0003_1"].sort());
+  assert.deepEqual(S.wb.p6, { "p6-0002_1": { n: 0, last: null } }, "Part 6 內建題數沒變，不搬");
+  assert.deepEqual(S.p5seen, { "p5-0005": true, [c5(N5)]: true, [c5(N5 + 1)]: true });
+  assert.deepEqual(S.p7done, { "p7-0003": 4, [c7]: 2 });
+  assert.deepEqual(S.mockSeen, { p5: { "p5-0199": true, [c5(N5)]: true }, p7: { [c7]: true } });
   assert.deepEqual(S.baseN, plain(app.run("BASE_N")));
+  // 執行期仍然對得到同一題
+  assert.deepEqual(plain(app.run(`wbKeys("p5")`)).sort(), [String(N5), "5"].sort());
   // 存檔後再載入一次，不會重複搬
   app.run("save()");
-  const again = loadApp({ storage: { toeic900: app.store.get("toeic900") } });
-  assert.deepEqual(Object.keys(plain(again.run("S.wb.p5"))).sort(), [String(N5), "5"].sort());
+  const again = loadApp({ storage: { toeic900: app.store.get("toeic900"), toeic900_bank: JSON.stringify(bank) } });
+  assert.deepEqual(Object.keys(plain(again.run("S.wb.p5"))).sort(), [c5(N5), "p5-0005"].sort());
 });
 
 test("S1-baseN 新使用者的紀錄帶有目前的內建題數；舊版裝置同步上來的紀錄也會搬移", async () => {
@@ -151,11 +158,12 @@ test("review-s1 P3 日期格式錯誤、未來日期、只考聽力節的模考�
 
 test("review-s1 P2-1 baseN 缺某一類或值壞掉時，那一類不搬（避免重複搬移）；完全沒有 baseN 才當作舊版", () => {
   const partial = { baseN: { p5: N5, p6: 14, p7: "bad", l2: 60 }, wb: { p5: { [N5]: { n: 0, last: null } }, p7: { [`${N7}-0`]: { n: 0, last: null } } } };
+  // 沒有自訂題庫：搬完的位置對不到題目，收進 S.legacy（v1.7），從 legacy 看搬移結果
   const app = loadApp({ storage: { toeic900: JSON.stringify(partial) } });
-  assert.deepEqual(Object.keys(plain(app.run("S.wb.p5"))), [String(N5)]);
-  assert.deepEqual(Object.keys(plain(app.run("S.wb.p7"))), [`${N7}-0`]);
+  assert.deepEqual(Object.keys(plain(app.run("S.legacy.wb.p5"))), [String(N5)]);
+  assert.deepEqual(Object.keys(plain(app.run("S.legacy.wb.p7"))), [`${N7}-0`]);
   const nul = loadApp({ storage: { toeic900: JSON.stringify({ baseN: null, wb: { p5: { 200: { n: 0, last: null } } } }) } });
-  assert.deepEqual(Object.keys(plain(nul.run("S.wb.p5"))), [String(N5)], "baseN 為 null 視為舊版紀錄");
+  assert.deepEqual(Object.keys(plain(nul.run("S.legacy.wb.p5"))), [String(N5)], "baseN 為 null 視為舊版紀錄");
 });
 
 test("review-s1 P2-2 雲端資料格式錯誤時不會讓載入失敗：錯誤欄位被收斂成安全的值，不會留下 baseN: null", async () => {
@@ -186,10 +194,12 @@ test("review-s1 phase 邊界：剩 3 天與 0 天是考前調整，剩 4 天是�
 });
 
 test("review-s1 P3 回報清單有壞資料時不拋錯；回報會記下是不是自訂題", () => {
-  const app = loadApp({ storage: { toeic900_reports: JSON.stringify([null, 5, { type: "p5", key: "1" }]) } });
-  assert.equal(app.run(`addReport({ type: "p5", key: ${N5 + 5}, q: "q", opts: [], ans: 0, chosen: 0 }, "x")`), true);
-  const r = plain(app.run("loadReports()")).find(x => x.key === String(N5 + 5));
+  const bank = { p5: [{ q: "The report was ______ on time.", opts: ["submitted", "submit", "submitting", "submits"], ans: 0, cat: "詞性", exp: "被動語態要用過去分詞。" }] };
+  const app = loadApp({ storage: { toeic900_reports: JSON.stringify([null, 5, { type: "p5", key: "1" }]), toeic900_bank: JSON.stringify(bank) } });
+  // v1.7 起回報記的是固定編號：自訂題是 c-…，內建題是 p5-0003
+  assert.equal(app.run(`addReport({ type: "p5", key: ${N5}, q: "q", opts: [], ans: 0, chosen: 0 }, "x")`), true);
+  const r = plain(app.run("loadReports()")).find(x => x.key.startsWith("c-p5-"));
   assert.equal(r.custom, true);
   app.run(`addReport({ type: "p5", key: 3, q: "q", opts: [], ans: 0, chosen: 0 }, "y")`);
-  assert.equal(plain(app.run("loadReports()")).find(x => x.key === "3").custom, false);
+  assert.equal(plain(app.run("loadReports()")).find(x => x.key === "p5-0003").custom, false);
 });

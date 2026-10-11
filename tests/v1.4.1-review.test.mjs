@@ -80,10 +80,10 @@ test("review-v141 P3 只考聽力節不算今天的閱讀模考", () => {
 
 test("review-v141 P3 原地替換的題目：舊錯題本紀錄只清一次；新紀錄不受影響", () => {
   const legacy = loadApp({ storage: { toeic900: JSON.stringify({ wb: { p5: { 106: { n: 0, last: null }, 5: { n: 0, last: null } } } }) } });
-  assert.deepEqual(Object.keys(plain(legacy.run("S.wb.p5"))), ["5"]);
+  assert.deepEqual(Object.keys(plain(legacy.run("S.wb.p5"))), ["p5-0005"]); // v1.7 起以固定編號為鍵
   assert.equal(legacy.run("S.contentV"), 2);
   const fresh = loadApp({ storage: { toeic900: JSON.stringify({ contentV: 2, wb: { p5: { 106: { n: 0, last: null } } } }) } });
-  assert.deepEqual(Object.keys(plain(fresh.run("S.wb.p5"))), ["106"], "已經是新版內容的紀錄不再清");
+  assert.deepEqual(Object.keys(plain(fresh.run("S.wb.p5"))), ["p5-0106"], "已經是新版內容的紀錄不再清");
 });
 
 test("review-v141 P3 自訂題庫的題目不能帶完整測驗標記；模考模式必須是字串", () => {

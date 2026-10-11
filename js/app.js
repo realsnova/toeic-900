@@ -9,6 +9,11 @@ const WB_MASTER_N = 2; // 錯題要連續答對幾次（且跨天）才算掌握
 // 同樣必須宣告在 `let S = load()` 之前。
 const BASE_N = { p5: PART5.length, p6: PART6.length, p7: PART7.length, l2: PART2.length, l34: PART34.length };
 const LEGACY_BASE_N = { p5: 200, p6: 10, p7: 12, l2: 60, l34: 13 }; // v1.3.x 以前（紀錄裡沒有 baseN）的內建題數
+const PRE_ID_BACKUP_KEY = "toeic900_pre_v17_backup"; // 轉換成固定編號之前的原始紀錄（只在本機）
+// 題目固定編號用到的常數（說明見 migrateToIds）；load() 會用到，必須宣告在 `let S = load()` 之前
+const ID_TYPES = ["p5", "p6", "p7", "l2", "l34"];
+const SET_PARTS = { p6: "blanks", p7: "qs", l34: "qs" };
+const builtinId = (t, i) => `${t}-${String(i).padStart(4, "0")}`;
 
 function defaultState() {
   return {
@@ -31,7 +36,8 @@ function defaultState() {
     onboarded: false,         // 是否已完成（或略過）新手引導
     ext: [],                  // 外部測驗成績 [{date, src, L, R}]：使用者自己輸入，L/R 為 0–495，0 代表沒考該部分
     baseN: { ...BASE_N },     // 這份紀錄建立或最後遷移時的內建題數（見 shiftForBuiltinGrowth）
-    contentV: 2               // 題目內容版本：原地替換題目時遞增，sanitizeState 會清掉指到舊題目的紀錄
+    contentV: 2,              // 題目內容版本：原地替換題目時遞增，sanitizeState 會清掉指到舊題目的紀錄
+    idV: 1                    // 1＝錯題本、輪替、最佳成績都以題目固定編號為鍵（v1.7，INV-13）
   };
 }
 const APP_VERSION = "1.5.1";
@@ -62,6 +68,13 @@ function load() {
       Object.assign(d, parsed);
       if (parsed.baseN === undefined) d.baseN = null; // 舊版紀錄：當作 v1.3.x 的內建題數
       if (parsed.contentV === undefined) d.contentV = 0; // 舊版紀錄：還沒做過題目替換的清理
+      if (parsed.idV === undefined) {
+        d.idV = 0; // 舊版紀錄：還是用陣列索引當鍵，sanitizeState 會轉成固定編號
+        // 轉換前的原始資料留一份在本機（不同步），設定頁可以下載；只留第一次的
+        if (localStorage.getItem(PRE_ID_BACKUP_KEY) === null) {
+          try { localStorage.setItem(PRE_ID_BACKUP_KEY, raw); } catch (e) { /* 空間不足就略過，不影響轉換 */ }
+        }
+      }
       // 舊版資料補齊新欄位
       d.wb = Object.assign({ p5: {}, p6: {}, p7: {}, l2: {}, l34: {} }, parsed.wb || {});
       // 錯題本的格式遷移（migrateWb）在下方 sanitizeState() 裡做，要先去掉 Firebase 陣列的空位才遷移
@@ -163,6 +176,50 @@ function sanitizeState(d) {
     [106, 173, 199, 302, 311, 322].forEach(i => { delete d.wb.p5[i]; });
     d.contentV = 2;
   }
+  migrateToIds(d);
+  if (d.legacy !== undefined && (!d.legacy || typeof d.legacy !== "object" || Array.isArray(d.legacy))) delete d.legacy;
+  return d;
+}
+/* ---- 題目固定編號（v1.7，INV-13）----
+   內建題：<類型>-<四位數流水號>，流水號＝第一次轉換時的陣列位置，之後新題拿下一號，不改、不重用；
+   要修正題意時舊題標 retired、另給新號。題組裡的小題：<題組編號>_<小題序號>（Firebase 的鍵不能有 #）。
+   自訂題：c-<類型>-<題目文字的雜湊>，每台裝置算出來都一樣，內建題增加時也不用搬紀錄。
+   程式內部仍然用陣列位置（「執行期的鍵」：Part 5／Part 2 是索引，題組類是「題組索引-小題索引」），
+   只有寫進紀錄時才換成固定編號：recId() 轉成編號，rtKey() 轉回位置。 */
+function customId(t, it) {
+  try { return `c-${t}-${fnv1a(t + "\n" + itemKey(t, it))}`; } catch (e) { return null; }
+}
+// 把一份紀錄的索引鍵換成固定編號。可以重複執行（idV 已是 1 就跳過）。
+// 自訂題的位置＝內建題數＋在自訂題庫裡的順序（mergeBank 的併入方式），所以從本機自訂題庫查編號。
+// 對不到題目的鍵不刪除，原樣收進 d.legacy（App 不讀，INV-03）。
+function migrateToIds(d) {
+  if (d.idV === 1) return d;
+  let bank = {};
+  try { bank = JSON.parse(localStorage.getItem("toeic900_bank") || "{}") || {}; } catch (e) { bank = {}; }
+  const idAt = (t, i) => {
+    if (!Number.isInteger(i) || i < 0) return null;
+    if (i < BASE_N[t]) return builtinId(t, i);
+    const it = Array.isArray(bank[t]) ? bank[t][i - BASE_N[t]] : null;
+    return it && typeof it === "object" ? customId(t, it) : null;
+  };
+  const one = (t, k) => (/^\d+$/.test(k) ? idAt(t, Number(k)) : null);
+  const sub = (t, k) => { const m = /^(\d+)-(\d+)$/.exec(k); const s = m && idAt(t, Number(m[1])); return s ? `${s}_${m[2]}` : null; };
+  const legacy = {};
+  const keep = (path, k, v) => { let o = legacy; path.forEach(p => { o = o[p] = o[p] || {}; }); o[k] = v; };
+  const convert = (obj, f, path) => {
+    const out = {};
+    Object.keys(obj || {}).forEach(k => { const id = f(k); if (id) out[id] = obj[k]; else keep(path, k, obj[k]); });
+    return out;
+  };
+  ID_TYPES.forEach(t => {
+    if (d.wb && d.wb[t]) d.wb[t] = convert(d.wb[t], k => (SET_PARTS[t] ? sub(t, k) : one(t, k)), ["wb", t]);
+    if (d.mockSeen && d.mockSeen[t]) d.mockSeen[t] = convert(d.mockSeen[t], k => one(t, k), ["mockSeen", t]);
+  });
+  [["p5seen", "p5"], ["l2seen", "l2"], ["p6done", "p6"], ["p7done", "p7"], ["l34done", "l34"]].forEach(([f, t]) => {
+    if (d[f]) d[f] = convert(d[f], k => one(t, k), [f]);
+  });
+  if (Object.keys(legacy).length) d.legacy = Object.assign(d.legacy && typeof d.legacy === "object" ? d.legacy : {}, legacy);
+  d.idV = 1;
   return d;
 }
 // 內建題增加時，把自訂題（索引 >= 舊內建題數）的紀錄往後搬，讓錯題本、輪替、最佳成績仍對到同一題。
@@ -222,7 +279,56 @@ function mergeBank() {
   });
   const b = loadBank();
   Object.keys(arrs).forEach(k => arrs[k].push(...b[k]));
+  assignIds();
 }
+// 每一題都帶 id：內建題依位置、自訂題依內容雜湊（匯入檔自帶的 id 一律覆蓋，避免冒用內建題的編號）
+const ID_INDEX = {}; // 類型 -> Map(編號 -> 陣列位置)
+function assignIds() {
+  const arrs = BANK_ARRAYS();
+  ID_TYPES.forEach(t => {
+    const map = new Map();
+    arrs[t].forEach((it, i) => {
+      it.id = i < BASE_N[t] ? builtinId(t, i) : customId(t, it);
+      if (it.id && !map.has(it.id)) map.set(it.id, i);
+    });
+    ID_INDEX[t] = map;
+  });
+}
+// 執行期的鍵 → 紀錄用的固定編號；已經是編號就原樣傳回；找不到題目時傳回 null
+function recId(t, k) {
+  const arr = BANK_ARRAYS()[t], s = String(k);
+  if (SET_PARTS[t]) {
+    const m = /^(\d+)-(\d+)$/.exec(s);
+    if (!m) return /_\d+$/.test(s) ? s : null;
+    const set = arr[Number(m[1])];
+    return set && set.id ? `${set.id}_${m[2]}` : null;
+  }
+  if (!/^\d+$/.test(s)) return s;
+  const it = arr[Number(s)];
+  return it && it.id ? it.id : null;
+}
+// 固定編號 → 執行期的鍵（字串）；題目已不存在（自訂題被清除、題組小題數變少）時傳回 null
+function rtKey(t, id) {
+  const map = ID_INDEX[t];
+  if (!map) return null;
+  if (SET_PARTS[t]) {
+    const m = /^(.+)_(\d+)$/.exec(String(id));
+    const si = m ? map.get(m[1]) : undefined;
+    if (si === undefined) return null;
+    const set = BANK_ARRAYS()[t][si];
+    return set && set[SET_PARTS[t]][Number(m[2])] ? `${si}-${m[2]}` : null;
+  }
+  const i = map.get(String(id));
+  return i === undefined ? null : String(i);
+}
+// 題組的最佳成績（以題組編號為鍵）
+function bestOf(t, si) { const set = BANK_ARRAYS()[t][si]; return set ? S[t + "done"][set.id] : undefined; }
+function setBest(t, si, right) {
+  const id = BANK_ARRAYS()[t][si].id, done = S[t + "done"];
+  done[id] = Math.max(done[id] || 0, right);
+}
+// 錯題本的一筆（用執行期的鍵查）
+function wbGet(t, k) { const id = recId(t, k); return id ? S.wb[t][id] : undefined; }
 const BANK_TYPES = {
   vocab: { name: "單字", unit: "個" },
   p5: { name: "Part 5 文法題", unit: "題" },
@@ -288,7 +394,7 @@ function importBank(type, text) {
     const b = loadBank();
     b[type].push(...ok);
     saveBank(b);
-    BANK_ARRAYS()[type].push(...ok); // 立即生效
+    mergeBank(); // 立即生效（並替新題指定編號）
   }
   return { added: ok.length, invalid, dup };
 }
@@ -737,15 +843,9 @@ function wrongCount() {
 }
 // 錯題本中「題目還存在」的鍵。題目可能不存在：自訂題被移除後索引對不上，或同步資料中有錯誤的鍵。
 // 不刪除這些紀錄（自訂題之後可能隨同步回來），只是不顯示，避免錯題本頁整個出錯。
+// 回傳執行期的鍵（Part 5／Part 2 是索引字串，題組類是「題組索引-小題索引」）。
 function wbKeys(type) {
-  const pair = k => String(k).split("-").map(Number);
-  const ok = {
-    p5: k => !!PART5[k], l2: k => !!PART2[k],
-    p6: k => { const [a, b] = pair(k); return !!(PART6[a] && PART6[a].blanks[b]); },
-    p7: k => { const [a, b] = pair(k); return !!(PART7[a] && PART7[a].qs[b]); },
-    l34: k => { const [a, b] = pair(k); return !!(PART34[a] && PART34[a].qs[b]); }
-  }[type];
-  return Object.keys((S.wb && S.wb[type]) || {}).filter(k => ok && ok(k));
+  return Object.keys((S.wb && S.wb[type]) || {}).map(id => rtKey(type, id)).filter(k => k !== null);
 }
 
 /* ---- 錯題本的「掌握」判定 ----
@@ -773,9 +873,10 @@ function migrateWb(d) {
   });
 }
 // 所有錯題本的寫入都走這裡，避免五個題型各寫一套邏輯而漏改
-function wbMark(type, key, correct) {
+function wbMark(type, rt, correct) {
   const bag = S.wb[type];
-  if (!bag) return;
+  const key = recId(type, rt);
+  if (!bag || !key) return;
   if (!correct) { bag[key] = { n: 0, last: null }; return; } // 答錯就把連對次數歸零，題目留在錯題本
   if (bag[key] === undefined) return; // 本來就不在錯題本裡，答對不需要記任何東西
   const e = wbNorm(bag[key]);
@@ -1094,9 +1195,9 @@ function loadReports() {
   try { const r = JSON.parse(localStorage.getItem(REPORT_KEY) || "[]"); return Array.isArray(r) ? r : []; } catch (e) { return []; }
 }
 function addReport(ctx, note) {
-  const list = loadReports().filter(r => r && typeof r === "object" && !(r.type === ctx.type && r.key === String(ctx.key)));
-  const first = Number(String(ctx.key).split("-")[0]);
-  list.push({ type: ctx.type, key: String(ctx.key), custom: first >= (BASE_N[ctx.type] || Infinity),
+  const key = recId(ctx.type, ctx.key) || String(ctx.key);
+  const list = loadReports().filter(r => r && typeof r === "object" && !(r.type === ctx.type && r.key === key));
+  list.push({ type: ctx.type, key, custom: key.startsWith("c-"),
     context: ctx.context ? String(ctx.context).slice(0, 120) : undefined, q: ctx.q, opts: ctx.opts, ans: ctx.ans, chosen: ctx.chosen,
     note: String(note || "").slice(0, 500), at: new Date().toISOString(), v: APP_VERSION });
   try { localStorage.setItem(REPORT_KEY, JSON.stringify(list.slice(-REPORT_MAX))); return true; } catch (e) { return false; }
@@ -1178,7 +1279,7 @@ renderers.listen = function () {
     </div>
     ${PART34.map((s, i) => {
       if (isFormItem("l34", i)) return ""; // 完整聽力測驗的題組只在模擬考出現
-      const best = S.l34done[i];
+      const best = bestOf("l34", i);
       return `<div class="item-row"><div><span class="pill">${esc(s.type)}</span> <b>${esc(s.title)}</b></div>
         <div>${best !== undefined ? `<span class="pill ok">最佳 ${esc(best)}/${s.qs.length}</span>` : `<span class="pill">未完成</span>`}
         <button class="btn small" data-l34="${i}">開始</button></div></div>`;
@@ -1202,7 +1303,7 @@ function l2Audio(item, order) {
 function startL2() {
   // Part 2 沒有類別統計，所以只做「已出過」輪替，不做弱項加權
   const ids = drawRound("l2seen", PART2.length, ROUND_N,
-    Object.keys(S.wb.l2).map(Number).filter(i => !isFormItem("l2", i)), null, i => isFormItem("l2", i));
+    wbKeys("l2").map(Number).filter(i => !isFormItem("l2", i)), null, i => isFormItem("l2", i));
   save(); // l2seen 已更新
   l2s = { ids, at: 0, right: 0 };
   l2Next();
@@ -1290,7 +1391,7 @@ function startL34(si) {
   const box = $("#tab-listen");
   function render() {
     if (state.at >= set.qs.length) {
-      S.l34done[si] = Math.max(S.l34done[si] || 0, state.right);
+      setBest("l34", si, state.right);
       daily().l34++;
       save();
       box.innerHTML = `
@@ -1415,6 +1516,8 @@ function isFormItem(type, i) {
 }
 function drawRound(seenKey, poolSize, n, wrongIds, isWeak, isHidden) {
   if (!S[seenKey] || typeof S[seenKey] !== "object") S[seenKey] = {};
+  const type = { p5seen: "p5", l2seen: "l2" }[seenKey];
+  const seen = { has: i => !!S[seenKey][recId(type, i)], add: i => { const id = recId(type, i); if (id) S[seenKey][id] = true; } };
   const hidden = i => !!(isHidden && isHidden(i));
   // 錯題優先，且不受 seen 影響——錯題本的題目本來就該重複出現直到掌握
   const ids = shuffle(wrongIds.filter(i => Number.isInteger(i) && i >= 0 && i < poolSize)).slice(0, n);
@@ -1422,7 +1525,7 @@ function drawRound(seenKey, poolSize, n, wrongIds, isWeak, isHidden) {
   let need = n - ids.length;
   if (need > 0) {
     let fresh = [];
-    for (let i = 0; i < poolSize; i++) if (!S[seenKey][i] && !taken.has(i) && !hidden(i)) fresh.push(i);
+    for (let i = 0; i < poolSize; i++) if (!seen.has(i) && !taken.has(i) && !hidden(i)) fresh.push(i);
     if (fresh.length < need) {
       S[seenKey] = {}; // 題庫輪替一圈，重置後重新洗牌
       fresh = [];
@@ -1442,13 +1545,13 @@ function drawRound(seenKey, poolSize, n, wrongIds, isWeak, isHidden) {
       .forEach(i => { if (picked.length < need) { picked.push(i); pickedSet.add(i); } });
     picked.forEach(i => { ids.push(i); taken.add(i); });
   }
-  ids.forEach(i => { S[seenKey][i] = true; });
+  ids.forEach(i => seen.add(i));
   return shuffle(ids);
 }
 function startP5() {
   const weak = weakCats();
   const ids = drawRound("p5seen", PART5.length, ROUND_N,
-    Object.keys(S.wb.p5).map(Number).filter(i => !isFormItem("p5", i)),
+    wbKeys("p5").map(Number).filter(i => !isFormItem("p5", i)),
     weak.size ? (i => weak.has(PART5[i].cat)) : null, i => isFormItem("p5", i));
   save(); // p5seen 已更新
   p5session = { ids, at: 0, right: 0, t0: Date.now() };
@@ -1497,7 +1600,7 @@ renderers.p6 = function () {
     </div>
     ${PART6.map((p, i) => {
       if (p.form) return ""; // 完整測驗的篇章不列在一般練習
-      const best = S.p6done[i];
+      const best = bestOf("p6", i);
       return `<div class="item-row"><div><b>${esc(p.title)}</b></div>
         <div>${best !== undefined ? `<span class="pill ok">最佳 ${esc(best)}/4</span>` : `<span class="pill">未完成</span>`}
         <button class="btn small" data-p6="${i}">練習</button></div></div>`;
@@ -1511,7 +1614,7 @@ function startP6(pi) {
   function renderBlank() {
     const box = $("#tab-p6");
     if (state.at >= p.blanks.length) {
-      S.p6done[pi] = Math.max(S.p6done[pi] || 0, state.right);
+      setBest("p6", pi, state.right);
       daily().p6++;
       save();
       box.innerHTML = `
@@ -1558,7 +1661,7 @@ renderers.p7 = function () {
     </div>
     ${PART7.map((p, i) => {
       if (p.form) return ""; // 完整測驗的題組不列在一般練習
-      const best = S.p7done[i];
+      const best = bestOf("p7", i);
       return `<div class="item-row"><div><b>${esc(p.title)}</b><br>
         <span class="muted">${p.qs.length} 題 · 建議 ${Math.round(p.time / 60)} 分鐘</span></div>
         <div>${best !== undefined ? `<span class="pill ok">最佳 ${esc(best)}/${p.qs.length}</span>` : `<span class="pill">未完成</span>`}
@@ -1595,7 +1698,7 @@ function startP7(si) {
   function renderQ() {
     if (state.at >= set.qs.length) {
       if (activeTimer) { clearInterval(activeTimer); activeTimer = null; }
-      S.p7done[si] = Math.max(S.p7done[si] || 0, state.right);
+      setBest("p7", si, state.right);
       daily().p7++;
       save();
       const used = set.time - state.left;
@@ -1632,7 +1735,7 @@ renderers.wrong = function () {
   const entries = [];
   // st(type, key)：錯題的掌握進度，讓列表能說明「為什麼答對了還在這裡」
   const st = (type, key) => {
-    const e = wbNorm(S.wb[type][key]);
+    const e = wbNorm(wbGet(type, key));
     return { remain: Math.max(1, WB_MASTER_N - e.n), todayDone: e.last === todayStr() };
   };
   wbKeys("p5").forEach(id => entries.push({ type: "p5", key: id, label: `Part 5 · ${PART5[id].cat}`, text: PART5[id].q, ...st("p5", id) }));
@@ -1682,9 +1785,9 @@ function retryWrong(entry) {
   const finish = (correct) => {
     // 先記下答題前的狀態，才能分辨「這次答對有沒有計入」——同一天內重複答對是不加次數的，
     // 不講清楚使用者會以為答對了卻沒反應。
-    const before = wbNorm(S.wb[entry.type][entry.key]);
+    const before = wbNorm(wbGet(entry.type, entry.key));
     wbMark(entry.type, entry.key, correct);
-    const after = S.wb[entry.type][entry.key];
+    const after = wbGet(entry.type, entry.key);
     d.wr = (d.wr || 0) + 1;
     save();
     let msg;
