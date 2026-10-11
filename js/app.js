@@ -2061,14 +2061,11 @@ renderers.bank = function () {
           目前同步代碼：<b>${Sync.code ? esc(Sync.code) : "尚未設定"}</b>
           ${Sync.lastSynced ? `上次同步：${Sync.lastSynced.toLocaleTimeString("zh-TW")}` : Sync.code ? "尚未完成過同步" : ""}
           ${!navigator.onLine ? `<br><span style="color:var(--warn)">⚠️ 目前離線，紀錄先存本機，恢復網路後會自動同步</span>` : ""}
-          ${Sync.code && Sync.weakCode(Sync.code) ? `<br><span style="color:var(--warn)">⚠️ 這組代碼太短，別人有可能猜到。建議按「升級為更長的代碼」。</span>` : ""}
-          ${Sync.code && !Sync.weakCode(Sync.code) && Sync.shortCode(Sync.code) ? `<br><span class="muted">💡 這是舊版的 10 字元代碼，仍然安全；想要更高的保護可以按「升級為更長的代碼」。</span>` : ""}
-          ${Sync.lastError === "moved" ? `<br><span style="color:var(--warn)">⚠️ 這組代碼已經在另一台裝置升級成新代碼，這台已停止同步。請到那台裝置的這一頁查看新代碼，輸入後按「套用」。</span>`
-            : Sync.lastError === "decrypt" ? `<br><span style="color:var(--warn)">⚠️ 雲端資料無法驗證（可能被竄改或損毀），沒有套用到這台裝置。可以按「用這台裝置的資料重建雲端」。</span>`
-            : Sync.lastError ? `<br><span style="color:var(--warn)">⚠️ 上次同步失敗（${Sync.lastError === "read" ? "讀取" : "寫入"}），請確認網路後按「立即同步」。</span>` : ""}
+          ${Sync.code && Sync.weakCode(Sync.code) ? `<br><span style="color:var(--warn)">⚠️ 這組代碼太短，別人有可能猜到。建議按「產生新代碼」。</span>` : ""}
+          ${Sync.lastError ? `<br><span style="color:var(--warn)">⚠️ 上次同步失敗（${Sync.lastError === "read" ? "讀取" : "寫入"}），請確認網路後按「立即同步」。</span>` : ""}
         </p>
         <p class="muted">在第一台裝置按「產生新代碼」，然後把代碼抄到第二台裝置的輸入框按「套用」——兩台裝置從此自動同步（存檔後約 1.5 秒同步，開啟頁面時自動抓取最新進度）。兩台裝置都有作答時會合併，不會互相覆蓋。</p>
-        <p class="muted">🔒 雲端上的資料用同步代碼加密，沒有代碼的人（包括資料庫管理者）看不到內容。代碼就是鑰匙：請勿分享，弄丟了雲端資料也無法取回（本機紀錄不受影響）。</p><br>
+        <p class="muted">🔑 同步代碼就是讀寫雲端資料的鑰匙：請勿分享。雲端資料沒有加密，Firebase 專案的管理者看得到內容。</p><br>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <input id="sync-code-input" value="${esc(Sync.code)}" placeholder="貼上同步代碼，如 ab3de-f7gh9-k2mnp-qr5st"
             style="background:var(--panel2);color:var(--text);border:1px solid var(--border2);border-radius:8px;padding:8px 10px;font-family:inherit;min-width:180px">
@@ -2076,11 +2073,7 @@ renderers.bank = function () {
           <button class="btn secondary small" id="sync-gen">產生新代碼</button>
           ${Sync.code ? `<button class="btn ghost small" id="sync-now">立即同步</button><button class="btn ghost small" id="sync-clear">解除此裝置同步</button>` : ""}
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
-          ${Sync.code && Sync.shortCode(Sync.code) && Sync.lastError !== "moved" ? `<button class="btn secondary small" id="sync-upgrade">升級為更長的代碼</button>` : ""}
-          ${Sync.code && Sync.lastError === "decrypt" ? `<button class="btn ghost small" id="sync-rebuild">用這台裝置的資料重建雲端</button>` : ""}
-          ${Sync.code ? `<button class="btn ghost small" id="sync-delete">刪除雲端資料</button>` : ""}
-        </div>
+        ${Sync.code ? `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px"><button class="btn ghost small" id="sync-delete">刪除雲端資料</button></div>` : ""}
         <p class="muted" id="sync-status" style="margin-top:8px"></p>`}
     </div>
     <div class="card">
@@ -2134,13 +2127,13 @@ renderers.bank = function () {
       // 自訂的短代碼容易被猜到（2026-10-07 資安審查 M3）。為了不讓已在使用的舊代碼無法跨裝置套用，只警告不禁止
       if (Sync.weakCode(v) && !confirm("這組代碼少於 10 個英數字，別人有可能猜到並讀取或覆蓋你的學習紀錄。\n\n建議改用「產生新代碼」。仍要使用這組代碼嗎？")) return;
       Sync.setCode(v);
-      $("#sync-status").textContent = "同步中…（第一次需要幾秒鐘產生加密金鑰）";
+      $("#sync-status").textContent = "同步中…";
       await Sync.syncNow(); // 雲端和這台裝置的紀錄會合併
       renderers.bank();
       updateNavBadges();
     });
     $("#sync-gen").addEventListener("click", async () => {
-      if (Sync.code && !confirm("產生新代碼後，這台裝置會改用新代碼，其他裝置要重新輸入新代碼才會繼續同步。\n\n如果只是想讓舊代碼更安全，建議改按「升級為更長的代碼」。確定要產生新代碼嗎？")) return;
+      if (Sync.code && !confirm("產生新代碼後，這台裝置會改用新代碼，其他裝置要重新輸入新代碼才會繼續同步。確定要產生新代碼嗎？")) return;
       Sync.setCode(Sync.genCode());
       $("#sync-status").textContent = "同步中…";
       await Sync.syncNow();
@@ -2150,21 +2143,6 @@ renderers.bank = function () {
       $("#sync-now").addEventListener("click", async () => {
         $("#sync-status").textContent = "同步中…";
         await Sync.syncNow();
-        renderers.bank();
-      });
-      const upg = $("#sync-upgrade");
-      if (upg && upg.addEventListener) upg.addEventListener("click", async () => {
-        if (!confirm("會產生一組 20 個字元的新代碼，雲端資料搬到新代碼，舊代碼停用。\n\n其他裝置下次開啟時會提示你輸入新代碼。要繼續嗎？")) return;
-        $("#sync-status").textContent = "升級中…";
-        const code = await Sync.upgradeCode();
-        renderers.bank();
-        if (code) alert(`新的同步代碼：\n\n${code}\n\n請到其他裝置的「題庫/備份」頁輸入這組代碼並按「套用」。`);
-        else $("#sync-status").textContent = "升級失敗，請確認網路後再試一次。舊代碼仍可使用。";
-      });
-      const rebuild = $("#sync-rebuild");
-      if (rebuild && rebuild.addEventListener) rebuild.addEventListener("click", async () => {
-        if (!confirm("雲端上無法驗證的資料會被這台裝置的紀錄取代。確定嗎？")) return;
-        if (await Sync.deleteCloud()) { Sync.lastError = null; await Sync.syncNow(); }
         renderers.bank();
       });
       $("#sync-delete").addEventListener("click", async () => {

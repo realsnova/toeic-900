@@ -98,27 +98,47 @@ export function fakeAudio({ mode = "ok" } = {}) {
   return A;
 }
 
-// 假 Firebase Realtime Database（只在記憶體）。v2/ 底下照 firebase/database.rules.json 檢查版本號：
-// 新寫入的 rev 必須是現有 rev + 1（沒有資料時是 1），否則像正式資料庫一樣以 PERMISSION_DENIED 拒絕。
+// 假 Firebase Realtime Database（只在記憶體）。sync/ 底下照 firebase/database.rules.json 檢查格式：
+// 一定要有 records 與 updatedAt，只能有 records、bank、updatedAt 三個欄位，否則像正式資料庫一樣以 PERMISSION_DENIED 拒絕。
 // beforeSet(path, value)：測試用，在寫入前插入另一台裝置的動作（模擬同時寫入）。
+// transaction(fn)：和 Firebase 一樣，寫入前雲端被別人改過就用新值重跑 fn；fn 傳回 undefined 代表不寫入。
 export function fakeDb() {
   const data = {};
+  const copy = v => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
+  const check = (path, v) => {
+    if (!path.startsWith("sync/")) return;
+    const keys = v && typeof v === "object" ? Object.keys(v) : [];
+    if (!v || v.records === undefined || typeof v.updatedAt !== "number" || keys.some(k => !["records", "bank", "updatedAt"].includes(k))) {
+      const e = new Error("PERMISSION_DENIED: Permission denied"); e.code = "PERMISSION_DENIED"; throw e;
+    }
+  };
   const db = {
-    data, writes: [], beforeSet: null,
+    data, writes: [], beforeSet: null, txRuns: 0,
     ref(path) {
+      const write = async v => {
+        if (db.beforeSet) { const f = db.beforeSet; db.beforeSet = null; await f(path, v); }
+        check(path, v);
+        db.writes.push({ path, v: copy(v) });
+        data[path] = copy(v);
+      };
       return {
         path,
-        get: async () => ({ val: () => (data[path] === undefined ? null : JSON.parse(JSON.stringify(data[path]))) }),
-        set: async v => {
-          if (db.beforeSet) { const f = db.beforeSet; db.beforeSet = null; await f(path, v); }
-          if (path.startsWith("v2/")) {
-            const want = data[path] ? data[path].rev + 1 : 1;
-            if (!v || v.rev !== want || v.v !== 2 || typeof v.ct !== "string" || typeof v.iv !== "string") {
-              const e = new Error("PERMISSION_DENIED: Permission denied"); e.code = "PERMISSION_DENIED"; throw e;
-            }
+        get: async () => ({ val: () => (data[path] === undefined ? null : copy(data[path])) }),
+        set: write,
+        transaction: async fn => {
+          for (let i = 0; i < 25; i++) {
+            db.txRuns++;
+            const before = JSON.stringify(data[path] === undefined ? null : data[path]);
+            const next = fn(data[path] === undefined ? null : copy(data[path]));
+            if (next === undefined) return { committed: false, snapshot: { val: () => copy(data[path]) } };
+            if (db.beforeSet) { const f = db.beforeSet; db.beforeSet = null; await f(path, next); }
+            if (JSON.stringify(data[path] === undefined ? null : data[path]) !== before) continue; // 被別人改過：重跑
+            check(path, next);
+            db.writes.push({ path, v: copy(next) });
+            data[path] = copy(next);
+            return { committed: true, snapshot: { val: () => copy(data[path]) } };
           }
-          db.writes.push({ path, v: JSON.parse(JSON.stringify(v)) });
-          data[path] = JSON.parse(JSON.stringify(v));
+          throw new Error("maxretry");
         },
         remove: async () => { delete data[path]; }
       };
