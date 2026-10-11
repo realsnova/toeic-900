@@ -108,6 +108,8 @@ const Merge = (() => {
     out.lcat = countMap3(b ? b.lcat : null, l.lcat, r.lcat);
     out.daily = countMap3(b ? b.daily : null, l.daily, r.daily);
     out.vocab = map3(b ? b.vocab : null, l.vocab, r.vocab, card);
+    // 技能掌握度：兩邊都改過時取作答次數多的那一份（能力值不是計數，不能相加）
+    out.mastery = map3(b ? b.mastery || {} : null, l.mastery, r.mastery, (lv, rv) => (lv === undefined ? rv : rv === undefined ? lv : (lv.n || 0) >= (rv.n || 0) ? lv : rv));
     out.wb = {};
     new Set([...Object.keys(obj(l.wb)), ...Object.keys(obj(r.wb))]).forEach(t => {
       out.wb[t] = map3(b ? obj(b.wb)[t] || {} : null, obj(l.wb)[t], obj(r.wb)[t], wbEntry);

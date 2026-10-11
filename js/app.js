@@ -19,7 +19,8 @@ function defaultState() {
   return {
     exam: null,               // 考試日期 'YYYY-MM-DD'
     updatedAt: 0,              // 最後異動時間戳（雲端同步比對新舊用，不可為 undefined）
-    vocab: {},                // word -> {i:間隔天數, e:難易係數, due:'YYYY-MM-DD', n:複習次數}
+    vocab: {},                // word -> {i:間隔天數, due:'YYYY-MM-DD', n:複習次數, s:穩定度, d:難度, l:上次複習日}（v1.7 起 FSRS；e 是舊版的難易係數）
+    mastery: {},              // 技能 ID -> {th:能力值, n:作答數, r:答對數, last:'YYYY-MM-DD'}（v1.7，js/engine.js）
     cat: {},                  // Part5 類別 -> {r, w}
     lcat: {},                 // 聽力類別（Part 2 / Part 3/4）-> {r, w}
     racc: { r: 0, w: 0 },     // 閱讀累計作答（練習答對率用；錯題本重考不計入）
@@ -137,9 +138,22 @@ function sanitizeState(d) {
   const vocab = {};
   entries(d.vocab).forEach(([w, v]) => {
     const c = obj(v);
-    vocab[w] = { i: Math.max(0, num(c.i, 0)), e: Math.min(5, Math.max(1.3, num(c.e, 2.5))), due: date(c.due) || todayStr(), n: cnt(c.n) };
+    const card = { i: Math.max(0, num(c.i, 0)), e: Math.min(5, Math.max(1.3, num(c.e, 2.5))), due: date(c.due) || todayStr(), n: cnt(c.n) };
+    // FSRS 欄位（v1.7）：數值不合理就丟掉，下次複習時從 i、e 重新推算
+    const s = num(c.s, NaN), dd = num(c.d, NaN);
+    if (s > 0 && s <= 36500 && dd >= 1 && dd <= 10) { card.s = s; card.d = dd; }
+    if (date(c.l)) card.l = c.l;
+    if (c.lapses !== undefined) card.lapses = cnt(c.lapses);
+    vocab[w] = card;
   });
   d.vocab = vocab;
+  const mastery = {};
+  entries(d.mastery).forEach(([k, v]) => {
+    if (!/^[a-z0-9-]{2,20}$/.test(k)) return;
+    const m = obj(v), th = num(m.th, 0);
+    mastery[k] = { th: Math.min(4, Math.max(-4, th)), n: cnt(m.n), r: Math.min(cnt(m.r), cnt(m.n)), last: date(m.last) || "" };
+  });
+  d.mastery = mastery;
   if (!d.wb || typeof d.wb !== "object") d.wb = {};
   // 錯題本：Firebase 可能把數字鍵存成陣列，空位在 JSON 裡會變成 null；先去掉空位（否則會變成假的錯題），
   // 再做舊格式遷移（true → {n, last}），最後確認日期格式；n 一定是數字（INV-09）
@@ -292,9 +306,29 @@ function assignIds() {
     arrs[t].forEach((it, i) => {
       it.id = i < BASE_N[t] ? builtinId(t, i) : customId(t, it);
       if (it.id && !map.has(it.id)) map.set(it.id, i);
+      // 技能標籤：新題寫在題目裡；舊題查 SKILL_TAGS；自訂的 Part 5 題依類別推定
+      if (SET_PARTS[t]) (it[SET_PARTS[t]] || []).forEach((q, k) => { if (!q.sk && SKILL_TAGS[`${it.id}_${k}`]) q.sk = SKILL_TAGS[`${it.id}_${k}`]; });
+      else if (!it.sk) it.sk = SKILL_TAGS[it.id] || (t === "p5" ? CAT_SKILL[it.cat] : undefined);
     });
     ID_INDEX[t] = map;
   });
+}
+const CAT_SKILL = { "詞性": "g-pos", "介係詞": "g-prep", "動詞時態": "g-tense", "代名詞": "g-pron", "分詞": "g-part", "關係詞": "g-rel",
+  "連接詞": "g-conj", "比較級": "g-comp", "詞彙": "v-word", "不定詞與動名詞": "g-inf", "主詞動詞一致": "g-agree", "假設語氣與倒裝": "g-mood" };
+// 一題（執行期的鍵）的技能
+function skillOf(t, k) {
+  const arr = BANK_ARRAYS()[t];
+  if (SET_PARTS[t]) { const [si, qi] = String(k).split("-").map(Number); const set = arr[si]; const q = set && set[SET_PARTS[t]][qi]; return q && q.sk; }
+  const it = arr[Number(k)];
+  return it && it.sk;
+}
+const SKILL_BY_ID = Object.fromEntries(SKILLS.map(s => [s.id, s]));
+// 每次作答都更新該技能的掌握度（wbMark 是所有作答的共同入口）
+function recordSkill(t, k, correct) {
+  const sk = skillOf(t, k);
+  if (!sk || !SKILL_BY_ID[sk]) return;
+  if (!S.mastery) S.mastery = {};
+  S.mastery[sk] = Mastery.update(S.mastery[sk], correct, { type: t, today: todayStr() });
 }
 // 執行期的鍵 → 紀錄用的固定編號；已經是編號就原樣傳回；找不到題目時傳回 null
 function recId(t, k) {
@@ -879,6 +913,7 @@ function migrateWb(d) {
 }
 // 所有錯題本的寫入都走這裡，避免五個題型各寫一套邏輯而漏改
 function wbMark(type, rt, correct) {
+  recordSkill(type, rt, correct);
   const bag = S.wb[type];
   const key = recId(type, rt);
   if (!bag || !key) return;
@@ -1066,14 +1101,8 @@ function revealCard(card) {
     e.stopPropagation();
     vocabSpeak([{ t: card.w, s: "N", rate: 0.85, pause: 250 }, { t: card.ex, s: "N" }]);
   });
-  const info = S.vocab[card.w];
-  const e = info ? info.e : 2.5, i = info ? info.i : 0;
-  const iv = {
-    again: 0,
-    hard: Math.max(1, Math.round(i * 1.2)) || 1,
-    good: i ? Math.round(i * e) : 1,
-    easy: i ? Math.round(i * e * 1.3) : 3
-  };
+  // FSRS（v1.7）：每個按鈕實際會排到幾天後
+  const iv = FSRS.preview(S.vocab[card.w] || null, todayStr());
   $("#rating").innerHTML = `
     <div class="rating-row">
       <button class="rate-again" data-r="again">忘記<span class="days">稍後再問</span></button>
@@ -1137,23 +1166,18 @@ function attachSwipeRating(card, iv) {
   fc.addEventListener("touchend", onEnd);
   fc.addEventListener("touchcancel", onEnd);
 }
-function rateCard(card, r, iv) {
+function rateCard(card, r) {
   const isNew = !S.vocab[card.w];
-  if (isNew) { S.vocab[card.w] = { i: 0, e: 2.5, due: todayStr(), n: 0 }; daily().newV++; }
-  const c = S.vocab[card.w];
-  c.n++;
+  if (isNew) daily().newV++;
   daily().v++;
-  if (r === "again") {
-    c.e = Math.max(1.3, c.e - 0.2);
-    c.i = 0; c.due = todayStr();
-    vq.push(vq.shift()); // 移到佇列尾端再問一次
-  } else {
-    if (r === "easy") c.e = Math.min(3.0, c.e + 0.1);
-    if (r === "hard") c.e = Math.max(1.3, c.e - 0.15);
-    c.i = iv[r];
-    c.due = todayStr(c.i);
-    vq.shift();
-  }
+  // FSRS 排程（js/engine.js）。e 保留給舊版 App 讀取：忘記降、簡單升，和舊版一樣
+  const prev = S.vocab[card.w] || null;
+  const c = FSRS.review(prev, r, todayStr());
+  const e = prev && Number.isFinite(prev.e) ? prev.e : 2.5;
+  c.e = r === "again" ? Math.max(1.3, e - 0.2) : r === "easy" ? Math.min(3.0, e + 0.1) : r === "hard" ? Math.max(1.3, e - 0.15) : e;
+  S.vocab[card.w] = c;
+  if (r === "again") vq.push(vq.shift()); // 移到佇列尾端再問一次
+  else vq.shift();
   save();
   nextCard();
 }

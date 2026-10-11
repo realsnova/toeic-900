@@ -8,7 +8,7 @@ import { webcrypto } from "node:crypto";
 const ROOT = path.resolve(import.meta.dirname, "..", "..");
 const SCRIPTS = [
   "js/ui.js", "js/data/vocab.js", "js/data/part5.js", "js/data/part6.js", "js/data/part7.js",
-  "js/data/listening.js", "js/firebase-config.js", "js/merge.js", "js/sync.js", "js/ai.js", "audio/clips.js", "js/audio.js", "js/app.js", "js/mock.js", "js/views.js"
+  "js/data/listening.js", "js/data/skills.js", "js/firebase-config.js", "js/merge.js", "js/engine.js", "js/sync.js", "js/ai.js", "audio/clips.js", "js/audio.js", "js/app.js", "js/mock.js", "js/views.js"
 ];
 
 // 假 fetch（AI 解析測試用）：記錄每次請求，依 mode 回應。不會連到真實網路。
