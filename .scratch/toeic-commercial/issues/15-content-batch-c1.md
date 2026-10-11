@@ -1,7 +1,7 @@
 # 15 題庫：練習題第 1 批（C1）＋內容檢查工具
 
 Type: feature
-Status: in progress（2026-10-11 開工）
+Status: resolved（2026-10-11 隨 v1.6.0 上線，927c1d0；使用者抽檢改為使用中回報）
 Phase: 三項升級・題庫
 Branch: `claude/toeic-v1-improve` → v1.6.0（目標 10/22，需使用者核准）
 

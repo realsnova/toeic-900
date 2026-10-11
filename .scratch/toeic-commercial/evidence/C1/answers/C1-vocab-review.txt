@@ -1,0 +1,3 @@
+39 bulletin: 例句只用到複合詞 bulletin board，沒有示範 bulletin 本身的「公告、快報」字義，學習效果弱 → 例句改為 "The company bulletin announced the new parking policy." / 公司公告宣布了新的停車政策。
+91 duly: 字義「按時」不是 duly 的常見義（多為「依規定、正式地」，如 duly authorized） → 中文改為「正式地、依規定地」，刪除「按時」。
+139 heavy-duty: 例句 "cleaned with heavy-duty equipment" 搭配不自然，中文「用重型設備清潔」也怪 → 改為 "The warehouse uses heavy-duty shelving to support pallets of machine parts." / 倉庫使用耐重貨架來承載成箱機器零件的棧板。

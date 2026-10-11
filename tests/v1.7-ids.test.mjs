@@ -91,7 +91,7 @@ test("ID-8 已發布的編號不重排、不改題意（INV-13）：清單裡的
 });
 
 test("ID-9 對不到題目的舊鍵收進 legacy，不會出現在錯題本，也不會讓頁面出錯", () => {
-  const app = loadApp({ storage: { toeic900: JSON.stringify({ baseN: { p5: 390, p6: 22, p7: 65, l2: 150, l34: 69 }, wb: { p5: { 5000: { n: 0, last: null } } } }) } });
+  const app = loadApp({ storage: { toeic900: JSON.stringify({ baseN: { p5: 510, p6: 30, p7: 85, l2: 210, l34: 89 }, wb: { p5: { 5000: { n: 0, last: null } } } }) } });
   assert.deepEqual(plain(app.run("S.wb.p5")), {});
   assert.deepEqual(plain(app.run("S.legacy.wb.p5")), { 5000: { n: 0, last: null } });
   app.run("renderers.wrong()");
