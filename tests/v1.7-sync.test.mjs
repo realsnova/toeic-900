@@ -173,3 +173,26 @@ test("SYNC-12 答錯時記下日期 w，同步合併才知道誰比較新；舊�
   app.run(`wbMark("p5", 6, false)`);
   assert.equal(app.run(`S.wb.p5["p5-0006"].w`), app.run("todayStr()"));
 });
+
+test("SEC-ERRLOG 錯誤紀錄只在本機、最多 200 筆，遮掉金鑰與同步代碼", () => {
+  const app = loadApp({ storage: { toeic900_synccode: CODE } });
+  app.run(`for (let i = 0; i < 205; i++) ErrLog.add("error", new Error("boom " + i));`);
+  app.run(`ErrLog.add("error", new Error("bad key sk-ant-api03-SECRET123 and code ${CODE}"))`);
+  const list = plain(app.run("ErrLog.list()"));
+  assert.equal(list.length, 200);
+  const last = JSON.stringify(list[list.length - 1]);
+  assert.equal(last.includes("SECRET123"), false);
+  assert.equal(last.includes(CODE), false);
+  assert.equal(JSON.stringify(plain(app.run("S"))).includes("boom"), false, "不進學習紀錄（不會同步）");
+  app.run("renderers.settings()");
+});
+
+test("SEC-PRIVACY 隱私說明寫明資料去向，且和程式行為一致", () => {
+  const app = loadApp();
+  const html = app.run("privacyHTML()");
+  for (const s of ["加密", "Firebase", "Anthropic", "不使用廣告", "刪除雲端資料", "not endorsed or approved by ETS"]) assert.ok(html.includes(s), s);
+  // 說「不使用 Cookie／分析工具」：頁面不可載入其他第三方腳本
+  const scripts = readSource("index.html").match(/<script[^>]+src="https?:\/\/[^"]+"/g) || [];
+  scripts.forEach(s => assert.match(s, /www\.gstatic\.com\/firebasejs\//));
+  assert.equal(/document\.cookie/.test(readSource("js/app.js") + readSource("js/sync.js") + readSource("js/views.js")), false);
+});

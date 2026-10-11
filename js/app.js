@@ -2310,12 +2310,57 @@ function showOnboarding() {
 }
 
 /* ============ 全域錯誤處理與連線狀態 ============ */
+/* 本機錯誤紀錄（v1.7，工作票 17）：最多 200 筆，只記錯誤訊息、程式位置、版本與時間，不記作答內容或學習紀錄。
+   只存在這台裝置，不同步、不自動送出；設定頁可以匯出，由使用者決定要不要提供。這不是遙測（INV-08）。 */
+const ERRLOG_KEY = "toeic900_errlog";
+const ERRLOG_MAX = 200;
+const ErrLog = {
+  list() {
+    try { const a = JSON.parse(localStorage.getItem(ERRLOG_KEY) || "[]"); return Array.isArray(a) ? a : []; } catch (e) { return []; }
+  },
+  // 金鑰、同步代碼即使意外出現在訊息裡也要遮掉
+  scrub(s) {
+    let out = String(s || "").replace(/sk-ant-[A-Za-z0-9_-]+/g, "sk-ant-***");
+    if (typeof Sync !== "undefined" && Sync.code) out = out.split(Sync.code).join("***");
+    return out;
+  },
+  add(kind, err) {
+    try {
+      const msg = ErrLog.scrub(err && (err.message || err.reason) ? err.message || err.reason : err).slice(0, 300);
+      const stack = err && err.stack ? ErrLog.scrub(String(err.stack).split("\n").slice(0, 4).join("\n")).slice(0, 600) : "";
+      const list = ErrLog.list();
+      list.push({ t: new Date().toISOString(), kind, msg, stack, v: APP_VERSION });
+      localStorage.setItem(ERRLOG_KEY, JSON.stringify(list.slice(-ERRLOG_MAX)));
+    } catch (e) { /* 儲存空間滿了就不記 */ }
+  },
+  clear() { localStorage.removeItem(ERRLOG_KEY); },
+  download() {
+    const data = { app: "toeic900", kind: "error-log", exported: new Date().toISOString(), version: APP_VERSION, errors: ErrLog.list() };
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 1)], { type: "application/json" }));
+    a.download = `toeic-錯誤紀錄-${todayStr()}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+};
+// 轉換成固定編號之前的原始紀錄（v1.7 第一次開啟時自動保存），設定頁可以下載
+function downloadPreIdBackup() {
+  const raw = localStorage.getItem(PRE_ID_BACKUP_KEY);
+  if (!raw) return;
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify({ app: "toeic900", kind: "pre-v1.7-records", records: JSON.parse(raw) }, null, 1)], { type: "application/json" }));
+  a.download = `toeic-v1.7升級前紀錄.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
 window.addEventListener("error", (e) => {
   console.error("未捕捉的錯誤：", e.error || e.message);
+  ErrLog.add("error", e.error || e.message);
   if (typeof UI !== "undefined") UI.toast("發生了一個小問題，但不影響你目前的進度。若持續發生請重新整理頁面。", "err", 4000);
 });
 window.addEventListener("unhandledrejection", (e) => {
   console.error("未處理的 Promise 拒絕：", e.reason);
+  ErrLog.add("rejection", e.reason);
   if (typeof UI !== "undefined") UI.toast("發生了一個小問題，但不影響你目前的進度。", "err", 4000);
 });
 window.addEventListener("offline", () => {

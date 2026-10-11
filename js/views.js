@@ -65,6 +65,24 @@ renderers.me = function () {
 renderers.mock = function () { Mock.menu(); };
 
 /* ============ 設定 ============ */
+/* 隱私權說明（v1.7，工作票 17）。內容改動時一併更新日期。 */
+const PRIVACY_UPDATED = "2026-10-11";
+function privacyHTML() {
+  return `<div class="card" id="privacy">
+    <h2>🔒 隱私與資料</h2>
+    <details>
+      <summary>這個 App 會存哪些資料、送到哪裡（${PRIVACY_UPDATED} 更新）</summary>
+      <div class="muted" style="margin-top:8px;line-height:1.7">
+        <p><b>存在你的裝置上</b>：學習紀錄（作答結果、錯題本、單字卡進度、模考成績）、自訂題庫、設定、題目回報與錯誤紀錄，都存在這台裝置的瀏覽器裡。沒有帳號，也不需要姓名、信箱或任何身分資料。</p>
+        <p><b>雲端同步（自己決定要不要開）</b>：設定同步代碼後，學習紀錄和自訂題庫會先在你的裝置上用同步代碼加密，再存到 Firebase（Google 的資料庫服務）。雲端只看得到亂碼，連資料庫管理者也讀不到內容；同步代碼就是鑰匙，請不要分享。可以在「題庫/備份」頁刪除雲端資料。</p>
+        <p><b>AI 錯題解析（自己決定要不要開）</b>：貼上你自己的 Anthropic API 金鑰後，按「AI 解析」時會把那一題的題目、選項、正解和你的答案送到 Anthropic。金鑰預設只在這次開啟期間有效，不會同步、不會放進備份檔。</p>
+        <p><b>不做的事</b>：不使用廣告、追蹤、分析工具或 Cookie；不收集作答統計；不把資料提供給任何第三方。網站由 GitHub Pages 提供，音檔都是預先產生、放在同一個網站上。</p>
+        <p><b>刪除</b>：「題庫/備份」頁可以刪除雲端資料；「統計」頁最下方可以清除所有學習紀錄；清除瀏覽器的網站資料也會刪掉這台裝置上的全部資料。刪除前建議先匯出備份。</p>
+        <p><b>著作權與商標</b>：題目為原創，語音由 Kokoro（Apache-2.0 授權）產生。TOEIC is a registered trademark of ETS. This product is not endorsed or approved by ETS.</p>
+      </div>
+    </details>
+  </div>`;
+}
 renderers.settings = function () {
   Accents.scan();
   const avail = Accents.available();
@@ -131,9 +149,26 @@ renderers.settings = function () {
       </div>
       <p class="muted">練習時按「🚩 這題有問題」會記在這台裝置。匯出的檔案交給我（Claude），下一次更新時會逐題確認並修正。</p>
     </div>
-    ${aiSettingsHTML()}`;
+    ${aiSettingsHTML()}
+    <div class="card">
+      <h2>🧯 錯誤紀錄</h2>
+      <div class="item-row">
+        <div>這台裝置記下的程式錯誤：<b>${ErrLog.list().length}</b> 筆</div>
+        <div style="display:flex;gap:6px">
+          <button class="btn small secondary" id="errlog-export">匯出</button>
+          <button class="btn small ghost" id="errlog-clear">清除</button>
+        </div>
+      </div>
+      <p class="muted">只記錯誤訊息、版本和時間，不含作答內容；只存在這台裝置，不會自動送出。遇到問題時可以匯出給我（Claude）查原因。</p>
+      ${localStorage.getItem(PRE_ID_BACKUP_KEY) ? `<div class="item-row"><div>v1.7 升級前的原始紀錄（自動保存）</div><button class="btn small ghost" id="preid-download">下載</button></div>` : ""}
+    </div>
+    ${privacyHTML()}`;
   wireAISettings($("#tab-settings"), renderers.settings);
   $("#report-export").addEventListener("click", exportReports);
+  $("#errlog-export").addEventListener("click", () => ErrLog.download());
+  $("#errlog-clear").addEventListener("click", () => { if (confirm("清除錯誤紀錄？")) { ErrLog.clear(); renderers.settings(); } });
+  const pre = $("#preid-download");
+  if (pre && pre.addEventListener) pre.addEventListener("click", downloadPreIdBackup);
   $("#report-clear").addEventListener("click", () => {
     if (!confirm("清除你回報的題目清單？建議先匯出。")) return;
     localStorage.removeItem(REPORT_KEY);
