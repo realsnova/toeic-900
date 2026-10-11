@@ -21,7 +21,7 @@ function defaultState() {
     exam: null,               // 考試日期 'YYYY-MM-DD'
     updatedAt: 0,              // 最後異動時間戳（雲端同步比對新舊用，不可為 undefined）
     vocab: {},                // word -> {i:間隔天數, due:'YYYY-MM-DD', n:複習次數, s:穩定度, d:難度, l:上次複習日}（v1.7 起 FSRS；e 是舊版的難易係數）
-    mastery: {},              // 技能 ID -> {th:能力值, n:作答數, r:答對數, last:'YYYY-MM-DD'}（v1.7，js/engine.js）
+    mastery: {},              // 技能 ID -> {th:能力值, n:作答數, r:答對數, last:'YYYY-MM-DD', dg:診斷過}（v1.7，js/engine.js）
     tq: { p5: [], l2: [] },   // 遷移練習：答錯的技能，下一輪出一道同技能的新題（v1.7）
     cat: {},                  // Part5 類別 -> {r, w}
     lcat: {},                 // 聽力類別（Part 2 / Part 3/4）-> {r, w}
@@ -156,7 +156,14 @@ function sanitizeState(d, opts = {}) {
     if (!/^[a-z0-9-]{2,20}$/.test(k)) return;
     const m = obj(v), th = num(m.th, 0);
     mastery[k] = { th: Math.min(4, Math.max(-4, th)), n: cnt(m.n), r: Math.min(cnt(m.r), cnt(m.n)), last: date(m.last) || "" };
+    if (m.dg) mastery[k].dg = 1;
   });
+  // 診斷測驗結果（v1.7）：{date, res: {技能 ID: [答對, 題數]}}
+  if (d.diag !== undefined) {
+    const g = obj(d.diag), res = {};
+    entries(g.res).forEach(([k, v]) => { if (/^[a-z0-9-]{2,20}$/.test(k) && Array.isArray(v)) res[k] = [Math.min(cnt(v[0]), cnt(v[1])), cnt(v[1])]; });
+    if (date(g.date)) d.diag = { date: g.date, res }; else delete d.diag;
+  }
   d.mastery = mastery;
   const tq = {};
   ["p5", "l2"].forEach(t => { tq[t] = (Array.isArray(obj(d.tq)[t]) ? obj(d.tq)[t] : []).filter(x => typeof x === "string" && /^[a-z0-9-]{2,20}$/.test(x)).slice(-TQ_MAX); });
@@ -349,11 +356,12 @@ function skillOf(t, k) {
 }
 const SKILL_BY_ID = Object.fromEntries(SKILLS.map(s => [s.id, s]));
 // 每次作答都更新該技能的掌握度（wbMark 是所有作答的共同入口）
-function recordSkill(t, k, correct) {
+function recordSkill(t, k, correct, opts) {
   const sk = skillOf(t, k);
   if (!sk || !SKILL_BY_ID[sk]) return;
   if (!S.mastery) S.mastery = {};
   S.mastery[sk] = Mastery.update(S.mastery[sk], correct, { type: t, today: todayStr() });
+  if (opts && opts.diag) S.mastery[sk].dg = 1;
   // 遷移練習：答錯後，下一輪出一道同技能、不同句子的題目，確認學到的是觀念而不是記住這一題
   if (!correct && (t === "p5" || t === "l2")) {
     if (!S.tq) S.tq = { p5: [], l2: [] };
@@ -369,7 +377,8 @@ const WEAK_LEVEL = 0.7;
 function weakSkills(t) {
   return SKILLS.filter(s => s.part === t)
     .map(s => ({ id: s.id, m: (S.mastery || {})[s.id] }))
-    .filter(x => Mastery.enough(x.m) && Mastery.level(x.m, t) < WEAK_LEVEL)
+    // 只有診斷的初步資料（不到 5 題）時，要有答錯才算弱項：從中間起算的估計，全對 2 題也才剛好 70%
+    .filter(x => Mastery.enough(x.m) && Mastery.level(x.m, t) < WEAK_LEVEL && (x.m.n >= Mastery.MIN_N || x.m.r < x.m.n))
     .sort((a, b) => Mastery.level(a.m, t) - Mastery.level(b.m, t))
     .map(x => x.id);
 }
@@ -595,7 +604,7 @@ function planWhy(item) {
     }
     case "listen": { const w = weakest(["l2", "l34"]); return w ? say(w) : "聽力每天都要接觸，耳朵才不會生疏"; }
     case "p6": case "p7": { const w = weakest([item.tab]); return w ? say(w).replace("，這一輪會多出這類題", "，挑有這類題的題組") : "閱讀量決定考試時能不能寫完"; }
-    case "wrong": return "錯題要分兩天各答對一次才算學會，這是最有效率的複習";
+    case "wrong": return "依記憶曲線排出今天該重考的錯題；要分兩天各答對一次才算學會";
     case "mock": return "完整、計時的測驗練的是時間分配和耐力";
     default: return "";
   }
@@ -604,7 +613,8 @@ function todayPlan() {
   return todayPlanItems().map(p => Object.assign(p, { why: planWhy(p) }));
 }
 function todayPlanItems() {
-  const d = daily(), ph = phase().name, due = dueCount(), wrongs = wrongCount();
+  const d = daily(), ph = phase().name, due = dueCount(), wrongs = wrongCount(), wDue = wrongDueCount();
+  const wrongDetail = wrongs ? `今天該重考 ${wDue} 題（錯題本共 ${wrongs} 題）` : "錯題本已清空！";
   const base = [
     { label: "單字複習", detail: due ? `還有 ${due} 張卡片` : "今日完成！", done: due === 0, tab: "vocab", est: "15 分" },
     { label: "Part 5 文法 10 題", detail: `已完成 ${d.p5} 題`, done: d.p5 >= 10, tab: "p5", est: "8 分" }
@@ -617,11 +627,11 @@ function todayPlanItems() {
   if (ph === "強化期") return base.concat([
     { label: "聽力 Part 3/4 兩組", detail: `已完成 ${d.l34} 組`, done: d.l34 >= 2, tab: "listen", est: "12 分" },
     { label: "Part 7 閱讀 2 篇（多篇優先）", detail: `已完成 ${d.p7} 篇`, done: d.p7 >= 2, tab: "p7", est: "18 分" },
-    { label: "錯題本重考 5 題", detail: wrongs ? `錯題本還有 ${wrongs} 題` : "錯題本已清空！", done: wrongs === 0 || (d.wr || 0) >= 5, tab: "wrong", est: "6 分" }
+    { label: "錯題本重考 5 題", detail: wrongDetail, done: wDue === 0 || (d.wr || 0) >= 5, tab: "wrong", est: "6 分" }
   ]);
   if (ph === "考前調整" || ph === "考試已過") return [
     { label: "單字複習（不學新字）", detail: due ? `還有 ${due} 張卡片` : "今日完成！", done: due === 0, tab: "vocab", est: "10 分" },
-    { label: "錯題本重考 5 題", detail: wrongs ? `錯題本還有 ${wrongs} 題` : "錯題本已清空！", done: wrongs === 0 || (d.wr || 0) >= 5, tab: "wrong", est: "8 分" },
+    { label: "錯題本重考 5 題", detail: wrongDetail, done: wDue === 0 || (d.wr || 0) >= 5, tab: "wrong", est: "8 分" },
     { label: "聽力 Part 3/4 一組（保持耳朵手感）", detail: `已完成 ${d.l34} 組`, done: d.l34 >= 1, tab: "listen", est: "6 分" },
     { label: "Part 7 限時 1 篇", detail: `已完成 ${d.p7} 篇`, done: d.p7 >= 1, tab: "p7", est: "10 分" }
   ];
@@ -642,7 +652,7 @@ function todayPlanItems() {
       : !mockDue && nextForm(true)
       ? { label: `${nextForm(true).name}（約 ${nextForm(true).mins} 分鐘）`, detail: "照正式考試節奏連續播放，練專注力與題目預讀", done: false, tab: "mock", est: `${nextForm(true).mins} 分` }
       : { label: "聽力 Part 2 五題 + Part 3/4 一組", detail: `P2 ${d.l2} 題 · P3/4 ${d.l34} 組`, done: d.l2 >= 5 && d.l34 >= 1, tab: "listen", est: "12 分" },
-    { label: "錯題本全部清零", detail: wrongs ? `還剩 ${wrongs} 題` : "已清空！", done: wrongs === 0, tab: "wrong", est: "10 分" }
+    { label: "錯題本：今天該重考的全部做完", detail: wrongDetail, done: wDue === 0, tab: "wrong", est: "10 分" }
   ]);
 }
 // 還沒做過的第一份完整閱讀測驗（listen=true 時找聽力測驗）
@@ -946,6 +956,9 @@ function dueCount() {
 function wrongCount() {
   return WB_TYPES.reduce((n, k) => n + wbKeys(k).length, 0);
 }
+function wrongDueCount() {
+  return WB_TYPES.reduce((n, k) => n + wbKeys(k).filter(rt => wbIsDue(k, rt)).length, 0);
+}
 // 錯題本中「題目還存在」的鍵。題目可能不存在：自訂題被移除後索引對不上，或同步資料中有錯誤的鍵。
 // 不刪除這些紀錄（自訂題之後可能隨同步回來），只是不顯示，避免錯題本頁整個出錯。
 // 回傳執行期的鍵（Part 5／Part 2 是索引字串，題組類是「題組索引-小題索引」）。
@@ -966,9 +979,26 @@ function wbNorm(v) {
     last: typeof v.last === "string" && v.last ? v.last : null
   };
   // w：最近一次答錯的日期（v1.7）。多裝置合併時用來判斷哪一邊的作答比較新（js/merge.js）
-  if (typeof v.w === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v.w)) e.w = v.w;
+  const D = x => typeof x === "string" && /^\d{4}-\d{2}-\d{2}$/.test(x);
+  if (D(v.w)) e.w = v.w;
+  // FSRS（v1.7）：s 穩定度、d 難度、l 上次作答日、due 下次該重考的日子。沒有的是舊紀錄，視為今天到期
+  if (typeof v.s === "number" && v.s > 0 && v.s <= 36500 && typeof v.d === "number" && v.d >= 1 && v.d <= 10) { e.s = v.s; e.d = v.d; }
+  if (D(v.l)) e.l = v.l;
+  if (D(v.due)) e.due = v.due;
   return e;
 }
+// 錯題下次該重考的日子（舊紀錄沒有就是今天）
+function wbDueOf(v) { const e = wbNorm(v); return e.due || todayStr(); }
+function wbIsDue(type, rt) { return wbDueOf(wbGet(type, rt)) <= todayStr(); }
+// 考前排程上限：考試前排到考試之後的單字卡與錯題，提前到考試前一天，考前至少再看一次（2026-10-11 使用者要求）。
+// 只改下次複習日，不改記憶強度（s）與間隔（i），考後照常。
+function examCapDate(today) {
+  if (!S.exam || !/^\d{4}-\d{2}-\d{2}$/.test(S.exam)) return null;
+  const last = new Date(Date.parse(S.exam + "T00:00:00Z") - 86400000).toISOString().slice(0, 10);
+  return today < last ? last : null;
+}
+function capDue(due, today) { const c = examCapDate(today); return c && due > c ? c : due; }
+function capDays(days, today) { const c = examCapDate(today); return c && days > 0 ? Math.min(days, daysBetween(today, c)) : days; }
 // 還要再答對幾次才會被移除（給 UI 顯示用，讓使用者知道為什麼答對了題目還在）
 function wbRemain(v) { return Math.max(1, WB_MASTER_N - wbNorm(v).n); }
 // 把整份狀態的錯題本轉成新格式；load() 與雲端 pull 後都要呼叫
@@ -981,17 +1011,27 @@ function migrateWb(d) {
   });
 }
 // 所有錯題本的寫入都走這裡，避免五個題型各寫一套邏輯而漏改
-function wbMark(type, rt, correct) {
-  recordSkill(type, rt, correct);
+function wbMark(type, rt, correct, opts) {
+  recordSkill(type, rt, correct, opts);
   const bag = S.wb[type];
   const key = recId(type, rt);
   if (!bag || !key) return;
-  if (!correct) { bag[key] = { n: 0, last: null, w: todayStr() }; return; } // 答錯就把連對次數歸零，題目留在錯題本
+  const t = todayStr();
+  // 錯題的重考時間用 FSRS 排（v1.7）：答錯明天重考；答對依記憶曲線往後排。移出錯題本的條件不變（跨天連對 2 次）
+  const card = e => (e && e.s ? { s: e.s, d: e.d, l: e.l, due: e.due } : null);
+  if (!correct) { // 答錯就把連對次數歸零，題目留在錯題本
+    const c = FSRS.review(card(bag[key] && wbNorm(bag[key])), "again", t);
+    bag[key] = { n: 0, last: null, w: t, s: c.s, d: c.d, l: t, due: capDue(todayStr(1), t) };
+    return;
+  }
   if (bag[key] === undefined) return; // 本來就不在錯題本裡，答對不需要記任何東西
   const e = wbNorm(bag[key]);
-  const t = todayStr();
   // 同一天內重複答對不累計：否則在錯題本頁連點兩次「重新挑戰」就能清掉，等於沒有間隔複習
-  if (e.last !== t) { e.n++; e.last = t; }
+  if (e.last !== t) {
+    e.n++; e.last = t;
+    const c = FSRS.review(card(e), "good", t);
+    Object.assign(e, { s: c.s, d: c.d, l: t, due: capDue(c.due, t) });
+  }
   if (e.n >= WB_MASTER_N) delete bag[key];
   else bag[key] = e;
 }
@@ -1024,6 +1064,11 @@ renderers.home = function () {
       <div class="item-row" style="background:transparent;margin:0;padding:0">
         <div>💾 <b>${S.lastBackup ? "已超過 7 天未備份" : "尚未建立過備份"}</b><span class="muted"> · 清除瀏覽資料或換電腦會遺失紀錄</span></div>
         <button class="btn small" data-goto="bank">立即備份</button>
+      </div></div>` : ""}
+    ${!S.diag ? `<div class="card" style="border-color:var(--accent)">
+      <div class="item-row" style="background:transparent;margin:0;padding:0">
+        <div>🧭 <b>15 分鐘診斷測驗</b><span class="muted"> · Part 5 和聽力 Part 2 共 36 題，找出弱項，之後每輪多練這些技能</span></div>
+        <button class="btn small" data-diag="1">開始</button>
       </div></div>` : ""}
     <div class="card">
       <h2>📋 今日 60 分鐘菜單 <span class="muted">（${ph.name}自動生成）</span></h2>
@@ -1173,6 +1218,7 @@ function revealCard(card) {
   });
   // FSRS（v1.7）：每個按鈕實際會排到幾天後
   const iv = FSRS.preview(S.vocab[card.w] || null, todayStr());
+  Object.keys(iv).forEach(r => { iv[r] = capDays(iv[r], todayStr()); }); // 考前不排到考試之後
   $("#rating").innerHTML = `
     <div class="rating-row">
       <button class="rate-again" data-r="again">忘記<span class="days">稍後再問</span></button>
@@ -1243,6 +1289,7 @@ function rateCard(card, r) {
   // FSRS 排程（js/engine.js）。e 保留給舊版 App 讀取：忘記降、簡單升，和舊版一樣
   const prev = S.vocab[card.w] || null;
   const c = FSRS.review(prev, r, todayStr());
+  c.due = capDue(c.due, todayStr()); // 考前不排到考試之後（間隔 i 不改，考後照記憶曲線）
   const e = prev && Number.isFinite(prev.e) ? prev.e : 2.5;
   c.e = r === "again" ? Math.max(1.3, e - 0.2) : r === "easy" ? Math.min(3.0, e + 0.1) : r === "hard" ? Math.max(1.3, e - 0.15) : e;
   S.vocab[card.w] = c;
@@ -1410,6 +1457,7 @@ function startL2() {
 }
 function l2Next() {
   const s = l2s, box = $("#tab-listen");
+  if (s.at >= s.ids.length && s.diag) { diagFinish(); return; }
   if (s.at >= s.ids.length) {
     box.innerHTML = `
       <div class="card result-banner">
@@ -1429,7 +1477,7 @@ function l2Next() {
   const order = shuffle(item.opts.map((_, i) => i));
   box.innerHTML = `
     <div class="card">
-      <p class="q-progress">第 ${s.at + 1} / ${s.ids.length} 題</p>
+      <p class="q-progress">${s.diag ? "診斷測驗 · " : ""}第 ${s.at + 1} / ${s.ids.length} 題</p>
       <div style="text-align:center;padding:16px">
         ${waveHTML()}
         <p class="muted">聆聽問句與 (A)(B)(C) 三個回應</p>
@@ -1471,7 +1519,8 @@ function l2Next() {
       if (!correct) wireAIBox(box, l2ctx);
       wireReport(box, l2ctx);
       trackListening("Part 2", correct);
-      wbMark("l2", id, correct);
+      if (s.diag) diagRecord("l2", id, correct);
+      wbMark("l2", id, correct, s.diag ? { diag: true } : undefined);
       daily().l2++;
       if (correct) s.right++;
       save();
@@ -1623,7 +1672,10 @@ function drawRound(seenKey, poolSize, n, wrongIds, isWeak, isHidden) {
   // 一輪 10 題的名額：錯題最多 6、遷移練習最多 2、冷落的技能最多 2，其餘是新題（含弱項加權）。
   // 錯題本很長時，原本整輪都是重考，遷移練習、冷落的技能和新題都排不進來（v1.7 模擬學習者測試）
   const wrongCap = type ? Math.max(1, n - 4) : n;
-  const ids = shuffle(wrongIds.filter(i => Number.isInteger(i) && i >= 0 && i < poolSize)).slice(0, wrongCap);
+  // 錯題裡今天到期的優先（FSRS 排的重考日），名額有剩才放還沒到期的
+  const wrongOk = wrongIds.filter(i => Number.isInteger(i) && i >= 0 && i < poolSize);
+  const dueW = type ? wrongOk.filter(i => wbIsDue(type, i)) : wrongOk;
+  const ids = shuffle(dueW).concat(shuffle(wrongOk.filter(i => !dueW.includes(i)))).slice(0, wrongCap);
   const taken = new Set(ids);
   // 遷移練習：上一輪答錯的技能，各出一道沒做過的同技能新題（最多 2 題），出過就從佇列移除
   const queue = type && S.tq && Array.isArray(S.tq[type]) ? S.tq[type] : [];
@@ -1677,6 +1729,66 @@ function drawRound(seenKey, poolSize, n, wrongIds, isWeak, isHidden) {
   ids.forEach(i => seen.add(i));
   return shuffle(ids);
 }
+/* ============ 診斷測驗（v1.7）============
+   約 15 分鐘：Part 5 的 13 項技能、聽力 Part 2 的 5 項技能，各 2 題（共 36 題），用一般練習題（不動完整測驗的保留題）。
+   作答照常進錯題本、更新掌握度，另外把這些技能標成「診斷過」（dg）：每項 2 題就先當作有初步資料，
+   弱項加題馬上生效，不用等每項累積 5 題。Part 6／7、聽力 Part 3/4 的技能在一般練習中累積。 */
+const DIAG_PER_SKILL = 2;
+let diag = null;
+function diagPick(type) {
+  const arr = BANK_ARRAYS()[type], seen = S[type + "seen"] || {}, ids = [];
+  SKILLS.filter(s => s.part === type).forEach(s => {
+    const pool = [];
+    for (let i = 0; i < BASE_N[type]; i++) if (arr[i] && arr[i].sk === s.id && !isFormItem(type, i)) pool.push(i);
+    const fresh = pool.filter(i => !seen[recId(type, i)] && !wbGet(type, i));
+    shuffle(fresh.length >= DIAG_PER_SKILL ? fresh : pool).slice(0, DIAG_PER_SKILL).forEach(i => ids.push(i));
+  });
+  return shuffle(ids);
+}
+function startDiag() {
+  diag = { p5: diagPick("p5"), l2: diagPick("l2"), res: {} };
+  [["p5", diag.p5], ["l2", diag.l2]].forEach(([t, ids]) => {
+    if (!S[t + "seen"]) S[t + "seen"] = {};
+    ids.forEach(i => { const id = recId(t, i); if (id) S[t + "seen"][id] = true; });
+  });
+  save();
+  switchTab("p5");
+  p5session = { ids: diag.p5, at: 0, right: 0, t0: Date.now(), diag: true };
+  p5Next();
+}
+function diagRecord(type, i, correct) {
+  const sk = BANK_ARRAYS()[type][i].sk;
+  if (!sk) return;
+  const r = diag.res[sk] || [0, 0];
+  diag.res[sk] = [r[0] + (correct ? 1 : 0), r[1] + 1];
+}
+function diagListenStart() {
+  switchTab("listen");
+  l2s = { ids: diag.l2, at: 0, right: 0, diag: true };
+  l2Next();
+}
+function diagFinish() {
+  S.diag = { date: todayStr(), res: diag.res };
+  save();
+  const box = $("#tab-listen");
+  const PART_NAME = { p5: "Part 5 文法與詞彙", l2: "聽力 Part 2" };
+  const weak = [];
+  const rows = ["p5", "l2"].map(t => `<h3 style="margin-top:12px">${PART_NAME[t]}</h3>` + SKILLS.filter(s => s.part === t).map(s => {
+    const [r, n] = diag.res[s.id] || [0, 0];
+    if (n && r < n) weak.push(s.name);
+    return `<div class="bar-row"><span class="lbl">${esc(s.name)}</span><div class="bar-track"><div class="bar-fill" style="width:${n ? Math.round(r / n * 100) : 0}%${n && r < n ? ";background:var(--warn)" : ""}"></div></div><span class="val">${n ? `${r} / ${n}` : "—"}</span></div>`;
+  }).join("")).join("");
+  const total = Object.values(diag.res).reduce((a, [r, n]) => [a[0] + r, a[1] + n], [0, 0]);
+  box.innerHTML = `
+    <div class="card result-banner"><div class="score">${total[0]} / ${total[1]}</div>
+      <p>${weak.length ? `需要加強：<b>${weak.map(esc).join("、")}</b>。之後 Part 5 和聽力 Part 2 每輪會多出這些技能的題目。` : "每項技能都答對了，之後依練習結果繼續調整。"}</p>
+      <p class="muted">每項只有 2 題，是初步結果；練習越多，掌握度越準（統計頁可以看）。答錯的題目已加入錯題本。</p>
+      <br><button class="btn" id="diag-home">回首頁</button></div>
+    <div class="card"><h2>🧭 診斷結果</h2>${rows}</div>`;
+  diag = null;
+  $("#diag-home").addEventListener("click", () => switchTab("home"));
+  updateNavBadges();
+}
 function startP5() {
   const ws = new Set(weakSkills("p5"));
   const weak = weakCats();
@@ -1689,6 +1801,14 @@ function startP5() {
 }
 function p5Next() {
   const s = p5session;
+  if (s.at >= s.ids.length && s.diag) {
+    $("#tab-p5").innerHTML = `
+      <div class="card result-banner"><div class="score">${s.right} / ${s.ids.length}</div>
+        <p>診斷測驗：文法與詞彙部分完成。接下來是聽力 Part 2，${diag.l2.length} 題，請打開聲音。</p>
+        <br><button class="btn" id="diag-next">繼續：聽力 Part 2</button></div>`;
+    $("#diag-next").addEventListener("click", () => withVoices(diagListenStart));
+    return;
+  }
   if (s.at >= s.ids.length) {
     const secs = Math.round((Date.now() - s.t0) / 1000);
     $("#tab-p5").innerHTML = `
@@ -1709,10 +1829,11 @@ function p5Next() {
   const item = PART5[id];
   const box = $("#tab-p5");
   box.innerHTML = `<div class="card" id="p5-q"></div><div id="p5-nav" style="text-align:right"></div>`;
-  renderMCQ($("#p5-q"), item, { progress: `第 ${s.at + 1} / ${s.ids.length} 題`, cat: item.cat, ai: { type: "p5", key: id } }, (correct) => {
+  renderMCQ($("#p5-q"), item, { progress: `${s.diag ? "診斷測驗 · " : ""}第 ${s.at + 1} / ${s.ids.length} 題`, cat: item.cat, ai: { type: "p5", key: id } }, (correct) => {
     if (!S.cat[item.cat]) S.cat[item.cat] = { r: 0, w: 0 };
     if (correct) { S.cat[item.cat].r++; s.right++; } else S.cat[item.cat].w++;
-    wbMark("p5", id, correct);
+    if (s.diag) diagRecord("p5", id, correct);
+    wbMark("p5", id, correct, s.diag ? { diag: true } : undefined);
     trackReading(correct);
     daily().p5++;
     save();
@@ -1866,7 +1987,8 @@ renderers.wrong = function () {
   // st(type, key)：錯題的掌握進度，讓列表能說明「為什麼答對了還在這裡」
   const st = (type, key) => {
     const e = wbNorm(wbGet(type, key));
-    return { remain: Math.max(1, WB_MASTER_N - e.n), todayDone: e.last === todayStr() };
+    const due = e.due || todayStr();
+    return { remain: Math.max(1, WB_MASTER_N - e.n), todayDone: e.last === todayStr(), due, isDue: due <= todayStr() };
   };
   wbKeys("p5").forEach(id => entries.push({ type: "p5", key: id, label: `Part 5 · ${PART5[id].cat}`, text: PART5[id].q, ...st("p5", id) }));
   wbKeys("p6").forEach(key => {
@@ -1882,6 +2004,8 @@ renderers.wrong = function () {
     const [si, qi] = key.split("-").map(Number);
     entries.push({ type: "l34", key, label: `聽力 · ${PART34[si].title}`, text: PART34[si].qs[qi].q, ...st("l34", key) });
   });
+  // 今天該重考的排前面，其餘依重考日（FSRS 排程）
+  entries.sort((a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : 0));
   const box = $("#tab-wrong");
   if (!entries.length) {
     box.innerHTML = `<div class="card result-banner"><div style="font-size:3rem">✨</div>
@@ -1892,11 +2016,12 @@ renderers.wrong = function () {
   }
   box.innerHTML = `
     <div class="card"><h2>📕 錯題本（${entries.length} 題）</h2>
-    <p class="muted">要連續答對 ${WB_MASTER_N} 次、且分在不同天，才會從錯題本移除——四選一有 25% 猜中率，
+    <p class="muted">今天該重考的排在最前面：答錯的明天重考，答對的依記憶曲線往後排（考前最晚排到考試前一天）。
+    要連續答對 ${WB_MASTER_N} 次、且分在不同天，才會從錯題本移除——四選一有 25% 猜中率，
     剛看完詳解就答對通常只是記得答案，隔天還答得出來才算真的學會。${phase().name === "衝刺期" ? "衝刺期目標：每天清零！" : ""}</p></div>
     ${entries.map((e, i) => `
       <div class="item-row"><div style="flex:1"><span class="pill">${esc(e.label)}</span>
-        <span class="pill">再答對 ${e.remain} 次移除</span>${e.todayDone ? `<span class="pill">今天已計，明天再來</span>` : ""}<br>
+        <span class="pill">再答對 ${e.remain} 次移除</span>${e.todayDone ? `<span class="pill">今天已計，明天再來</span>` : e.isDue ? `<span class="pill" style="color:var(--warn)">今天該重考</span>` : `<span class="pill">${esc(e.due.slice(5).replace("-", "/"))} 重考</span>`}<br>
         <span class="muted">${esc(e.text.slice(0, 80))}${e.text.length > 80 ? "…" : ""}</span></div>
         <button class="btn small" data-retry="${i}">重新挑戰</button></div>`).join("")}
     <div id="wrong-quiz"></div>`;
@@ -2200,13 +2325,15 @@ function masteryCard() {
       const m = (S.mastery || {})[s.id];
       if (!Mastery.enough(m)) return `<div class="bar-row"><span class="lbl">${esc(s.name)}</span><div class="bar-track"></div><span class="val muted">資料不足（${m ? m.n : 0} 題）</span></div>`;
       const pct = Math.round(Mastery.level(m, t) * 100);
-      return `<div class="bar-row"><span class="lbl">${esc(s.name)}</span><div class="bar-track"><div class="bar-fill" style="width:${pct}%${pct < WEAK_LEVEL * 100 ? ";background:var(--warn)" : ""}"></div></div><span class="val">${pct}%（${m.n} 題）</span></div>`;
+      const early = m.n < Mastery.MIN_N ? "，初步" : ""; // 診斷過、還不到 5 題
+      return `<div class="bar-row"><span class="lbl">${esc(s.name)}</span><div class="bar-track"><div class="bar-fill" style="width:${pct}%${pct < WEAK_LEVEL * 100 ? ";background:var(--warn)" : ""}"></div></div><span class="val">${pct}%（${m.n} 題${early}）</span></div>`;
     }).join("");
     return `<h3 style="margin-top:12px">${PART_NAME[t]}</h3>${rows}`;
   }).join("");
   return `<div class="card"><h2>🎯 技能掌握度</h2>
     <p class="muted">依每題的作答更新，數字是「一般難度的題目預估答對率」。低於 70% 的技能會標成橘色，Part 5 與聽力 Part 2 會多出這些技能的題目；答錯的技能下一輪會出一題同技能的新題。</p>
-    <details><summary>展開 36 項技能</summary>${groups}</details></div>`;
+    <details><summary>展開 36 項技能</summary>${groups}</details>
+    <p class="muted" style="margin-top:8px">${S.diag ? `上次診斷測驗：${esc(S.diag.date)}。` : "還沒做過診斷測驗。"}<button class="btn small secondary" data-diag="1">${S.diag ? "重新診斷" : "做診斷測驗（約 15 分鐘）"}</button></p></div>`;
 }
 renderers.stats = function () {
   const cards = Object.values(S.vocab);
@@ -2304,6 +2431,10 @@ renderers.stats = function () {
 
 /* ============ 啟動 ============ */
 mergeBank();
+document.addEventListener("click", e => {
+  const b = e.target && e.target.closest ? e.target.closest("[data-diag]") : null;
+  if (b) startDiag();
+});
 async function boot() {
   // 先用本機資料立刻渲染首頁（秒開，不等網路）——避免網路慢時白屏。
   // 記下開機當下的本機時間戳當基準，雲端在背景對帳，只有雲端確實較新且這段時間

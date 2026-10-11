@@ -85,11 +85,12 @@ const Mastery = (() => {
     const n = (m && m.n) || 0, th = (m && m.th) || 0;
     const K = Math.max(KMIN, K0 / Math.sqrt(1 + n / 3));
     const th2 = Math.min(TH, Math.max(-TH, th + K * ((correct ? 1 : 0) - p(th, b, guess(type)))));
-    return { th: +th2.toFixed(4), n: n + 1, r: ((m && m.r) || 0) + (correct ? 1 : 0), last: today };
+    return Object.assign({}, m, { th: +th2.toFixed(4), n: n + 1, r: ((m && m.r) || 0) + (correct ? 1 : 0), last: today });
   }
   // 掌握度：一般難度的題目預估答對率（0–1，含猜中率）
   const level = (m, type = "p5") => p((m && m.th) || 0, 0, guess(type));
   const MIN_N = 5; // 少於這個題數只顯示「資料不足」
-  const enough = m => !!m && m.n >= MIN_N;
-  return { update, level, enough, p, guess, MIN_N };
+  const DIAG_N = 2; // 做過診斷測驗的技能（dg）：每項 2 題就先當作有初步資料，馬上用來選題
+  const enough = m => !!m && (m.n >= MIN_N || (!!m.dg && m.n >= DIAG_N));
+  return { update, level, enough, p, guess, MIN_N, DIAG_N };
 })();
