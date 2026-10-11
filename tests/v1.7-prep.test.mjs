@@ -70,3 +70,13 @@ test("PREP-2 診斷測驗：Part 5 的 13 項、Part 2 的 5 項技能各 2 題�
   assert.deepEqual(plain(again.run(`weakSkills("p5")`)), ["g-rel"]);
   again.run("renderers.home(); renderers.stats()");
 });
+
+test("PREP-4 診斷結果三方合併：另一台重新診斷的較新結果不會被這台的舊結果蓋回", () => {
+  const app = loadApp();
+  const X = { date: "2026-10-11", res: { "p5-tense": [1, 2] } }, Y = { date: "2026-10-15", res: { "p5-tense": [2, 2] } };
+  const out = app.run(`(() => { const b = sanitizeState(Object.assign(defaultState(), { diag: ${JSON.stringify(X)} }));
+    const l = sanitizeState(Object.assign(defaultState(), { diag: ${JSON.stringify(X)}, updatedAt: 2 }));
+    const r = sanitizeState(Object.assign(defaultState(), { diag: ${JSON.stringify(Y)}, updatedAt: 1 }));
+    return JSON.stringify([Merge.records(b, l, r).diag, Merge.records(null, defaultState(), r).diag]); })()`);
+  assert.deepEqual(JSON.parse(out), [Y, Y]);
+});

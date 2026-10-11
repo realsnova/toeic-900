@@ -97,7 +97,8 @@ const Merge = (() => {
     const b = isObj(base) ? base : null, l = obj(local), r = obj(remote);
     const localNewer = (l.updatedAt || 0) >= (r.updatedAt || 0);
     const out = Object.assign({}, r, l); // 不認得的欄位：以本機為準
-    ["exam", "targetScore", "lastBackup"].forEach(k => {
+    // diag：診斷測驗結果（v1.7）。不能用「不認得的欄位以本機為準」：另一台重新診斷後，這台會把較新的結果蓋回舊的
+    ["exam", "targetScore", "lastBackup", "diag"].forEach(k => {
       const v = scalar3(b, l, r, k, localNewer);
       if (v === undefined) delete out[k]; else out[k] = v;
     });
