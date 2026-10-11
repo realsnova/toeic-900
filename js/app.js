@@ -342,6 +342,8 @@ function recordSkill(t, k, correct) {
     S.tq[t] = S.tq[t].slice(-TQ_MAX);
   }
 }
+const NEGLECT_DAYS = 10;
+const daysBetween = (a, b) => Math.round((Date.parse(b + "T00:00:00Z") - Date.parse(a + "T00:00:00Z")) / 86400000);
 // 某個 Part 的弱項技能：作答數夠、掌握度低於 70%，由弱到強
 const WEAK_LEVEL = 0.7;
 function weakSkills(t) {
@@ -1598,17 +1600,36 @@ function drawRound(seenKey, poolSize, n, wrongIds, isWeak, isHidden) {
   const seen = { has: i => !!S[seenKey][recId(type, i)], add: i => { const id = recId(type, i); if (id) S[seenKey][id] = true; } };
   const hidden = i => !!(isHidden && isHidden(i));
   // 錯題優先，且不受 seen 影響——錯題本的題目本來就該重複出現直到掌握
-  const ids = shuffle(wrongIds.filter(i => Number.isInteger(i) && i >= 0 && i < poolSize)).slice(0, n);
+  // 一輪 10 題的名額：錯題最多 6、遷移練習最多 2、冷落的技能最多 2，其餘是新題（含弱項加權）。
+  // 錯題本很長時，原本整輪都是重考，遷移練習、冷落的技能和新題都排不進來（v1.7 模擬學習者測試）
+  const wrongCap = type ? Math.max(1, n - 4) : n;
+  const ids = shuffle(wrongIds.filter(i => Number.isInteger(i) && i >= 0 && i < poolSize)).slice(0, wrongCap);
   const taken = new Set(ids);
-  // 遷移練習：上一輪答錯的技能，各出一道沒做過的同技能新題（最多 3 題），出過就從佇列移除
+  // 遷移練習：上一輪答錯的技能，各出一道沒做過的同技能新題（最多 2 題），出過就從佇列移除
   const queue = type && S.tq && Array.isArray(S.tq[type]) ? S.tq[type] : [];
   const arr = type ? BANK_ARRAYS()[type] : [];
   const transfer = [];
-  while (queue.length && ids.length < n && transfer.length < 3) {
+  while (queue.length && ids.length < n && transfer.length < 2) {
     const sk = queue.shift();
     const pick = shuffle(Array.from({ length: poolSize }, (_, i) => i)
       .filter(i => arr[i] && arr[i].sk === sk && !taken.has(i) && !hidden(i) && !seen.has(i)))[0];
     if (pick !== undefined) { ids.push(pick); taken.add(pick); transfer.push(pick); }
+  }
+  // 冷落的技能：超過 NEGLECT_DAYS 天沒練到的技能，每輪最多補 2 題（沒做過的優先，都做過就重複舊題）。
+  // 輪替要整個題庫出完才重置，強項技能的題目一旦出完，可能一個多月都碰不到（90 天模擬發現 43 天）。
+  if (type) {
+    const today = todayStr();
+    const stale = SKILLS.filter(sk => sk.part === type).map(sk => sk.id).filter(id => {
+      const m = (S.mastery || {})[id];
+      return !m || !m.last || daysBetween(m.last, today) >= NEGLECT_DAYS;
+    });
+    let added = 0;
+    for (const id of shuffle(stale)) {
+      if (added >= 2 || ids.length >= n) break;
+      const pool = Array.from({ length: poolSize }, (_, i) => i).filter(i => arr[i] && arr[i].sk === id && !taken.has(i) && !hidden(i));
+      const pick = shuffle(pool.filter(i => !seen.has(i)))[0] ?? shuffle(pool)[0];
+      if (pick !== undefined) { ids.push(pick); taken.add(pick); added++; }
+    }
   }
   let need = n - ids.length;
   if (need > 0) {

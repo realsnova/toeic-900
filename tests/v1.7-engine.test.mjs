@@ -160,3 +160,41 @@ test("PLAN-1 每日菜單的每一項都附原因；有弱項時說出是哪一�
   assert.match(p5.why, /關係詞掌握度 \d+%（12 題）/);
   a.run("renderers.home()");
 });
+
+test("SIM-1 模擬學習者 90 天：掌握度收斂到真實能力、每項技能兩週內至少練到一次、每天題量固定", () => {
+  const a = loadApp();
+  const out = plain(a.run(`(() => {
+    let seed = 12345;
+    const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    let day = 0;
+    const base = Date.parse("2026-11-01T00:00:00Z");
+    todayStr = (o = 0) => new Date(base + (day + o) * 86400000).toISOString().slice(0, 10);
+    const skills = SKILLS.filter(s => s.part === "p5").map(s => s.id);
+    const truth = {}; skills.forEach((id, k) => { truth[id] = -1.5 + 3 * (k / (skills.length - 1)); }); // 能力由弱到強
+    const lastSeen = {}, gaps = {}, perDay = [];
+    for (day = 0; day < 90; day++) {
+      let n = 0;
+      for (let round = 0; round < 2; round++) {
+        const ws = new Set(weakSkills("p5"));
+        const ids = drawRound("p5seen", PART5.length, ROUND_N, wbKeys("p5").map(Number).filter(i => !isFormItem("p5", i)),
+          ws.size ? (i => ws.has(PART5[i].sk)) : null, i => isFormItem("p5", i));
+        ids.forEach(i => {
+          const sk = PART5[i].sk;
+          const ok = rnd() < Mastery.p(truth[sk], 0, 0.25);
+          wbMark("p5", i, ok); n++;
+          if (lastSeen[sk] !== undefined) gaps[sk] = Math.max(gaps[sk] || 0, day - lastSeen[sk]);
+          lastSeen[sk] = day;
+        });
+      }
+      perDay.push(n);
+    }
+    const err = skills.filter(id => S.mastery[id] && S.mastery[id].n >= 20)
+      .map(id => ({ id, est: Mastery.level(S.mastery[id]), real: Mastery.p(truth[id], 0, 0.25), n: S.mastery[id].n }));
+    return { err, gaps, perDay: [Math.min(...perDay), Math.max(...perDay)], never: skills.filter(id => lastSeen[id] === undefined) };
+  })()`));
+  assert.deepEqual(out.never, [], "有技能 90 天都沒練到");
+  for (const [sk, g] of Object.entries(out.gaps)) assert.ok(g <= 14, `${sk} 最長 ${g} 天沒練到`);
+  assert.deepEqual(out.perDay, [20, 20]);
+  assert.ok(out.err.length >= 8, `樣本夠的技能只有 ${out.err.length} 個`);
+  for (const e of out.err) assert.ok(Math.abs(e.est - e.real) < 0.15, `${e.id} 估計 ${e.est.toFixed(2)}，實際 ${e.real.toFixed(2)}（${e.n} 題）`);
+});
