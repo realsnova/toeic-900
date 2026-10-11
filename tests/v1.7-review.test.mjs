@@ -127,3 +127,16 @@ test("REV-M3 內容相同的兩筆模考紀錄合併時不會變成一筆", () =
   const r = plain(app.run(`Merge.records(null, { mocks: [${JSON.stringify(m)}, ${JSON.stringify(m)}] }, { mocks: [${JSON.stringify(m)}] })`));
   assert.equal(r.mocks.length, 2);
 });
+
+test("REV-loop 第一次交易拿到空快取（Firebase 的行為）：同步會結束，不會一直重跑", async () => {
+  const db = fakeDb();
+  const a = device(db);
+  a.run(`wbMark("p5", 3, false); save();`);
+  await a.run("Sync.syncNow()");
+  a.run(`window.__rounds = 0; Sync.__r = Sync.round; Sync.round = async () => { window.__rounds++; return Sync.__r(); };`);
+  const done = a.run("Sync.syncNow()");
+  const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error("同步沒有結束")), 3000));
+  try { await Promise.race([done, timeout]); } finally { a.run("Sync.ready = false"); } // 失敗時讓迴圈停下來
+  assert.ok(a.run("window.__rounds") <= 2, `跑了 ${a.run("window.__rounds")} 輪`);
+  assert.equal(a.run("Sync.running"), null);
+});

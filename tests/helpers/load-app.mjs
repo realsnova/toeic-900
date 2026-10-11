@@ -102,6 +102,7 @@ export function fakeAudio({ mode = "ok" } = {}) {
 // 一定要有 records 與 updatedAt，只能有 records、bank、updatedAt 三個欄位，否則像正式資料庫一樣以 PERMISSION_DENIED 拒絕。
 // beforeSet(path, value)：測試用，在寫入前插入另一台裝置的動作（模擬同時寫入）。
 // transaction(fn)：和 Firebase 一樣，寫入前雲端被別人改過就用新值重跑 fn；fn 傳回 undefined 代表不寫入。
+// 也和 Firebase 一樣，第一次呼叫 fn 時傳本機快取（沒有監聽時多半是 null），伺服器上的值不同就用正確的值重跑。
 export function fakeDb() {
   const data = {};
   const copy = v => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
@@ -128,8 +129,11 @@ export function fakeDb() {
         transaction: async fn => {
           for (let i = 0; i < 25; i++) {
             db.txRuns++;
-            const before = JSON.stringify(data[path] === undefined ? null : data[path]);
-            const next = fn(data[path] === undefined ? null : copy(data[path]));
+            await new Promise(r => setTimeout(r, 2)); // 網路往返：讓每次呼叫的時間戳記不同
+            const cold = i === 0 && db.coldCache !== false;
+            const before = cold ? "null" : JSON.stringify(data[path] === undefined ? null : data[path]);
+            const next = fn(cold || data[path] === undefined ? null : copy(data[path]));
+            if (next === undefined && cold && data[path] !== undefined) continue; // 快取是空的、放棄寫入：Firebase 會用伺服器的值重跑
             if (next === undefined) return { committed: false, snapshot: { val: () => copy(data[path]) } };
             if (db.beforeSet) { const f = db.beforeSet; db.beforeSet = null; await f(path, next); }
             if (JSON.stringify(data[path] === undefined ? null : data[path]) !== before) continue; // 被別人改過：重跑

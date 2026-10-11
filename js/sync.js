@@ -130,7 +130,9 @@ const Sync = {
           const remote = Sync.clean(cur);
           // 舊版 App 寫的：用兩方合併（聯集、計數取較大值、錯題保留），不會刪掉本機的作答
           const trusted = !!remote && Sync.signed(cur);
-          merged = remote ? Sync.merge(trusted ? base : null, local, remote) : local;
+          // 沒有雲端資料時用本機的副本：Firebase 第一次呼叫常拿本機快取（多半是空的）再用伺服器的值重跑，
+          // 下面會改 updatedAt，不能改到開始時的快照，否則「同步中有新作答」的判斷會一直成立而不停同步
+          merged = remote ? Sync.merge(trusted ? base : null, local, remote) : JSON.parse(JSON.stringify(local));
           merged.records = sanitizeState(merged.records);
           if (trusted && Merge.same(merged, remote)) return; // 雲端已經是最新：不寫入
           // 更新時間設成現在：還沒更新的舊版裝置下次開啟時才會拉取合併後的紀錄
